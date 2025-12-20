@@ -1,0 +1,71 @@
+generator client {
+  provider      = "prisma-client-js"
+  output        = "../shared/node_modules/.prisma/client"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+generator client_default {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Bazos Account - stores Bazos platform account credentials
+model BazosAccount {
+  id        String    @id @default(uuid()) @db.Uuid
+  name      String    @db.VarChar(200)
+  email     String    @db.VarChar(200)
+  password  String?   @db.Text // Encrypted password
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now()) @db.Timestamp(6)
+  updatedAt DateTime  @updatedAt @db.Timestamp(6)
+  ads       BazosAd[]
+
+  @@index([email])
+  @@index([isActive])
+  @@map("bazos_accounts")
+}
+
+// Bazos Ad - Bazos classified ads linked to catalog products
+model BazosAd {
+  id            String        @id @default(uuid()) @db.Uuid
+  accountId     String        @db.Uuid
+  productId     String?       @db.Uuid // Catalog product ID (no FK - references catalog-microservice)
+  bazosAdId     String?       @db.VarChar(100) // Bazos platform ad ID
+  title         String        @db.VarChar(500)
+  description   String?       @db.Text
+  price         Decimal       @db.Decimal(10, 2)
+  category      String?       @db.VarChar(200)
+  location      String?       @db.VarChar(200)
+  stockQuantity Int           @default(0)
+  expiresAt     DateTime?
+  isActive      Boolean       @default(true)
+  createdAt     DateTime      @default(now()) @db.Timestamp(6)
+  updatedAt     DateTime      @updatedAt @db.Timestamp(6)
+  account       BazosAccount  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@index([accountId])
+  @@index([bazosAdId])
+  @@index([isActive])
+  @@index([expiresAt])
+  @@map("bazos_ads")
+}
+
+// Bazos Category - Category mappings for Bazos platform
+model BazosCategory {
+  id            String   @id @default(uuid()) @db.Uuid
+  bazosCategory String   @unique @db.VarChar(200) // Bazos category name
+  catalogCategoryId String? @db.Uuid // References catalog-microservice category
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now()) @db.Timestamp(6)
+  updatedAt     DateTime @updatedAt @db.Timestamp(6)
+
+  @@index([bazosCategory])
+  @@index([isActive])
+  @@map("bazos_categories")
+}
