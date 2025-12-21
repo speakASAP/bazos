@@ -27,7 +27,7 @@ The Bazos Service automates Bazos classified ad creation and updates. It uses ce
 
 - Uses `catalog-microservice` (3200) for product data
 - Uses `warehouse-microservice` (3201) for stock levels
-- Uses `order-microservice` (3203) for order processing
+- Uses `orders-microservice` (3203) for order processing
 - Subscribes to RabbitMQ `stock.updated` events
 
 ## Database

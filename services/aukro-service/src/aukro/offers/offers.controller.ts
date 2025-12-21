@@ -36,5 +36,10 @@ export class OffersController {
   async deleteOffer(@Param('id') id: string) {
     return this.offersService.delete(id);
   }
+
+  @Post(':id/renew')
+  async renewAd(@Param('id') id: string, @Body() data?: { days?: number }) {
+    return this.offersService.renewAd(id, data?.days);
+  }
 }
 
