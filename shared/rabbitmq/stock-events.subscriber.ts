@@ -107,53 +107,51 @@ export class StockEventsSubscriber implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * Update offer stock quantities for a product
+   * Update Bazos ad stock quantities for a product
    * Note: productId is the catalog-microservice product ID
-   * We need to find offers by matching SKU/EAN or by stored catalogProductId
    */
   private async updateOfferStock(productId: string, available: number) {
     try {
-      // Find offers linked to this product
-      // For now, we'll update offers that have productId matching (legacy) or catalogProductId
-      // In the future, we should add catalogProductId field to AllegroOffer
-      const offers = await this.prisma.bazosOffer.findMany({
+      // Find ads linked to this product
+      const ads = await this.prisma.bazosAd.findMany({
         where: {
           productId: productId,
         },
         select: {
           id: true,
-          bazosOfferId: true,
+          bazosAdId: true,
           stockQuantity: true,
           isActive: true,
         },
       });
 
-      if (offers.length === 0) {
-        this.logger.log(`No offers found for product ${productId}`, 'StockEventsSubscriber');
+      if (ads.length === 0) {
+        this.logger.log(`No Bazos ads found for product ${productId}`, 'StockEventsSubscriber');
         return;
       }
 
-      // Update each offer's stock quantity
-      for (const offer of offers) {
-        if (offer.stockQuantity !== available) {
-          await this.prisma.bazosOffer.update({
-            where: { id: offer.id },
+      // Update each ad's stock quantity
+      for (const ad of ads) {
+        if (ad.stockQuantity !== available) {
+          await this.prisma.bazosAd.update({
+            where: { id: ad.id },
             data: {
               stockQuantity: available,
+              isActive: available > 0,
             },
           });
 
           this.logger.log(
-            `Updated offer ${offer.id} (Aukro: ${offer.bazosOfferId}) stock from ${offer.stockQuantity} to ${available}`,
+            `Updated Bazos ad ${ad.id} (Bazos: ${ad.bazosAdId}) stock from ${ad.stockQuantity} to ${available}`,
             'StockEventsSubscriber'
           );
 
-          // TODO: Optionally sync to Allegro API if stock changed significantly
-          // This could be done via InventoryService or directly via AllegroApiService
+          // TODO: Optionally sync to Bazos platform if stock changed significantly
+          // This could be done via BazosApiService
         }
       }
     } catch (error: any) {
-      this.logger.error(`Failed to update offer stock: ${error.message}`, error.stack, 'StockEventsSubscriber');
+      this.logger.error(`Failed to update Bazos ad stock: ${error.message}`, error.stack, 'StockEventsSubscriber');
     }
   }
 
@@ -162,12 +160,22 @@ export class StockEventsSubscriber implements OnModuleInit, OnModuleDestroy {
    */
   private async handleOutOfStock(productId: string) {
     try {
-      // Set stock to 0 for all offers
-      await this.updateOfferStock(productId, 0);
+      // Set stock to 0 and deactivate ads
+      const ads = await this.prisma.bazosAd.findMany({
+        where: { productId },
+      });
 
-      // Optionally deactivate offers on Allegro
-      // This could be done via OffersService or AllegroApiService
-      this.logger.warn(`Product ${productId} is out of stock - offers updated`, 'StockEventsSubscriber');
+      for (const ad of ads) {
+        await this.prisma.bazosAd.update({
+          where: { id: ad.id },
+          data: {
+            stockQuantity: 0,
+            isActive: false,
+          },
+        });
+      }
+
+      this.logger.warn(`Product ${productId} is out of stock - ${ads.length} Bazos ads deactivated`, 'StockEventsSubscriber');
     } catch (error: any) {
       this.logger.error(`Failed to handle out of stock: ${error.message}`, error.stack, 'StockEventsSubscriber');
     }
