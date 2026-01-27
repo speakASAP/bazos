@@ -11,7 +11,7 @@ The Bazos Service automates Bazos classified ad creation and updates. It uses ce
 **Port Range**: 39xx
 
 | Service | Subdomain | Port |
-|---------|-----------|------|
+| ------- | --------- | ---- |
 | bazos-service | bazos.statex.cz | 3900 |
 | api-gateway | bazos.statex.cz | 3901 |
 | gateway-proxy | bazos.statex.cz | 3904 |
