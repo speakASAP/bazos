@@ -12,9 +12,9 @@ The Bazos Service automates Bazos classified ad creation and updates. It uses ce
 
 | Service | Subdomain | Port |
 | ------- | --------- | ---- |
-| bazos-service | bazos.statex.cz | 3900 |
-| api-gateway | bazos.statex.cz | 3901 |
-| gateway-proxy | bazos.statex.cz | 3904 |
+| bazos-service | bazos.alfares.cz | 3900 |
+| api-gateway | bazos.alfares.cz | 3901 |
+| gateway-proxy | bazos.alfares.cz | 3904 |
 
 ## Features
 
@@ -41,7 +41,7 @@ Database: `bazos_db`
 
 ## API Endpoints
 
-Base URL: `https://bazos.statex.cz/api` (or `http://localhost:3901/api` in dev)
+Base URL: `https://bazos.alfares.cz/api` (or `http://localhost:3901/api` in dev)
 
 - `GET /api/accounts` - List Bazos accounts
 - `POST /api/accounts` - Add Bazos account
