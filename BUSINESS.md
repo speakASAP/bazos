@@ -18,5 +18,5 @@ flipflop-service.
 
 ## SLA
 
-- Production: <https://bazos.statex.cz>
+- Production: <https://bazos.alfares.cz>
 - Events: subscribes to stock.updated
