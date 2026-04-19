@@ -7,15 +7,14 @@ RUN npm install --prefer-offline --no-audit || npm ci
 
 COPY . .
 
-# Build with proper error handling (fail fast)
-RUN npm run build || \
-    (echo "❌ Primary build failed" >&2; \
-     cd services/aukro-service && \
-     npm install && \
-     npm run build && \
-     cd ../.. && \
-     cp -r services/aukro-service/dist ./dist) || \
-    (echo "❌ Fallback build also failed" >&2; exit 1)
+# Build shared module first (required dependency)
+RUN cd /app/shared && npm run build
+
+# Build aukro-service and copy its dist
+RUN cd services/aukro-service && \
+    npm run build && \
+    cd ../.. && \
+    cp -r services/aukro-service/dist ./dist
 
 # Verify dist/ was created successfully
 RUN test -f dist/main.js || \
