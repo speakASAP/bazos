@@ -7,10 +7,20 @@ RUN npm install --prefer-offline --no-audit || npm ci
 
 COPY . .
 
-# Try to build - try multiple methods
-RUN npm run build 2>/dev/null || \
-    (cd services/aukro-service && npm install && npm run build && cd ../.. && cp -r services/aukro-service/dist ./dist) 2>/dev/null || \
-    npx tsc 2>/dev/null || true
+# Build with proper error handling (fail fast)
+RUN npm run build || \
+    (echo "❌ Primary build failed" >&2; \
+     cd services/aukro-service && \
+     npm install && \
+     npm run build && \
+     cd ../.. && \
+     cp -r services/aukro-service/dist ./dist) || \
+    (echo "❌ Fallback build also failed" >&2; exit 1)
+
+# Verify dist/ was created successfully
+RUN test -f dist/main.js || \
+    (echo "❌ Build completed but dist/main.js not found" >&2; exit 1) && \
+    echo "✅ dist/main.js successfully created"
 
 EXPOSE 3000
 
