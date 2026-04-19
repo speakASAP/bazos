@@ -14,4 +14,5 @@ RUN npm run build 2>/dev/null || \
 
 EXPOSE 3000
 
-CMD ["node", "dist/main.js"]
+ENTRYPOINT ["node"]
+CMD ["dist/main.js"]
