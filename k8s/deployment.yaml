@@ -33,6 +33,12 @@ spec:
                 name: bazos-service-config
             - secretRef:
                 name: bazos-service-secret
+          env:
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: database-credentials
+                  key: DB_PASSWORD
           livenessProbe:
             httpGet:
               path: /health
