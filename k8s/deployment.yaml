@@ -30,9 +30,7 @@ spec:
               name: http
           envFrom:
             - configMapRef:
-                name: bazos-service-config
-            - secretRef:
-                name: bazos-service-secret
+                name: bazos-config
           env:
             - name: DB_PASSWORD
               valueFrom:

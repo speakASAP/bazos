@@ -1,27 +1,64 @@
-FROM node:24-slim
+# Multi-stage build for API Gateway
+FROM node:24-slim AS builder
 
 WORKDIR /app
 
+# Copy shared package and install dependencies first
+COPY shared/ ./shared/
+WORKDIR /app/shared
+RUN npm ci
+# Copy prisma schema to original location and generate Prisma client
+WORKDIR /app
+COPY prisma ./prisma
+# Ensure output directory exists
+RUN mkdir -p /app/shared/node_modules/.prisma/client
+# Create symlink so Prisma can find @prisma/client in shared/node_modules
+RUN ln -s /app/shared/node_modules ./node_modules
+# Use Prisma from shared/node_modules to avoid auto-install issues
+RUN /app/shared/node_modules/.bin/prisma generate --schema=./prisma/schema.prisma
+# Remove symlink
+RUN rm ./node_modules
+# Fix: Copy index.js to default.js so @prisma/client can find the real client (not the stub)
+RUN cp /app/shared/node_modules/.prisma/client/index.js /app/shared/node_modules/.prisma/client/default.js || true
+WORKDIR /app/shared
+RUN npm run build
+
+# Copy service files
+WORKDIR /app
+COPY services/api-gateway/package*.json ./services/api-gateway/
+COPY services/api-gateway/tsconfig.json ./services/api-gateway/
+COPY services/api-gateway/src ./services/api-gateway/src
+COPY tsconfig.json ./
 COPY package*.json ./
-RUN npm install --prefer-offline --no-audit || npm ci
 
-COPY . .
+# Install dependencies and build
+WORKDIR /app/services/api-gateway
+RUN npm install --prefer-offline --legacy-peer-deps
+RUN npm run build
 
-# Build shared module first (required dependency)
-RUN cd /app/shared && npm run build
+# Production stage
+FROM node:24-slim
 
-# Build aukro-service and copy its dist
-RUN cd services/aukro-service && \
-    npm run build && \
-    cd ../.. && \
-    cp -r services/aukro-service/dist ./dist
+# Install OpenSSL for Prisma query engine
+RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 
-# Verify dist/ was created successfully
-RUN test -f dist/main.js || \
-    (echo "❌ Build completed but dist/main.js not found" >&2; exit 1) && \
-    echo "✅ dist/main.js successfully created"
+WORKDIR /app
 
-EXPOSE 3000
+# Copy entire shared package (needed for file: reference to work, includes generated Prisma client)
+COPY --from=builder /app/shared ./shared
 
-ENTRYPOINT ["node"]
-CMD ["dist/main.js"]
+# Copy service files maintaining directory structure for file: references
+COPY --from=builder /app/services/api-gateway ./services/api-gateway
+
+# Copy root package.json for shared dependencies
+COPY --from=builder /app/package*.json ./
+
+WORKDIR /app/services/api-gateway
+
+EXPOSE 3701
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:3701/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+
+CMD ["node", "dist/main.js"]
+
