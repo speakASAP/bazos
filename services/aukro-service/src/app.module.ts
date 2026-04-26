@@ -5,7 +5,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { join } from 'path';
-import { AukroModule } from './bazos/bazos.module';
+import { AukroModule } from './aukro/aukro.module';
 import { PrismaModule, LoggerModule, HealthModule, RabbitMQModule } from '@bazos/shared';
 import { HealthController } from './health/health.controller';
 

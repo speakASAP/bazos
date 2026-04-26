@@ -16,14 +16,15 @@ datasource db {
 
 // Bazos Account - stores Bazos platform account credentials
 model BazosAccount {
-  id        String    @id @default(uuid()) @db.Uuid
-  name      String    @db.VarChar(200)
-  email     String    @db.VarChar(200)
-  password  String?   @db.Text // Encrypted password
-  isActive  Boolean   @default(true)
-  createdAt DateTime  @default(now()) @db.Timestamp(6)
-  updatedAt DateTime  @updatedAt @db.Timestamp(6)
+  id        String       @id @default(uuid()) @db.Uuid
+  name      String       @db.VarChar(200)
+  email     String       @db.VarChar(200)
+  password  String?      @db.Text // Encrypted password
+  isActive  Boolean      @default(true)
+  createdAt DateTime     @default(now()) @db.Timestamp(6)
+  updatedAt DateTime     @updatedAt @db.Timestamp(6)
   ads       BazosAd[]
+  orders    BazosOrder[]
 
   @@index([email])
   @@index([isActive])
@@ -54,6 +55,29 @@ model BazosAd {
   @@index([isActive])
   @@index([expiresAt])
   @@map("bazos_ads")
+}
+
+// Bazos Order - Orders received from Bazos platform
+model BazosOrder {
+  id            String       @id @default(uuid()) @db.Uuid
+  accountId     String       @db.Uuid
+  bazosOrderId  String?      @db.VarChar(100) // Bazos platform order ID
+  orderId       String?      @db.Uuid // Central orders-microservice order ID
+  customerEmail String?      @db.VarChar(200)
+  customerPhone String?      @db.VarChar(50)
+  total         Decimal      @db.Decimal(10, 2) @default(0)
+  currency      String       @db.VarChar(10) @default("CZK")
+  status        String       @db.VarChar(50) @default("pending")
+  forwarded     Boolean      @default(false)
+  createdAt     DateTime     @default(now()) @db.Timestamp(6)
+  updatedAt     DateTime     @updatedAt @db.Timestamp(6)
+  account       BazosAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId])
+  @@index([bazosOrderId])
+  @@index([status])
+  @@index([forwarded])
+  @@map("bazos_orders")
 }
 
 // Bazos Category - Category mappings for Bazos platform

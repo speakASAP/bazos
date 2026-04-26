@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
 import { AccountsController } from './accounts.controller';
 import { AccountsService } from './accounts.service';
-import { PrismaModule } from '@bazos/shared';
+import { PrismaModule, AuthModule } from '@bazos/shared';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, AuthModule],
   controllers: [AccountsController],
   providers: [AccountsService],
   exports: [AccountsService],
