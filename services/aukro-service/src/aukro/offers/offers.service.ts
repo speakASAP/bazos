@@ -16,7 +16,7 @@ export class OffersService {
   }
 
   async findAll(query: any) {
-    return this.prisma.bazosOffer.findMany({
+    return this.prisma.bazosAd.findMany({
       where: {
         isActive: query.isActive !== undefined ? query.isActive === 'true' : undefined,
         accountId: query.accountId,
@@ -28,7 +28,7 @@ export class OffersService {
   }
 
   async findOne(id: string) {
-    const offer = await this.prisma.bazosOffer.findUnique({
+    const offer = await this.prisma.bazosAd.findUnique({
       where: { id },
       include: { account: true },
     });
@@ -51,20 +51,20 @@ export class OffersService {
   }
 
   async create(data: any) {
-    return this.prisma.bazosOffer.create({
+    return this.prisma.bazosAd.create({
       data,
     });
   }
 
   async update(id: string, data: any) {
-    return this.prisma.bazosOffer.update({
+    return this.prisma.bazosAd.update({
       where: { id },
       data,
     });
   }
 
   async delete(id: string) {
-    return this.prisma.bazosOffer.update({
+    return this.prisma.bazosAd.update({
       where: { id },
       data: { isActive: false },
     });
