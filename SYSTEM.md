@@ -4,7 +4,7 @@
 
 NestJS + PostgreSQL. Bazos.cz automation via web scraping/form submission (no public API).
 
-Multi-container service (Docker Compose blue/green + K8s manifests in `k8s/`):
+Multi-container service (Kubernetes `statex-apps`):
 
 | Container | Port | Role |
 |-----------|------|------|
@@ -37,20 +37,19 @@ K8s: ESO syncs to `bazos-service-secret` every 5 min — see `k8s/external-secre
 Local/Docker: `./shared/scripts/vault-env-gen.sh bazos-service prod`  
 → [../shared/docs/VAULT.md](../shared/docs/VAULT.md)
 
-## Deploy
+## Deployment
 
-**Docker Compose (production):**
-```bash
-./scripts/deploy.sh
-```
-
-**K8s manifests:** `k8s/` — available but not yet active in production.
+**Platform:** Kubernetes (k3s) · namespace `statex-apps`  
+**Image:** `localhost:5000/bazos-service:latest`  
+**Deploy:** `./scripts/deploy.sh`  
+**Logs:** `kubectl logs -n statex-apps -l app=bazos-service -f`  
+**Restart:** `kubectl rollout restart deployment/bazos-service -n statex-apps`
 
 → [../shared/docs/DEPLOY_STANDARD.md](../shared/docs/DEPLOY_STANDARD.md)
 
 ## Current State
 <!-- AI-maintained -->
-Stage: production · Deploy: Docker Compose blue/green
+Stage: production · Deploy: Kubernetes (`statex-apps`)
 
 ## Known Issues
 <!-- AI-maintained -->
