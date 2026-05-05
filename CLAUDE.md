@@ -22,4 +22,4 @@
 ### Secrets
 All secrets in Vault at `secret/prod/bazos-service`. → [../shared/docs/VAULT.md](../shared/docs/VAULT.md)
 
-**Ops**: `docker compose logs -f` · `./scripts/deploy.sh`
+**Ops**: `kubectl logs -n statex-apps -l app=bazos-service -f` · `kubectl rollout restart deployment/bazos-service -n statex-apps` · `./scripts/deploy.sh`
