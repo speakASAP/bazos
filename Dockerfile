@@ -23,9 +23,13 @@ RUN npm install
 # Generate Prisma client from repo root to avoid prisma CLI attempting implicit package installs in /app/shared
 # Output path in schema is ../shared/node_modules/.prisma/client (relative to /app/prisma/) = /app/shared/node_modules/.prisma/client
 WORKDIR /app
+RUN mkdir -p /app/shared/node_modules/.prisma/client
 RUN npm install --prefix /app/shared --save-dev prisma@5.22.0 --silent
-RUN DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"     ./shared/node_modules/.bin/prisma generate --schema=prisma/schema.prisma
-# Fix: Copy generated client into the service's node_modules/.prisma/client so @prisma/client resolves the real client
+RUN DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy" \
+  ./shared/node_modules/.bin/prisma generate --schema=prisma/schema.prisma
+# @prisma/client loads .prisma/client/default.js; without this it stays the "run prisma generate" stub
+RUN cp /app/shared/node_modules/.prisma/client/index.js /app/shared/node_modules/.prisma/client/default.js
+# Copy generated client into the service node_modules so /app resolves @prisma/client consistently
 RUN cp -r /app/shared/node_modules/.prisma/client/. /app/services/bazos-service/node_modules/.prisma/client/
 
 # Build service
