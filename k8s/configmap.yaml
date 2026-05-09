@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: bazos-service-config
+  name: bazos-config
   namespace: statex-apps
   labels:
     app: bazos-service
@@ -10,15 +10,18 @@ data:
   NODE_ENV: "production"
   SERVICE_NAME: "bazos-service"
   DOMAIN: "bazos.alfares.cz"
-  PORT: "3000"
+  PORT: "3900"
+  BAZOS_SERVICE_PORT: "3900"
   # Add environment variables from .env that are non-sensitive (no secrets, API keys, passwords)
   # Examples:
   # DATABASE_POOL_SIZE: "10"
   # LOG_LEVEL: "info"
-  DB_HOST: "192.168.88.53"
+  DB_HOST: "db-server-postgres"
   DB_PORT: "5432"
   DB_USER: "dbadmin"
   DB_NAME: "bazos"
   DB_SYNC: "false"
   DB_AUTO_CREATE: "true"
-  # TIMEOUT_MS: "30000"
+  LOGGING_SERVICE_URL: "http://logging-microservice:3367"
+  HTTP_TIMEOUT: "30000"
+  GATEWAY_TIMEOUT: "30000"

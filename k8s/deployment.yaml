@@ -23,13 +23,17 @@ spec:
     spec:
       containers:
         - name: app
-          image: localhost:5000/bazos-service:latest
+          # :latest image failed Prisma client init; rebuild after Dockerfile fix, then retag :latest
+          image: localhost:5000/bazos-service:v3
           imagePullPolicy: IfNotPresent
           ports:
-            - containerPort: 3000
+            - containerPort: 3900
+              name: http
           envFrom:
             - configMapRef:
                 name: bazos-config
+            - secretRef:
+                name: bazos-service-secret
           env:
             - name: DB_PASSWORD
               valueFrom:
@@ -39,7 +43,7 @@ spec:
           livenessProbe:
             httpGet:
               path: /health
-              port: 3000
+              port: 3900
             initialDelaySeconds: 15
             periodSeconds: 30
             failureThreshold: 3
@@ -47,7 +51,7 @@ spec:
           readinessProbe:
             httpGet:
               path: /health
-              port: 3000
+              port: 3900
             initialDelaySeconds: 10
             periodSeconds: 10
             failureThreshold: 3
