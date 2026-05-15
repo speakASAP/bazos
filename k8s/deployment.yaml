@@ -25,7 +25,7 @@ spec:
         - name: app
           # :latest image failed Prisma client init; rebuild after Dockerfile fix, then retag :latest
           image: localhost:5000/bazos-service:v3
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           ports:
             - containerPort: 3900
               name: http
