@@ -11,6 +11,8 @@ import { BazosPublisherQueueService } from './publisher/bazos-publisher-queue.se
 import { BazosPublisherQueueController } from './publisher/bazos-publisher-queue.controller';
 import { BazosCatalogSellActionService } from './catalog/bazos-catalog-sell-action.service';
 import { BazosCatalogSellActionController } from './catalog/bazos-catalog-sell-action.controller';
+import { BazosMonitoringService } from './monitoring/bazos-monitoring.service';
+import { BazosMonitoringController } from './monitoring/bazos-monitoring.controller';
 
 @Module({
   imports: [PrismaModule, LoggerModule, AuthModule],
@@ -20,12 +22,14 @@ import { BazosCatalogSellActionController } from './catalog/bazos-catalog-sell-a
     BazosAdService,
     BazosPublisherQueueService,
     BazosCatalogSellActionService,
+    BazosMonitoringService,
   ],
   controllers: [
     BazosIdentityController,
     BazosAdController,
     BazosPublisherQueueController,
     BazosCatalogSellActionController,
+    BazosMonitoringController,
   ],
   exports: [
     BazosIdentityService,
@@ -33,6 +37,7 @@ import { BazosCatalogSellActionController } from './catalog/bazos-catalog-sell-a
     BazosAdService,
     BazosPublisherQueueService,
     BazosCatalogSellActionService,
+    BazosMonitoringService,
   ],
 })
 export class BazosModule {}
