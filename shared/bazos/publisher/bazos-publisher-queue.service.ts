@@ -56,6 +56,12 @@ export class BazosPublisherQueueService {
           completedAt: new Date(),
         },
       });
+      this.logger.warn('Bazos publish enqueue blocked by policy', {
+        attemptId: attempt.id,
+        adId: ad.id,
+        identityId: ad.identityId,
+        failureGates: policyResult.failures.map((failure) => failure.gate),
+      });
       return { queued: false, decision: policyResult, attempt };
     }
 
@@ -140,6 +146,12 @@ export class BazosPublisherQueueService {
         await this.prisma.bazosAd.update({
           where: { id: attempt.ad.id },
           data: { publishStatus: 'blocked_policy', lastPolicyCheck: policyResult as any },
+        });
+        this.logger.warn('Bazos publish claim blocked by policy re-check', {
+          attemptId: attempt.id,
+          adId: attempt.ad.id,
+          identityId: attempt.identityId,
+          failureGates: policyResult.failures.map((failure) => failure.gate),
         });
         return { claimed: false, reason: 'policy_blocked', decision: policyResult };
       }
