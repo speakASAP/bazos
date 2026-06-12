@@ -23,8 +23,9 @@ model BazosAccount {
   isActive  Boolean      @default(true)
   createdAt DateTime     @default(now()) @db.Timestamp(6)
   updatedAt DateTime     @updatedAt @db.Timestamp(6)
-  ads       BazosAd[]
-  orders    BazosOrder[]
+  ads        BazosAd[]
+  orders     BazosOrder[]
+  identities BazosIdentity[]
 
   @@index([email])
   @@index([isActive])
@@ -35,6 +36,7 @@ model BazosAccount {
 model BazosAd {
   id            String        @id @default(uuid()) @db.Uuid
   accountId     String        @db.Uuid
+  identityId    String?       @db.Uuid
   productId     String?       @db.Uuid // Catalog product ID (no FK - references catalog-microservice)
   bazosAdId     String?       @db.VarChar(100) // Bazos platform ad ID
   title         String        @db.VarChar(500)
@@ -45,12 +47,19 @@ model BazosAd {
   stockQuantity Int           @default(0)
   expiresAt     DateTime?
   isActive      Boolean       @default(true)
+  publishStatus String        @default("draft") @db.VarChar(50)
+  challengeState String?      @db.VarChar(50)
+  lastPolicyCheck Json?
+  lastPublishedAt DateTime?
   createdAt     DateTime      @default(now()) @db.Timestamp(6)
   updatedAt     DateTime      @updatedAt @db.Timestamp(6)
   account       BazosAccount  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  identity      BazosIdentity? @relation(fields: [identityId], references: [id], onDelete: SetNull)
+  publishAttempts BazosPublishAttempt[]
 
   @@index([productId])
   @@index([accountId])
+  @@index([identityId])
   @@index([bazosAdId])
   @@index([isActive])
   @@index([expiresAt])
@@ -92,4 +101,107 @@ model BazosCategory {
   @@index([bazosCategory])
   @@index([isActive])
   @@map("bazos_categories")
+}
+
+
+// Bazos Identity - one verified seller phone/session used to publish ads without bypassing Bazos checks
+model BazosIdentity {
+  id                    String      @id @default(uuid()) @db.Uuid
+  accountId             String?     @db.Uuid
+  userId                String?     @db.VarChar(100)
+  phoneNumber           String      @unique @db.VarChar(50)
+  displayName           String      @db.VarChar(200)
+  contactName           String?     @db.VarChar(200)
+  contactPhone          String?     @db.VarChar(50)
+  defaultZip            String?     @db.VarChar(20)
+  defaultLocation       String?     @db.VarChar(200)
+  sessionState          String      @default("missing") @db.VarChar(50)
+  encryptedSession      Json?
+  status                String      @default("draft") @db.VarChar(50)
+  reviewState           String      @default("clear") @db.VarChar(50)
+  verificationExpiresAt DateTime?
+  activeAdCount         Int         @default(0)
+  nextPublishNotBefore  DateTime?
+  lastPublishAttemptAt  DateTime?
+  notes                 String?     @db.Text
+  createdAt             DateTime    @default(now()) @db.Timestamp(6)
+  updatedAt             DateTime    @updatedAt @db.Timestamp(6)
+  account               BazosAccount? @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  ads                   BazosAd[]
+  publishAttempts       BazosPublishAttempt[]
+  categoryCadences      BazosIdentityCategoryCadence[]
+  verificationSessions BazosVerificationSession[]
+
+  @@index([accountId])
+  @@index([userId])
+  @@index([status])
+  @@index([reviewState])
+  @@index([nextPublishNotBefore])
+  @@map("bazos_identities")
+}
+
+// Per-identity category cadence so automated publishing cannot flood the same Bazos category
+model BazosIdentityCategoryCadence {
+  id              String   @id @default(uuid()) @db.Uuid
+  identityId      String   @db.Uuid
+  bazosCategory   String   @db.VarChar(200)
+  lastPublishedAt DateTime @db.Timestamp(6)
+  createdAt       DateTime @default(now()) @db.Timestamp(6)
+  updatedAt       DateTime @updatedAt @db.Timestamp(6)
+  identity        BazosIdentity @relation(fields: [identityId], references: [id], onDelete: Cascade)
+
+  @@unique([identityId, bazosCategory])
+  @@index([bazosCategory])
+  @@map("bazos_identity_category_cadences")
+}
+
+// Immutable audit trail for every publish attempt and policy decision
+model BazosPublishAttempt {
+  id             String   @id @default(uuid()) @db.Uuid
+  identityId     String   @db.Uuid
+  adId           String?  @db.Uuid
+  productId      String?  @db.Uuid
+  status         String   @default("policy_checked") @db.VarChar(50)
+  policyResult   Json
+  challengeState String?  @db.VarChar(50)
+  notBefore      DateTime?
+  startedAt      DateTime?
+  completedAt    DateTime?
+  error          String?  @db.Text
+  createdAt      DateTime @default(now()) @db.Timestamp(6)
+  updatedAt      DateTime @updatedAt @db.Timestamp(6)
+  identity       BazosIdentity @relation(fields: [identityId], references: [id], onDelete: Cascade)
+  ad             BazosAd? @relation(fields: [adId], references: [id], onDelete: SetNull)
+
+  @@index([identityId])
+  @@index([adId])
+  @@index([productId])
+  @@index([status])
+  @@index([notBefore])
+  @@map("bazos_publish_attempts")
+}
+
+
+// Human verification/session workflow. This records the normal Bazos checks; it must not automate around them.
+model BazosVerificationSession {
+  id                String   @id @default(uuid()) @db.Uuid
+  identityId        String   @db.Uuid
+  state             String   @default("awaiting_human") @db.VarChar(50)
+  challengeType     String?  @db.VarChar(50)
+  verificationUrl   String?  @db.Text
+  operatorUserId    String?  @db.VarChar(100)
+  humanConfirmed    Boolean  @default(false)
+  evidence          Json?
+  expiresAt         DateTime?
+  completedAt       DateTime?
+  notes             String?  @db.Text
+  createdAt         DateTime @default(now()) @db.Timestamp(6)
+  updatedAt         DateTime @updatedAt @db.Timestamp(6)
+  identity          BazosIdentity @relation(fields: [identityId], references: [id], onDelete: Cascade)
+
+  @@index([identityId])
+  @@index([state])
+  @@index([challengeType])
+  @@index([expiresAt])
+  @@map("bazos_verification_sessions")
 }

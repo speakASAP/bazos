@@ -9,6 +9,11 @@ GREEN='\033[0;32m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; BLUE='\033[0;34m'; NC
 SERVICE_NAME="bazos-service"
 NAMESPACE="${NAMESPACE:-statex-apps}"
 K8S_DIR="$PROJECT_ROOT/k8s"
+REGISTRY="localhost:5000"
+DEFAULT_TAG="$(cd "$PROJECT_ROOT" && git rev-parse --short HEAD 2>/dev/null || echo "build-$(date -u +%Y%m%d%H%M%S)")"
+IMAGE_TAG="${1:-$DEFAULT_TAG}"
+IMAGE="${REGISTRY}/${SERVICE_NAME}:${IMAGE_TAG}"
+IMAGE_LATEST="${REGISTRY}/${SERVICE_NAME}:latest"
 
 # shellcheck disable=SC1091
 source "$(dirname "$PROJECT_ROOT")/shared/scripts/load-deploy-phase-timing.sh" "$PROJECT_ROOT" 2>/dev/null \
@@ -57,6 +62,17 @@ fi
 
 deploy_timing_run_phase "Preflight" preflight_service_health
 
+deploy_timing_phase_start "Build image"
+echo -e "${YELLOW}Building image ${IMAGE}...${NC}"
+docker build -t "$IMAGE" -t "$IMAGE_LATEST" "$PROJECT_ROOT"
+deploy_timing_phase_end "Build image"
+
+deploy_timing_phase_start "Push image"
+echo -e "${YELLOW}Pushing image...${NC}"
+docker push "$IMAGE"
+docker push "$IMAGE_LATEST"
+deploy_timing_phase_end "Push image"
+
 deploy_timing_phase_start "Apply Kubernetes manifests"
 echo -e "${YELLOW}Applying Kubernetes manifests...${NC}"
 for manifest in configmap.yaml external-secret.yaml deployment.yaml service.yaml ingress.yaml; do
@@ -69,6 +85,7 @@ deploy_timing_phase_end "Apply Kubernetes manifests"
 
 deploy_timing_phase_start "Rollout restart"
 echo -e "${YELLOW}Triggering rollout restart...${NC}"
+kubectl set image "deployment/${SERVICE_NAME}" app="$IMAGE_LATEST" -n "$NAMESPACE"
 kubectl rollout restart deployment/"$SERVICE_NAME" -n "$NAMESPACE"
 echo -e "${GREEN}OK Rollout restart triggered${NC}"
 deploy_timing_phase_end "Rollout restart"
