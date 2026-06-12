@@ -51,7 +51,7 @@ export class BazosIdentityService {
       },
     });
 
-    this.logger.log('Bazos identity created', { identityId: identity.id, userId, phoneNumber: dto.phoneNumber });
+    this.logger.log('Bazos identity created', { identityId: identity.id, userId });
     return identity;
   }
 
@@ -113,13 +113,7 @@ export class BazosIdentityService {
    * The challengeState must be one of the defined REVIEW_STATE values.
    */
   async markChallenge(id: string, dto: MarkChallengeDto) {
-    const allowedChallenges: string[] = [
-      REVIEW_STATE.VERIFICATION_REQUIRED,
-      REVIEW_STATE.BANK_VERIFICATION_REQUIRED,
-      REVIEW_STATE.CAPTCHA_OR_HUMAN_CHECK_REQUIRED,
-      REVIEW_STATE.SESSION_EXPIRED,
-      REVIEW_STATE.BLOCKED_BY_BAZOS,
-    ];
+    const allowedChallenges: string[] = Object.values(REVIEW_STATE).filter((state) => state !== REVIEW_STATE.CLEAR);
 
     if (!allowedChallenges.includes(dto.challengeState)) {
       throw new BadRequestException(`Invalid challenge state: ${dto.challengeState}`);

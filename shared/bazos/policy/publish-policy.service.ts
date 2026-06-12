@@ -4,6 +4,7 @@ import { LoggerService } from '../../logger/logger.service';
 import {
   IDENTITY_STATUS,
   REVIEW_STATE,
+  SESSION_STATE,
   MAX_ACTIVE_ADS,
   PACING_MIN_SECONDS,
   PACING_MAX_SECONDS,
@@ -18,13 +19,28 @@ import {
 export interface PolicyCheckInput {
   identityId: string;
   bazosCategory: string;
-  productId: string;
+  productId?: string;
   /** Ad title used for local duplicate detection */
   adTitle?: string;
+  /** Evidence from the public Bazos duplicate search. Missing evidence blocks publishing. */
+  publicDuplicateCheck?: {
+    checkedAt: Date;
+    likelyDuplicate: boolean;
+    reason?: string;
+  };
+  /** Evidence from content policy validation. Missing evidence blocks publishing. */
+  contentPolicy?: {
+    checkedAt: Date;
+    passed: boolean;
+    reason?: string;
+  };
 }
 
 @Injectable()
 export class PublishPolicyService {
+  private readonly publicDuplicateEvidenceTtlMs = 60 * 60 * 1000;
+  private readonly contentPolicyEvidenceTtlMs = 60 * 60 * 1000;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly logger: LoggerService,
@@ -38,11 +54,14 @@ export class PublishPolicyService {
    *  1. identity.status == verified
    *  2. identity.reviewState == clear
    *  3. identity.verificationExpiresAt > now (when known)
-   *  4. identity.activeAdCount < 50
-   *  5. now >= identity.nextPublishNotBefore
-   *  6. now - category.lastPublishedAt >= 24h
-   *  7. No local active duplicate for product/identity
-   *  8. Category mapping exists and is not blocked
+   *  4. identity.sessionState == active
+   *  5. identity.activeAdCount < 50
+   *  6. now >= identity.nextPublishNotBefore
+   *  7. now - category.lastPublishedAt >= 24h
+   *  8. No local active duplicate for product/identity
+   *  9. No likely public Bazos duplicate
+   * 10. Category mapping exists and is not blocked
+   * 11. Content policy validation passes
    */
   async evaluate(input: PolicyCheckInput): Promise<PolicyEvaluationResult> {
     const now = new Date();
@@ -90,7 +109,15 @@ export class PublishPolicyService {
       });
     }
 
-    // Gate 4 — active ad cap
+    // Gate 4 — session must be active, so verified identity state cannot mask an expired/missing session.
+    if (identity.sessionState !== SESSION_STATE.ACTIVE) {
+      failures.push({
+        gate: POLICY_GATE.IDENTITY_SESSION_NOT_ACTIVE,
+        message: `Identity sessionState is "${identity.sessionState}", must be "active"`,
+      });
+    }
+
+    // Gate 5 — active ad cap
     if (identity.activeAdCount >= MAX_ACTIVE_ADS) {
       failures.push({
         gate: POLICY_GATE.ACTIVE_AD_CAP_REACHED,
@@ -98,7 +125,7 @@ export class PublishPolicyService {
       });
     }
 
-    // Gate 5 — pacing (nextPublishNotBefore stored before worker sleeps)
+    // Gate 6 — pacing (nextPublishNotBefore stored before worker sleeps)
     if (identity.nextPublishNotBefore && identity.nextPublishNotBefore > now) {
       failures.push({
         gate: POLICY_GATE.PACING_TOO_SOON,
@@ -107,7 +134,7 @@ export class PublishPolicyService {
       });
     }
 
-    // Gate 6 — 24h per-category cooldown
+    // Gate 7 — 24h per-category cooldown
     const cadence = identity.categoryCadences[0];
     if (cadence) {
       const cooldownMs = CATEGORY_COOLDOWN_HOURS * 60 * 60 * 1000;
@@ -121,7 +148,7 @@ export class PublishPolicyService {
       }
     }
 
-    // Gate 7 — local duplicate check
+    // Gate 8 — local duplicate check
     if (input.productId) {
       const duplicate = await this.prisma.bazosAd.findFirst({
         where: {
@@ -138,7 +165,25 @@ export class PublishPolicyService {
       }
     }
 
-    // Gate 8 — category mapping must exist and be active
+    // Gate 9 — public duplicate evidence must exist and be clean.
+    if (!input.publicDuplicateCheck) {
+      failures.push({
+        gate: POLICY_GATE.PUBLIC_DUPLICATE_CHECK_MISSING,
+        message: 'Public Bazos duplicate search evidence is required before publishing',
+      });
+    } else if (this.isEvidenceExpired(input.publicDuplicateCheck.checkedAt, now, this.publicDuplicateEvidenceTtlMs)) {
+      failures.push({
+        gate: POLICY_GATE.PUBLIC_DUPLICATE_CHECK_MISSING,
+        message: `Public Bazos duplicate search evidence expired at ${input.publicDuplicateCheck.checkedAt.toISOString()}`,
+      });
+    } else if (input.publicDuplicateCheck.likelyDuplicate) {
+      failures.push({
+        gate: POLICY_GATE.PUBLIC_DUPLICATE,
+        message: input.publicDuplicateCheck.reason || 'Public Bazos search found a likely duplicate',
+      });
+    }
+
+    // Gate 10 — category mapping must exist and be active
     const categoryMapping = await this.prisma.bazosCategory.findFirst({
       where: { bazosCategory: input.bazosCategory, isActive: true },
     });
@@ -146,6 +191,24 @@ export class PublishPolicyService {
       failures.push({
         gate: POLICY_GATE.CATEGORY_MISSING_OR_BLOCKED,
         message: `Bazos category "${input.bazosCategory}" has no active mapping; human review required`,
+      });
+    }
+
+    // Gate 11 — content policy evidence must exist and pass.
+    if (!input.contentPolicy) {
+      failures.push({
+        gate: POLICY_GATE.CONTENT_POLICY_NOT_VALIDATED,
+        message: 'Content policy validation evidence is required before publishing',
+      });
+    } else if (this.isEvidenceExpired(input.contentPolicy.checkedAt, now, this.contentPolicyEvidenceTtlMs)) {
+      failures.push({
+        gate: POLICY_GATE.CONTENT_POLICY_NOT_VALIDATED,
+        message: `Content policy validation evidence expired at ${input.contentPolicy.checkedAt.toISOString()}`,
+      });
+    } else if (!input.contentPolicy.passed) {
+      failures.push({
+        gate: POLICY_GATE.CONTENT_POLICY_FAIL,
+        message: input.contentPolicy.reason || 'Content policy validation failed',
       });
     }
 
@@ -180,5 +243,9 @@ export class PublishPolicyService {
       result.selectedPacingDelaySeconds = this.selectPacingDelaySeconds();
     }
     return result;
+  }
+
+  private isEvidenceExpired(checkedAt: Date, now: Date, ttlMs: number): boolean {
+    return checkedAt.getTime() > now.getTime() || now.getTime() - checkedAt.getTime() > ttlMs;
   }
 }
