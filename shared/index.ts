@@ -18,4 +18,14 @@ export * from './clients/warehouse-client.service';
 export * from './clients/order-client.service';
 export * from './rabbitmq/rabbitmq.module';
 export * from './rabbitmq/stock-events.subscriber';
+export * from './bazos/bazos.module';
+export * from './bazos/identity/bazos-identity.service';
+export * from './bazos/identity/bazos-identity.types';
+export * from './bazos/identity/bazos-identity.dto';
+export * from './bazos/identity/bazos-identity.controller';
+export * from './bazos/policy/publish-policy.service';
+export * from './bazos/policy/publish-policy.types';
+export * from './bazos/ad/bazos-ad.service';
+export * from './bazos/ad/bazos-ad.dto';
+export * from './bazos/ad/bazos-ad.controller';
 

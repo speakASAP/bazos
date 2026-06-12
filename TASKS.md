@@ -13,3 +13,4 @@
 ## Completed
 <!-- Coordinator-append-only -->
 - 2026-04-05 documentation-standard-applied
+- 2026-06-12 compliance-model: BazosIdentity service/controller, PublishPolicyService (8 gates), BazosAdService draft/challenge, unit tests
