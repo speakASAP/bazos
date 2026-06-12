@@ -2,57 +2,48 @@
 
 ## Purpose
 
-Map Bazos compliance guardrails to explicit implementation checks and fail-closed behavior.
+Superseded. Do not use this file for new Bazos work.
 
 ## Intent Trace
 
-Bazos has no public API, requires verified phone/device/account state, limits active non-promoted ads, deletes duplicates, and forbids attempts to bypass verification or rate controls. The service must enforce this intent in code and validation.
+Compliance safety gates are now embedded in `docs/process/OPERATIONAL_GATES.md`, `docs/governance/PROJECT_INVARIANTS.md`, and the active Bazos goal sequence.
+
+## Goal Impact
+
+Keeping this file as a superseded marker prevents older sessions from selecting the obsolete goal sequence.
 
 ## Scope
 
-- Read Goal 01 baseline.
-- Identify ad publishing, renewal, scraping, import, account, and category-rate surfaces.
-- Add or document gates for verification state, duplicate detection, active-ad caps, rate limits, randomized pacing, and per-phone-identity isolation.
-- Add focused tests or validation evidence where feasible.
+No active scope.
 
 ## Out Of Scope
 
-- Live Bazos account operations.
-- New bypass mechanisms.
-- Production deployment.
+All coding and deployment.
 
 ## Acceptance Criteria
 
-- Each compliance guardrail maps to implementation or a documented blocker.
-- Fail-closed behavior is explicit.
-- Tests or validation evidence cover the highest-risk paths.
-- No secrets or real account data are introduced.
+Use active goals 01-05 in `implementation-goals/README.md`.
 
 ## Required Reading
 
 ```text
-AGENTS.md
-README.md
-docs/BAZOS_COMPLIANCE.md
-docs/IMPLEMENTATION_STATE.md
-docs/governance/PROJECT_INVARIANTS.md
+implementation-goals/README.md
 docs/process/OPERATIONAL_GATES.md
-implementation-goals/GOAL-01-baseline-inventory.md
 ```
+
+## Pre-Coding Gate
+
+Blocked. This superseded goal cannot authorize coding.
 
 ## Execution Steps
 
-1. Read Goal 01 baseline report.
-2. Create or update `GOAL-02-compliance-safety-gates.execution-plan.md`.
-3. Identify compliance-sensitive write ownership.
-4. Implement or document checks in bounded files.
-5. Run focused validation.
-6. Update implementation state and validation report.
+1. Stop.
+2. Use the active Bazos goal roadmap.
 
 ## Validation
 
-Run focused non-destructive tests or static checks selected from Goal 01. Do not run live publishing, renewal, or scraping actions.
+Not applicable.
 
 ## Completion Report
 
-Use the required Intent Compliance Report shape from `implementation-goals/README.md`.
+Not applicable.

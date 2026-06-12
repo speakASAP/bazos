@@ -2,62 +2,47 @@
 
 ## Purpose
 
-Establish the current bazos-service state before implementation work begins.
+Superseded. Do not use this file for new Bazos work.
 
 ## Intent Trace
 
-The project needs one orchestrator master agent that checks all jobs, sets goals, splits plans, coordinates tasks, and resumes from state. This goal creates the baseline needed for safe continuation.
+This older bootstrap goal is replaced by `implementation-goals/GOAL-01-bazos-identity-session-compliance.md`, which follows the active Bazos roadmap from `PLAN.md`.
+
+## Goal Impact
+
+Keeping this file as a superseded marker prevents older sessions from selecting the obsolete bootstrap sequence.
 
 ## Scope
 
-- Inspect repository status, branches, and uncommitted changes.
-- Inventory services, scripts, package files, Prisma schema, Kubernetes manifests, and docs.
-- Identify current validation commands.
-- Record current compliance-sensitive surfaces.
-- Update `docs/IMPLEMENTATION_STATE.md`.
-- Create `reports/validation/goal-01-baseline-inventory.md`.
+No active scope.
 
 ## Out Of Scope
 
-- Service implementation changes.
-- Production deployment.
-- Live Bazos account operations.
+All coding and deployment.
 
 ## Acceptance Criteria
 
-- Branch and dirty status are recorded.
-- Service/file ownership map is recorded.
-- Current validation commands are recorded with pass/fail status.
-- Compliance-sensitive surfaces are listed.
-- Next goal readiness is clear.
+Use the active goal file instead.
 
 ## Required Reading
 
 ```text
-AGENTS.md
-README.md
-docs/BAZOS_COMPLIANCE.md
-docs/IMPLEMENTATION_ORCHESTRATOR.md
-docs/IMPLEMENTATION_STATE.md
-docs/governance/PROJECT_INVARIANTS.md
-docs/process/OPERATIONAL_GATES.md
-implementation-goals/README.md
+implementation-goals/GOAL-01-bazos-identity-session-compliance.md
 ```
+
+## Pre-Coding Gate
+
+Blocked. This superseded goal cannot authorize coding.
 
 ## Execution Steps
 
-1. Run `git status --short --branch`.
-2. Run `rg --files`.
-3. Inspect package files, scripts, Prisma schema, service directories, and Kubernetes manifests.
-4. Identify available validation commands.
-5. Run only non-destructive validation commands.
-6. Write a concise validation report.
-7. Update implementation state.
+1. Stop.
+2. Use `implementation-goals/GOAL-01-bazos-identity-session-compliance.md`.
 
 ## Validation
 
-Use the narrowest non-destructive checks available after inventory. Do not run production account actions.
+Not applicable.
 
 ## Completion Report
 
-Use the required Intent Compliance Report shape from `implementation-goals/README.md`.
+Not applicable.
