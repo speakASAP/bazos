@@ -69,7 +69,7 @@ Operators can inspect Bazos compliance state, policy gate failures, challenge st
 
 ## Commit Or No-Commit Reason
 
-Commit pending after state update and staging of Goal 05 files only.
+Committed implementation changes as 103e2bd; follow-up documentation records the SHA.
 
 ## Next Action
 
