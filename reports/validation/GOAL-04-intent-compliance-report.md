@@ -66,7 +66,7 @@ Catalog-side consumers can prepare a Bazos sale, inspect policy context, explici
 
 ## Commit Or No-Commit Reason
 
-Commit pending after state update and staging of Goal 04 files only.
+Committed implementation changes as d09eba4; follow-up documentation records the SHA.
 
 ## Next Action
 
