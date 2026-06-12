@@ -8,7 +8,7 @@ Query the RAG before reading source files when working on implementation.
 
 Command template:
 
-kubectl -n statex-apps exec deployment/bazos-service -- curl -s -X POST http://docs-rag-microservice:3397/retrieval/agent-context -H Content-Type:application/json -H Authorization:Bearer_TOKEN -d QUERY_JSON
+kubectl -n statex-apps exec deployment/bazos-service -- curl -s -X POST http://docs-rag-microservice:3397/retrieval/agent-context -H Content-Type:application/json -H "Authorization: Bearer $JWT_TOKEN" -d QUERY_JSON
 
 ## bazos-service
 
