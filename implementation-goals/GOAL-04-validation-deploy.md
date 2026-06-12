@@ -2,59 +2,48 @@
 
 ## Purpose
 
-Run final validation for completed Bazos work and deploy only when deployment is clearly approved by the selected goal and owner intent.
+Superseded. Do not use this file as an active Bazos implementation goal.
 
 ## Intent Trace
 
-Deployment must be controlled by the orchestrator, backed by validation evidence, and recorded in state so future sessions can resume correctly.
+Deployment readiness is now a gate in `docs/process/OPERATIONAL_GATES.md`, not a standalone implementation goal.
+
+## Goal Impact
+
+Keeping this file as a superseded marker prevents deployment from being inferred from an obsolete goal file.
 
 ## Scope
 
-- Review completed goal reports.
-- Run non-destructive validation commands.
-- Confirm compliance gate evidence.
-- Deploy only with explicit owner approval.
-- Record deployment output summary and smoke evidence.
-- Update `docs/IMPLEMENTATION_STATE.md`.
+No active scope.
 
 ## Out Of Scope
 
-- New product changes.
-- Architecture replacement.
-- Live Bazos account actions unless explicitly approved.
+All coding and deployment.
 
 ## Acceptance Criteria
 
-- All prior goals have completion reports.
-- Validation passes or failures are documented.
-- Deployment is performed only with clear approval.
-- Post-deploy smoke evidence is recorded when deployment occurs.
-- Next action is explicit.
+Use the deployment-readiness gate and explicit owner approval when deployment is required.
 
 ## Required Reading
 
 ```text
-AGENTS.md
-README.md
-docs/BAZOS_COMPLIANCE.md
-docs/IMPLEMENTATION_STATE.md
 docs/process/OPERATIONAL_GATES.md
-reports/validation/
+docs/IMPLEMENTATION_STATE.md
 ```
+
+## Pre-Coding Gate
+
+Blocked. This superseded goal cannot authorize coding or deployment.
 
 ## Execution Steps
 
-1. Confirm Goal 01-03 status.
-2. Run final validation commands.
-3. Confirm deployment approval is in scope.
-4. If approved, run the documented deployment command.
-5. Run post-deploy smoke checks.
-6. Record evidence and state.
+1. Stop.
+2. Use the active Bazos goal roadmap and deployment-readiness gate.
 
 ## Validation
 
-Use deployment commands documented by Goal 01. Do not infer production approval.
+Not applicable.
 
 ## Completion Report
 
-Use the required Intent Compliance Report shape from `implementation-goals/README.md`.
+Not applicable.

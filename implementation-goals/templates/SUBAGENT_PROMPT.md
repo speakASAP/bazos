@@ -4,7 +4,13 @@
 
 ## Goal
 
+## Goal Impact
+
 ## Required Reading
+
+## Execution Plan Link
+
+## Pre-Coding Gate Evidence
 
 ## Assigned Write Set
 
@@ -12,7 +18,7 @@
 
 ## Out Of Scope
 
-## Compliance Requirements
+## Bazos Compliance Checks
 
 ## Validation
 
@@ -23,15 +29,19 @@
 
 ### Goal
 
+### Goal Impact
+
 ### Assigned Write Set
 
 ### Implemented
 
 ### Not Implemented
 
-### Compliance Check
+### Bazos Compliance Check
 
 ### Validation
+
+### Readiness Gate Evidence
 
 ### Risks
 
