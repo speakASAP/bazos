@@ -1,4 +1,5 @@
-import { IsString, IsOptional, IsNotEmpty, Length, Matches } from 'class-validator';
+import { IsBoolean, IsNotEmpty, IsObject, IsOptional, IsString, Length } from 'class-validator';
+import { EncryptedBazosSessionEnvelope } from './bazos-identity.types';
 
 export class CreateBazosIdentityDto {
   @IsString()
@@ -77,11 +78,40 @@ export class MarkChallengeDto {
   notes?: string;
 }
 
-export class MarkVerifiedDto {
+export class StartVerificationSessionDto {
   @IsOptional()
-  verificationExpiresAt?: Date;
+  @IsString()
+  verificationUrl?: string;
+
+  @IsOptional()
+  expiresAt?: Date | string;
 
   @IsOptional()
   @IsString()
   notes?: string;
 }
+
+export class CompleteVerificationSessionDto {
+  @IsBoolean()
+  humanConfirmed: boolean;
+
+  @IsObject()
+  encryptedSession: EncryptedBazosSessionEnvelope;
+
+  @IsOptional()
+  verificationExpiresAt?: Date | string;
+
+  @IsOptional()
+  @IsString()
+  notes?: string;
+}
+
+export class VerificationSessionChallengeDto extends MarkChallengeDto {}
+
+export class ExpireVerificationSessionDto {
+  @IsOptional()
+  @IsString()
+  notes?: string;
+}
+
+export class MarkVerifiedDto extends CompleteVerificationSessionDto {}

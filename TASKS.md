@@ -15,3 +15,4 @@
 - 2026-04-05 documentation-standard-applied
 - 2026-06-12 compliance-model: BazosIdentity service/controller, PublishPolicyService (8 gates), BazosAdService draft/challenge, unit tests
 - 2026-06-12 goal-01-identity-session-compliance: completed IPS review and strengthened policy to fail closed on inactive sessions, missing/stale public duplicate evidence, missing/stale content-policy evidence, and all documented challenge states
+- 2026-06-12 goal-02-human-verification-flow: added human verification session lifecycle, encrypted session envelope requirement, challenge/expiry stop states, and validation reports
