@@ -9,11 +9,30 @@ import { BazosAdService } from './ad/bazos-ad.service';
 import { BazosAdController } from './ad/bazos-ad.controller';
 import { BazosPublisherQueueService } from './publisher/bazos-publisher-queue.service';
 import { BazosPublisherQueueController } from './publisher/bazos-publisher-queue.controller';
+import { BazosCatalogSellActionService } from './catalog/bazos-catalog-sell-action.service';
+import { BazosCatalogSellActionController } from './catalog/bazos-catalog-sell-action.controller';
 
 @Module({
   imports: [PrismaModule, LoggerModule, AuthModule],
-  providers: [BazosIdentityService, PublishPolicyService, BazosAdService, BazosPublisherQueueService],
-  controllers: [BazosIdentityController, BazosAdController, BazosPublisherQueueController],
-  exports: [BazosIdentityService, PublishPolicyService, BazosAdService, BazosPublisherQueueService],
+  providers: [
+    BazosIdentityService,
+    PublishPolicyService,
+    BazosAdService,
+    BazosPublisherQueueService,
+    BazosCatalogSellActionService,
+  ],
+  controllers: [
+    BazosIdentityController,
+    BazosAdController,
+    BazosPublisherQueueController,
+    BazosCatalogSellActionController,
+  ],
+  exports: [
+    BazosIdentityService,
+    PublishPolicyService,
+    BazosAdService,
+    BazosPublisherQueueService,
+    BazosCatalogSellActionService,
+  ],
 })
 export class BazosModule {}
