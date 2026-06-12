@@ -7,11 +7,13 @@ import { BazosIdentityController } from './identity/bazos-identity.controller';
 import { PublishPolicyService } from './policy/publish-policy.service';
 import { BazosAdService } from './ad/bazos-ad.service';
 import { BazosAdController } from './ad/bazos-ad.controller';
+import { BazosPublisherQueueService } from './publisher/bazos-publisher-queue.service';
+import { BazosPublisherQueueController } from './publisher/bazos-publisher-queue.controller';
 
 @Module({
   imports: [PrismaModule, LoggerModule, AuthModule],
-  providers: [BazosIdentityService, PublishPolicyService, BazosAdService],
-  controllers: [BazosIdentityController, BazosAdController],
-  exports: [BazosIdentityService, PublishPolicyService, BazosAdService],
+  providers: [BazosIdentityService, PublishPolicyService, BazosAdService, BazosPublisherQueueService],
+  controllers: [BazosIdentityController, BazosAdController, BazosPublisherQueueController],
+  exports: [BazosIdentityService, PublishPolicyService, BazosAdService, BazosPublisherQueueService],
 })
 export class BazosModule {}

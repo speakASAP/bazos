@@ -20,6 +20,7 @@ export interface PolicyCheckInput {
   identityId: string;
   bazosCategory: string;
   productId?: string;
+  adId?: string;
   /** Ad title used for local duplicate detection */
   adTitle?: string;
   /** Evidence from the public Bazos duplicate search. Missing evidence blocks publishing. */
@@ -155,6 +156,7 @@ export class PublishPolicyService {
           identityId: input.identityId,
           productId: input.productId,
           isActive: true,
+          ...(input.adId ? { id: { not: input.adId } } : {}),
         },
       });
       if (duplicate) {

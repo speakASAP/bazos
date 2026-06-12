@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { PrismaService } from '../../database/prisma.service';
 import { LoggerService } from '../../logger/logger.service';
 import { PublishPolicyService } from '../policy/publish-policy.service';
-import { CreateBazosAdDraftDto, UpdateBazosAdDraftDto } from './bazos-ad.dto';
+import { CreateBazosAdDraftDto, CreateBazosAdDraftFromCatalogDto, UpdateBazosAdDraftDto } from './bazos-ad.dto';
 import { REVIEW_STATE } from '../identity/bazos-identity.types';
 
 @Injectable()
@@ -45,6 +45,19 @@ export class BazosAdService {
 
     this.logger.log('Bazos ad draft created', { adId: ad.id, identityId: dto.identityId, userId });
     return ad;
+  }
+
+  async createDraftFromCatalog(userId: string, dto: CreateBazosAdDraftFromCatalogDto) {
+    return this.createDraft(userId, {
+      identityId: dto.identityId,
+      productId: dto.productId,
+      title: dto.title,
+      description: dto.description,
+      price: dto.price,
+      category: dto.category,
+      location: dto.location,
+      stockQuantity: dto.stockQuantity ?? 0,
+    });
   }
 
   /**
