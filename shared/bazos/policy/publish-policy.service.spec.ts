@@ -207,6 +207,20 @@ describe('PublishPolicyService', () => {
       expect(result.allowed).toBe(false);
       expect(result.failures.some((f) => f.gate === POLICY_GATE.LOCAL_DUPLICATE)).toBe(true);
     });
+
+    it('excludes the current draft from local duplicate detection', async () => {
+      const prisma = makePrismaStub({ identity: baseIdentity(), duplicateAd: null });
+      const svc = new PublishPolicyService(prisma, makeLogger());
+      const result = await svc.evaluate({ ...input, adId: 'current-ad' });
+      expect(result.allowed).toBe(true);
+      expect(prisma.bazosAd.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            id: { not: 'current-ad' },
+          }),
+        }),
+      );
+    });
   });
 
   describe('Gate 9 — public duplicate evidence', () => {
