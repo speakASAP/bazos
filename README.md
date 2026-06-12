@@ -1,6 +1,6 @@
 # bazos-service
 
-Bazos.cz classifieds automation. → [BUSINESS.md](BUSINESS.md) for goals/SLA, [SYSTEM.md](SYSTEM.md) for stack/ports/deploy.
+Bazos.cz classifieds automation. See BUSINESS.md for goals/SLA and SYSTEM.md for stack/ports/deploy.
 
 ## Sub-services
 
@@ -15,24 +15,30 @@ Bazos.cz classifieds automation. → [BUSINESS.md](BUSINESS.md) for goals/SLA, [
 
 ## Database
 
-`bazos_db` · Prisma schema: `prisma/schema.prisma`
+Database: bazos_db. Prisma schema: prisma/schema.prisma.
 
-Tables: `bazos_accounts`, `bazos_ads`, `bazos_orders`
+Tables: bazos_accounts, bazos_ads, bazos_orders.
 
 ## Secrets
 
-All secrets in Vault at `secret/prod/bazos-service` → K8s via ESO (`bazos-service-secret`). → [shared/docs/VAULT.md](../shared/docs/VAULT.md)
+All secrets are in Vault at secret/prod/bazos-service and are synced to Kubernetes through bazos-service-secret. See ../shared/docs/VAULT.md.
 
 ## API
 
-Base: `https://bazos.alfares.cz/api` (dev: `http://localhost:3901/api`)
+Base: https://bazos.alfares.cz/api (dev: http://localhost:3901/api)
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| GET | `/api/accounts` | List accounts |
-| POST | `/api/accounts` | Add account |
-| GET | `/api/ads` | List ads |
-| POST | `/api/ads` | Create ad |
-| POST | `/api/ads/sync` | Sync from catalog |
-| POST | `/api/ads/:id/renew` | Renew ad |
-| GET | `/api/categories` | Category mappings |
+| GET | /api/accounts | List accounts |
+| POST | /api/accounts | Add account |
+| GET | /api/ads | List ads |
+| POST | /api/ads | Create ad |
+| POST | /api/ads/sync | Sync from catalog |
+| POST | /api/ads/:id/renew | Renew ad |
+| GET | /api/categories | Category mappings |
+
+## Bazos Compliance Guardrails
+
+Publishing must follow docs/BAZOS_COMPLIANCE.md. The short version: Bazos has no public API, requires verified phone/device/account state, limits active non-promoted ads, deletes duplicates, and forbids attempts to bypass verification or rate controls.
+
+The service design supports several verified phone identities per ecosystem user, but each identity is governed independently by active-ad caps, category rate limits, duplicate checks, and randomized pacing. Multiple phone identities are for legitimate seller operations only, not for evading Bazos rules.
