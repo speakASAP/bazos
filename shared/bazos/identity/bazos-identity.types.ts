@@ -32,6 +32,24 @@ export const SESSION_STATE = {
 } as const;
 export type SessionState = typeof SESSION_STATE[keyof typeof SESSION_STATE];
 
+export const VERIFICATION_SESSION_STATE = {
+  AWAITING_HUMAN: 'awaiting_human',
+  COMPLETED: 'completed',
+  CHALLENGE_DETECTED: 'challenge_detected',
+  EXPIRED: 'expired',
+  CANCELLED: 'cancelled',
+} as const;
+export type VerificationSessionState = typeof VERIFICATION_SESSION_STATE[keyof typeof VERIFICATION_SESSION_STATE];
+
+export interface EncryptedBazosSessionEnvelope {
+  ciphertext: string;
+  iv: string;
+  authTag: string;
+  algorithm: string;
+  keyRef: string;
+  capturedAt: string;
+}
+
 export const MAX_ACTIVE_ADS = 50;
 export const PACING_MIN_SECONDS = 60;
 export const PACING_MAX_SECONDS = 180;
