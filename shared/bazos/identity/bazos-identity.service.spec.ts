@@ -48,6 +48,14 @@ describe('BazosIdentityService', () => {
       expect(createCall.data.reviewState).toBe(REVIEW_STATE.CLEAR);
       expect(createCall.data.sessionState).toBe(SESSION_STATE.MISSING);
     });
+
+    it('does not log the raw phone number', async () => {
+      const prisma = makePrisma({ existing: null });
+      const logger = makeLogger();
+      const svc = new BazosIdentityService(prisma, logger);
+      await svc.create('user-1', createDto);
+      expect(logger.log).toHaveBeenCalledWith('Bazos identity created', { identityId: 'id-1', userId: 'user-1' });
+    });
   });
 
   describe('markVerified', () => {
@@ -69,6 +77,9 @@ describe('BazosIdentityService', () => {
       REVIEW_STATE.CAPTCHA_OR_HUMAN_CHECK_REQUIRED,
       REVIEW_STATE.SESSION_EXPIRED,
       REVIEW_STATE.BLOCKED_BY_BAZOS,
+      REVIEW_STATE.DUPLICATE_REJECTED,
+      REVIEW_STATE.CONTENT_POLICY_REJECTED,
+      REVIEW_STATE.CATEGORY_REVIEW_REQUIRED,
     ])('accepts valid challenge state: %s', async (challengeState) => {
       const prisma = makePrisma();
       const svc = new BazosIdentityService(prisma, makeLogger());
