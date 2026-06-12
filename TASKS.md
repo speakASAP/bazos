@@ -17,3 +17,4 @@
 - 2026-06-12 goal-01-identity-session-compliance: completed IPS review and strengthened policy to fail closed on inactive sessions, missing/stale public duplicate evidence, missing/stale content-policy evidence, and all documented challenge states
 - 2026-06-12 goal-02-human-verification-flow: added human verification session lifecycle, encrypted session envelope requirement, challenge/expiry stop states, and validation reports
 - 2026-06-12 goal-03-publisher-queue: added guarded publish queue, idempotent enqueue, persisted 60-180s pacing reservation, claim-time policy re-check, per-identity serialization, challenge stop handling, success metadata storage, and validation reports
+- 2026-06-12 goal-04-catalog-sell-button: added guarded catalog sell action API for draft prepare, explicit publish confirmation, and status polling through bazos-service policy/queue guardrails
