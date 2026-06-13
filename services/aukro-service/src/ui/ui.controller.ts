@@ -1,5 +1,5 @@
-import { Body, Controller, Get, Post, Request, Res, UseGuards } from '@nestjs/common';
-import { AuthService, JwtAuthGuard, LoginDto } from '@bazos/shared';
+import { Body, Controller, Get, Post, Request, Res, UnauthorizedException } from '@nestjs/common';
+import { AuthService, LoginDto } from '@bazos/shared';
 import { appScript, appStyles, renderAppPage, renderLandingPage } from './ui.assets';
 
 @Controller()
@@ -36,9 +36,18 @@ export class UiController {
     return this.authService.login(dto);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Get('ui/auth/me')
-  me(@Request() req: any) {
-    return { user: req.user };
+  async me(@Request() req: any) {
+    const [type, token] = req.headers.authorization?.split(' ') ?? [];
+    if (type !== 'Bearer' || !token) {
+      throw new UnauthorizedException('No token provided');
+    }
+
+    const validation = await this.authService.validateToken(token);
+    if (!validation.valid || !validation.user) {
+      throw new UnauthorizedException('Invalid token');
+    }
+
+    return { user: validation.user };
   }
 }
