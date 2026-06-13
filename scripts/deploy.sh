@@ -75,19 +75,27 @@ deploy_timing_phase_end "Push image"
 
 deploy_timing_phase_start "Apply Kubernetes manifests"
 echo -e "${YELLOW}Applying Kubernetes manifests...${NC}"
-for manifest in configmap.yaml external-secret.yaml deployment.yaml service.yaml ingress.yaml; do
+RENDERED_DEPLOYMENT="$(mktemp)"
+trap 'rm -f "$RENDERED_DEPLOYMENT"' EXIT
+
+for manifest in configmap.yaml external-secret.yaml service.yaml ingress.yaml; do
   if [ -f "$K8S_DIR/$manifest" ]; then
     kubectl apply -f "$K8S_DIR/$manifest" -n "$NAMESPACE"
   fi
 done
-echo -e "${GREEN}OK Kubernetes manifests applied${NC}"
+
+if [ -f "$K8S_DIR/deployment.yaml" ]; then
+  sed -E "s#image: ${REGISTRY}/${SERVICE_NAME}:[^[:space:]]+#image: ${IMAGE}#" "$K8S_DIR/deployment.yaml" > "$RENDERED_DEPLOYMENT"
+  kubectl apply -f "$RENDERED_DEPLOYMENT" -n "$NAMESPACE"
+fi
+echo -e "${GREEN}OK Kubernetes manifests applied with image ${IMAGE}${NC}"
 deploy_timing_phase_end "Apply Kubernetes manifests"
 
 deploy_timing_phase_start "Rollout restart"
-echo -e "${YELLOW}Triggering rollout restart...${NC}"
-kubectl set image "deployment/${SERVICE_NAME}" app="$IMAGE_LATEST" -n "$NAMESPACE"
-kubectl rollout restart deployment/"$SERVICE_NAME" -n "$NAMESPACE"
-echo -e "${GREEN}OK Rollout restart triggered${NC}"
+echo -e "${YELLOW}Triggering rollout with immutable image ${IMAGE}...${NC}"
+kubectl set image "deployment/${SERVICE_NAME}" app="$IMAGE" -n "$NAMESPACE"
+kubectl annotate deployment/"$SERVICE_NAME" "deploy.bazos-service/image-tag=${IMAGE_TAG}" "deploy.bazos-service/restarted-at=$(date -u +%Y-%m-%dT%H:%M:%SZ)" -n "$NAMESPACE" --overwrite
+echo -e "${GREEN}OK Rollout triggered for ${IMAGE}${NC}"
 deploy_timing_phase_end "Rollout restart"
 
 deploy_timing_phase_start "Wait for rollout"
