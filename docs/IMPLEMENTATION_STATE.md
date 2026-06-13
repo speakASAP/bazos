@@ -54,6 +54,7 @@ Do not rely on chat history as the source of truth.
 Newest first:
 
 ```text
+2026-06-13: Goal 06 UI separation refinement deployed to production. Pushed branch `codex/bazos-goal-05-monitoring-reconciliation` through commit `ecac66c`; deploy script built and pushed image `localhost:5000/bazos-service:ecac66c` with digest `sha256:a75792885b49ad4dbe2ee04148a9f62fc6be9efe8137889510fc4f71e13bed93`. The script rollout against mutable `latest` timed out, then deployment was corrected by pinning Kubernetes to `localhost:5000/bazos-service:ecac66c`; pinned rollout completed. Final pod `bazos-service-6998f98c5c-v798d` 1/1 Running with 0 restarts. Production smoke passed for `/` pricing copy, `/admin`, `/client`, `/ui/app.css`, `/ui/auth/me` HTTP 401 without token, and `/health`. Report: reports/validation/GOAL-06-deployment-report.md. Follow-up: implement immutable-image deployment in `scripts/deploy.sh`.
 2026-06-13: Goal 06 UI separation refinement completed in source on branch codex/bazos-goal-05-monitoring-reconciliation. Landing page now presents 49 Kc/month customer pricing; `/admin` and `/client` render separate dashboard shells without cross-dashboard admin/client navigation; client auth supports sign-in or registration via existing AuthService; added `POST /ui/auth/register`. Validation: `npm --prefix services/aukro-service run build` pass; `npm test` pass (5 suites, 79 tests); `git diff --check` pass; compiled asset smoke checks pass for pricing, separated navigation, client register tab, and register endpoint script path. Production deployment not performed. Reports: implementation-goals/GOAL-06-landing-admin-client-ui.md, reports/validation/GOAL-06-pre-coding-readiness.md, reports/validation/GOAL-06-validation-report.md, reports/validation/GOAL-06-intent-compliance-report.md. Commit SHA: recorded in final session response.
 2026-06-13: Goal 06 production deployment completed on branch codex/bazos-goal-05-monitoring-reconciliation. Owner explicitly approved deployment. Initial deploy script completed but production smoke showed cached `latest` image content, so deployment was pinned to immutable image tags. Added follow-up commit `545b990` to make `/ui/auth/me` return clean HTTP 401 through AuthService token validation. Final deployment image: `localhost:5000/bazos-service:545b990`; final pod `bazos-service-5ffbc94797-hqbxn` 1/1 Running with 0 restarts. Production smoke passed: `/` HTTP 200 landing content, `/admin` HTTP 200 admin shell, `/client` HTTP 200 client shell, `/ui/app.css` HTTP 200, `/ui/auth/me` without token HTTP 401, `/health` HTTP 200. Report: reports/validation/GOAL-06-deployment-report.md. Follow-ups: avoid cached `latest` deploys with immutable tags or imagePullPolicy changes; add admin RBAC when Auth role claims are defined.
 2026-06-13: Goal 06 landing/admin/client UI implemented on branch codex/bazos-goal-05-monitoring-reconciliation. Added public landing page, authenticated admin and client app shells, Auth microservice login bridge, guarded JWT `/ui/auth/me`, static CSS/JS UI assets, and AppModule wiring. Validation: npm --prefix services/aukro-service run build pass; npm test pass (5 suites, 79 tests); git diff --check pass; compiled asset checks pass; static Playwright visual QA pass for landing desktop/mobile and admin/client desktop with no horizontal overflow. Temporary service startup mapped the new routes, but live local route smoke could not complete outside Kubernetes because Prisma could not reach cluster DNS `db-server-postgres:5432`. Production deployment not performed. Reports: implementation-goals/GOAL-06-landing-admin-client-ui.md, reports/validation/GOAL-06-pre-coding-readiness.md, reports/validation/GOAL-06-validation-report.md, reports/validation/GOAL-06-intent-compliance-report.md. Commit SHA: recorded in final session response.
@@ -69,16 +70,16 @@ Newest first:
 ## Last Session Report
 
 ```text
-Goal: GOAL-06 UI separation refinement
-Goal Impact: Separated landing, admin, and client surfaces; added 49 Kc/month customer pricing and client registration without changing Bazos publishing controls.
+Goal: GOAL-06 UI separation refinement deployment
+Goal Impact: Deployed separated landing/admin/client UI and client registration without changing Bazos publishing controls.
 Branch: codex/bazos-goal-05-monitoring-reconciliation
-Changed files: implementation-goals/GOAL-06-landing-admin-client-ui.md; reports/validation/GOAL-06-pre-coding-readiness.md; reports/validation/GOAL-06-validation-report.md; reports/validation/GOAL-06-intent-compliance-report.md; services/aukro-service/src/ui/ui.controller.ts; services/aukro-service/src/ui/ui.assets.ts; docs/IMPLEMENTATION_STATE.md.
+Changed files: reports/validation/GOAL-06-deployment-report.md; docs/IMPLEMENTATION_STATE.md.
 Intent Compliance Report: reports/validation/GOAL-06-intent-compliance-report.md
-Validation: build pass; npm test pass (5 suites, 79 tests); git diff --check pass; compiled asset smoke checks pass.
-Readiness Gate Evidence: reports/validation/GOAL-06-pre-coding-readiness.md updated for `/ui/auth/register`.
-Blockers: none. Production deployment still requires explicit owner approval.
-Commit or no-commit reason: committed; final SHA recorded in session response.
-Next command: Deploy only after owner approval.
+Validation: git push pass; deploy preflight/build/push pass; initial latest rollout timeout; immutable image pin rollout pass; production smoke pass for `/`, `/admin`, `/client`, `/ui/app.css`, `/ui/auth/me`, and `/health`.
+Readiness Gate Evidence: reports/validation/GOAL-06-pre-coding-readiness.md and owner deployment approval on 2026-06-13.
+Blockers: none for deployment. Follow-up required: make deploy script pin immutable image tags by default.
+Commit or no-commit reason: deployment record pending commit.
+Next command: Implement immutable-image deployment follow-up.
 ```
 
 ## Required Session Report
@@ -100,10 +101,10 @@ Next command:
 
 ## Next Action
 
-Goal 06 UI separation refinement is complete in source and awaits deployment decision.
+Goal 06 UI separation refinement has been deployed. Next task is immutable-image deployment hardening.
 
 ```text
-Commit the refinement; deploy only after explicit owner approval.
+Implement immutable-image deployment in scripts/deploy.sh.
 ```
 
 Source documents:
