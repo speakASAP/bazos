@@ -46,6 +46,7 @@ New routes:
 - `GET /ui/app.css`
 - `GET /ui/app.js`
 - `POST /ui/auth/login`
+- `POST /ui/auth/register`
 - `GET /ui/auth/me`
 
 Existing guarded data endpoints are reused.

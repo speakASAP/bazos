@@ -1,5 +1,85 @@
 # GOAL-06 Validation Report
 
+
+## 2026-06-13 UI Separation Refinement
+
+### Artifact Validated
+
+Goal 06 refinement for separate landing, admin, and client pages.
+
+### Validation Scope
+
+Validated that the public landing page now presents 49 Kc/month customer pricing, `/admin` and `/client` no longer expose a shared admin/client dashboard switcher, the client page offers sign-in or registration, and the controller exposes `/ui/auth/register` through the existing Auth microservice contract.
+
+### Commands Run
+
+- `ssh alfares 'cd /home/ssf/Documents/Github/bazos-service && npm --prefix services/aukro-service run build'`
+- `ssh alfares 'cd /home/ssf/Documents/Github/bazos-service && npm test'`
+- `ssh alfares 'cd /home/ssf/Documents/Github/bazos-service && git diff --check'`
+- Compiled asset smoke check using `services/aukro-service/dist/ui/ui.assets.js`.
+
+### Gate Evidence
+
+| Gate | Result | Evidence |
+|---|---|---|
+| TypeScript build | pass | `npm --prefix services/aukro-service run build` completed. |
+| Shared tests | pass | `npm test` completed: 5 suites, 79 tests passed. |
+| Whitespace diff | pass | `git diff --check` completed with no output. |
+| Compiled UI content | pass | Landing pricing, separated admin/client nav, client register tab, and `/ui/auth/register` script path all passed static checks. |
+
+### Invariant Evidence
+
+No publisher policy, queue, browser submitter, identity verification, duplicate check, category cadence, active-ad cap, pacing, challenge handling, or encrypted session storage code was changed.
+
+### Sensitive-Data Scan Evidence
+
+The UI continues to contain only normal email/password auth inputs. No cookies, verification codes, raw sessions, payment details, or secrets are displayed or logged by this change.
+
+### Contract Evidence
+
+Added route:
+
+- `POST /ui/auth/register`
+
+Existing routes remain:
+
+- `GET /`
+- `GET /admin`
+- `GET /client`
+- `GET /ui/app.css`
+- `GET /ui/app.js`
+- `POST /ui/auth/login`
+- `POST /ui/auth/register`
+- `GET /ui/auth/me`
+
+### Replay And Determinism Evidence
+
+Not applicable. The refinement changes static UI/auth shell behavior only and does not enqueue, claim, submit, retry, reconcile, or schedule publish attempts.
+
+### Passed Criteria
+
+- Landing page includes 49 Kc/month pricing for customer service access.
+- `/admin` renders as an admin-only dashboard shell without a client-offers dashboard link.
+- `/client` renders as a client dashboard shell without an admin dashboard link.
+- Client auth form supports sign-in or registration through AuthService.
+- Validation commands passed.
+
+### Failed Criteria
+
+None.
+
+### Deviations
+
+No production deployment was performed in this refinement. Browser-plugin visual verification was unavailable in this tool session, so compiled static content checks were used with build/test/diff validation.
+
+### Recommendation
+
+Accept source refinement. Deploy only after explicit deployment-readiness approval.
+
+### Next Action
+
+Request owner approval before production deployment.
+
 ## Artifact Validated
 
 Landing, admin, and client UI for `bazos-service`.
@@ -57,6 +137,7 @@ Added routes:
 - `GET /ui/app.css`
 - `GET /ui/app.js`
 - `POST /ui/auth/login`
+- `POST /ui/auth/register`
 - `GET /ui/auth/me`
 
 The admin and client app shells authenticate through `/ui/auth/login`, store the returned JWT in browser localStorage, verify it through guarded `/ui/auth/me`, and call existing guarded data endpoints with `Authorization: Bearer <token>`.

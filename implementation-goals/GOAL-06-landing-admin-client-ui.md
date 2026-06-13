@@ -24,7 +24,7 @@ The admin and client sections use Auth microservice JWTs through the existing sh
 - Add a Bazos UI module to the deployed NestJS service.
 - Serve a public landing page at `/`.
 - Serve app shells at `/admin` and `/client`.
-- Add `/ui/auth/login` and `/ui/auth/me` for Auth microservice-backed session handling.
+- Add `/ui/auth/login`, `/ui/auth/register`, and `/ui/auth/me` for Auth microservice-backed session handling.
 - Add static CSS and JavaScript routes under `/ui/*`.
 - Wire the UI module into `services/aukro-service/src/app.module.ts`.
 
@@ -38,10 +38,11 @@ The admin and client sections use Auth microservice JWTs through the existing sh
 ## Acceptance Criteria
 
 - Root `/` returns a landing page instead of `Cannot GET /`.
-- Landing copy states compliance constraints and benefits without implying bypasses.
-- `/admin` and `/client` render authenticated UI shells.
+- Landing copy states compliance constraints, 49 Kc/month customer pricing, and benefits without implying bypasses.
+- `/admin` and `/client` render separate authenticated UI shells without cross-dashboard mixing.
 - Admin data calls require an Auth microservice JWT and use existing monitoring endpoints.
 - Client offer calls require an Auth microservice JWT and use existing offer endpoints.
+- Client auth supports sign-in or registration through the Auth microservice.
 - Build and tests pass.
 
 ## Required Reading

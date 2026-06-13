@@ -26,9 +26,9 @@ export const renderLandingPage = () =>
       </a>
       <nav class="site-nav" aria-label="Main navigation">
         <a href="#benefits">Benefits</a>
+        <a href="#pricing">Pricing</a>
         <a href="#compliance">Compliance</a>
-        <a href="/admin">Admin</a>
-        <a href="/client">Client</a>
+        <a href="/client">Client login</a>
       </nav>
       <a class="button button-primary" href="/client">${icon('login')}Sign in</a>
     </header>
@@ -36,11 +36,11 @@ export const renderLandingPage = () =>
     <main>
       <section class="hero-section">
         <div class="hero-copy">
-          <h1>Run Bazos offers from one compliant AlfaRes workspace.</h1>
-          <p class="hero-lede">Prepare listings from catalog data, see what is active, review policy gates, and keep every seller identity inside Bazos.cz limits before a publish attempt is allowed.</p>
+          <h1>Publish your Bazos offers from one compliant workspace.</h1>
+          <p class="hero-lede">For 49 Kc per month, sellers can prepare offers, monitor Bazos status, and request guarded publishing through AlfaRes without losing visibility into Bazos.cz limits.</p>
           <div class="hero-actions">
-            <a class="button button-primary" href="/client">${icon('layout')}Open dashboard</a>
-            <a class="button button-secondary" href="#compliance">${icon('shield')}View compliant workflow</a>
+            <a class="button button-primary" href="/client">${icon('layout')}Start for 49 Kc/month</a>
+            <a class="button button-secondary" href="#pricing">${icon('catalog')}See pricing</a>
           </div>
         </div>
         <div class="product-frame" aria-label="Bazos service dashboard preview">
@@ -120,6 +120,19 @@ export const renderLandingPage = () =>
         </div>
       </section>
 
+      <section class="pricing-section" id="pricing">
+        <div class="pricing-copy">
+          <h2>Simple customer pricing</h2>
+          <p>Pay 49 Kc per month for access to the client dashboard, offer preparation, status tracking, and guarded publish requests for verified Bazos identities.</p>
+        </div>
+        <div class="pricing-card">
+          <span>Monthly service</span>
+          <strong>49 Kc</strong>
+          <small>per month</small>
+          <a class="button button-primary" href="/client">${icon('login')}Sign in or register</a>
+        </div>
+      </section>
+
       <section class="workflow-section" id="compliance">
         <div class="section-heading">
           <h2>Compliant workflow first</h2>
@@ -134,13 +147,13 @@ export const renderLandingPage = () =>
       </section>
 
       <section class="portal-section">
-        <a class="portal-card" href="/admin">
-          <span>${icon('admin')}Admin section</span>
-          <strong>Monitor blocked attempts, review identities, and check service health.</strong>
-        </a>
         <a class="portal-card" href="/client">
-          <span>${icon('client')}Customer section</span>
-          <strong>Manage offers, see Bazos status, evaluate policy, and request publishing through guarded flows.</strong>
+          <span>${icon('client')}Client dashboard</span>
+          <strong>Register or sign in to manage offers, see Bazos status, and request publishing through guarded flows.</strong>
+        </a>
+        <a class="portal-card" href="/admin">
+          <span>${icon('admin')}Admin dashboard</span>
+          <strong>Separate administrator page for blocked attempts, identity review, and service health.</strong>
         </a>
       </section>
     </main>
@@ -152,7 +165,13 @@ export const renderLandingPage = () =>
   );
 
 export const renderAppPage = (mode: AppMode) => {
-  const title = mode === 'admin' ? 'Bazos Admin Console' : 'Bazos Client Offers';
+  const title = mode === 'admin' ? 'Bazos Admin Console' : 'Bazos Client Dashboard';
+  const navLabel = mode === 'admin' ? 'Admin dashboard' : 'Client dashboard';
+  const detailsLabel = mode === 'admin' ? 'Review queue' : 'My offers';
+  const authTitle = mode === 'admin' ? 'Admin sign in' : 'Sign in or register';
+  const authCopy = mode === 'admin'
+    ? 'Use your AlfaRes administrator account to access operational review tools.'
+    : 'Use your AlfaRes account, or create one with email and password to start the 49 Kc/month service.';
   return pageShell(
     title,
     `<div class="app-shell" data-mode="${mode}">
@@ -162,8 +181,8 @@ export const renderAppPage = (mode: AppMode) => {
           <span>Bazos Service</span>
         </a>
         <nav class="app-nav" aria-label="Workspace navigation">
-          <a class="${mode === 'admin' ? 'active' : ''}" href="/admin">${icon('admin')}Admin</a>
-          <a class="${mode === 'client' ? 'active' : ''}" href="/client">${icon('client')}Client offers</a>
+          <a class="active" href="/${mode}">${icon(mode === 'admin' ? 'admin' : 'client')}${navLabel}</a>
+          <a href="/">${icon('layout')}Landing page</a>
           <a href="/#compliance">${icon('shield')}Compliance</a>
         </nav>
       </aside>
@@ -171,7 +190,7 @@ export const renderAppPage = (mode: AppMode) => {
         <header class="app-topbar">
           <div>
             <h1>${title}</h1>
-            <p>${mode === 'admin' ? 'Operational visibility for Bazos identities, blocked attempts, and service health.' : 'Customer workspace for offer status, policy checks, and guarded publish actions.'}</p>
+            <p>${mode === 'admin' ? 'Operational visibility for Bazos identities, blocked attempts, and service health.' : 'Customer workspace for your offers, subscription access, policy checks, and guarded publish actions.'}</p>
           </div>
           <div class="session-actions">
             <span id="session-label">Not signed in</span>
@@ -179,15 +198,22 @@ export const renderAppPage = (mode: AppMode) => {
           </div>
         </header>
 
-        <section class="auth-panel" id="auth-panel">
-          <div>
-            <h2>Sign in with AlfaRes account</h2>
-            <p>Access is authorized by the ecosystem Auth microservice. Data calls use the same JWT guard as the Bazos backend.</p>
+        <section class="auth-panel" id="auth-panel" data-auth-mode="login">
+          <div class="auth-copy">
+            <h2>${authTitle}</h2>
+            <p>${authCopy}</p>
+            ${mode === 'client' ? '<div class="price-note"><strong>49 Kc/month</strong><span>Client service subscription</span></div>' : ''}
           </div>
           <form id="login-form" class="login-form">
+            <div class="auth-switch" role="tablist" aria-label="Authentication mode">
+              <button class="auth-tab active" data-auth-tab="login" type="button">Sign in</button>
+              ${mode === 'client' ? '<button class="auth-tab" data-auth-tab="register" type="button">Register</button>' : ''}
+            </div>
+            <label class="register-only hidden">First name<input name="firstName" type="text" autocomplete="given-name"></label>
+            <label class="register-only hidden">Last name<input name="lastName" type="text" autocomplete="family-name"></label>
             <label>Email<input name="email" type="email" autocomplete="email" required></label>
-            <label>Password<input name="password" type="password" autocomplete="current-password" required></label>
-            <button class="button button-primary" type="submit">${icon('login')}Sign in</button>
+            <label>Password<input name="password" type="password" autocomplete="current-password" required minlength="8"></label>
+            <button class="button button-primary" id="auth-submit" type="submit">${icon('login')}Sign in</button>
           </form>
           <p class="form-message" id="form-message" role="status"></p>
         </section>
@@ -196,7 +222,7 @@ export const renderAppPage = (mode: AppMode) => {
           <div class="toolbar">
             <div class="tabs" role="tablist">
               <button class="tab active" data-view="overview" type="button">Overview</button>
-              <button class="tab" data-view="details" type="button">${mode === 'admin' ? 'Review queue' : 'Offers'}</button>
+              <button class="tab" data-view="details" type="button">${detailsLabel}</button>
             </div>
             <button class="button button-secondary" id="refresh" type="button">${icon('refresh')}Refresh</button>
           </div>
@@ -417,7 +443,7 @@ button, input { font: inherit; }
   font-weight: 820;
   line-height: 1;
 }
-.benefit-band, .workflow-section, .portal-section {
+.benefit-band, .workflow-section, .portal-section, .pricing-section {
   max-width: 1220px;
   margin: 0 auto;
   padding: 74px 44px;
@@ -457,6 +483,37 @@ button, input { font: inherit; }
   color: var(--muted);
   line-height: 1.55;
 }
+.pricing-section {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 32px;
+  align-items: center;
+  border-top: 1px solid var(--line);
+}
+.pricing-copy h2 {
+  margin: 0;
+  font-size: clamp(32px, 4vw, 52px);
+  line-height: 1.05;
+}
+.pricing-copy p {
+  max-width: 720px;
+  margin: 18px 0 0;
+  color: var(--muted);
+  font-size: 17px;
+  line-height: 1.6;
+}
+.pricing-card {
+  display: grid;
+  gap: 10px;
+  padding: 26px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: var(--shadow);
+}
+.pricing-card span, .pricing-card small { color: var(--muted); font-weight: 750; }
+.pricing-card strong { font-size: 56px; line-height: 1; color: var(--red); }
+.pricing-card .button { margin-top: 10px; }
 .workflow-section {
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
@@ -594,10 +651,42 @@ button, input { font: inherit; }
   margin: 0 0 10px;
   font-size: 24px;
 }
+.auth-copy { display: grid; gap: 12px; }
+.price-note {
+  display: inline-grid;
+  gap: 3px;
+  width: fit-content;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+.price-note strong { color: var(--red); font-size: 24px; }
+.price-note span { color: var(--muted); font-size: 13px; font-weight: 750; }
 .login-form {
   display: grid;
   gap: 12px;
 }
+.auth-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.auth-switch:has(.auth-tab:only-child) { grid-template-columns: 1fr; }
+.auth-tab {
+  min-height: 40px;
+  border: 0;
+  background: #fff;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 750;
+  cursor: pointer;
+}
+.auth-tab + .auth-tab { border-left: 1px solid var(--line); }
+.auth-tab.active { background: var(--red); color: #fff; }
 .login-form label {
   display: grid;
   gap: 7px;
@@ -695,7 +784,7 @@ button, input { font: inherit; }
 @media (max-width: 960px) {
   .site-header { padding: 0 20px; }
   .site-nav { display: none; }
-  .hero-section, .section-heading, .portal-section, .auth-panel {
+  .hero-section, .section-heading, .portal-section, .auth-panel, .pricing-section {
     grid-template-columns: 1fr;
   }
   .hero-section { padding: 44px 20px; }
@@ -740,10 +829,21 @@ export const appScript = `
   const sessionLabel = document.getElementById('session-label');
   const signOut = document.getElementById('sign-out');
   const refresh = document.getElementById('refresh');
+  const authSubmit = document.getElementById('auth-submit');
   let activeView = 'overview';
+  let authMode = 'login';
 
   const token = () => localStorage.getItem(tokenKey);
   const setMessage = (text) => { if (message) message.textContent = text || ''; };
+
+  function setAuthMode(nextMode) {
+    authMode = nextMode;
+    document.querySelectorAll('[data-auth-tab]').forEach((tab) => tab.classList.toggle('active', tab.dataset.authTab === authMode));
+    document.querySelectorAll('.register-only').forEach((field) => field.classList.toggle('hidden', authMode !== 'register'));
+    if (authSubmit) authSubmit.innerHTML = authMode === 'register' ? '${icon('login')}Register' : '${icon('login')}Sign in';
+    const password = form.querySelector('input[name="password"]');
+    if (password) password.autocomplete = authMode === 'register' ? 'new-password' : 'current-password';
+  }
   const headers = () => ({ 'Authorization': 'Bearer ' + token(), 'Content-Type': 'application/json' });
 
   async function request(path, options) {
@@ -895,12 +995,19 @@ export const appScript = `
     setMessage('');
     const data = Object.fromEntries(new FormData(form).entries());
     try {
-      const response = await fetch('/ui/auth/login', {
+      if (authMode !== 'register') {
+        delete data.firstName;
+        delete data.lastName;
+      }
+      const response = await fetch(authMode === 'register' ? '/ui/auth/register' : '/ui/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
-      if (!response.ok) throw new Error('Sign in failed');
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.message || (authMode === 'register' ? 'Registration failed' : 'Sign in failed'));
+      }
       const body = await response.json();
       localStorage.setItem(tokenKey, body.accessToken);
       await render();
@@ -913,6 +1020,11 @@ export const appScript = `
     localStorage.removeItem(tokenKey);
     showAuth();
   });
+
+  document.querySelectorAll('[data-auth-tab]').forEach((tab) => {
+    tab.addEventListener('click', () => setAuthMode(tab.dataset.authTab));
+  });
+  setAuthMode('login');
 
   refresh.addEventListener('click', render);
   document.querySelectorAll('.tab').forEach((tab) => {

@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Post, Request, Res, UnauthorizedException } from '@nestjs/common';
-import { AuthService, LoginDto } from '@bazos/shared';
+import { AuthService, LoginDto, RegisterDto } from '@bazos/shared';
 import { appScript, appStyles, renderAppPage, renderLandingPage } from './ui.assets';
 
 @Controller()
@@ -34,6 +34,11 @@ export class UiController {
   @Post('ui/auth/login')
   login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
+  }
+
+  @Post('ui/auth/register')
+  register(@Body() dto: RegisterDto) {
+    return this.authService.register(dto);
   }
 
   @Get('ui/auth/me')
