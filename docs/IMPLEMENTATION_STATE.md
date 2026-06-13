@@ -14,7 +14,7 @@ completeness_level: complete
 - Active goal: none
 - Active branch: `codex/bazos-goal-05-monitoring-reconciliation`
 - Current wave: Wave 1 - Bazos Compliance Backend
-- Completed goals: compliance-model recorded in `TASKS.md`; Goal 01 identity/session/compliance review completed; Goal 02 human verification flow completed; Goal 03 publisher queue/browser submitter completed; Goal 04 catalog sell button completed; Goal 05 monitoring/reconciliation completed and deployed to production on 2026-06-13; Goal 06 UI separation refinement completed in source
+- Completed goals: compliance-model recorded in `TASKS.md`; Goal 01 identity/session/compliance review completed; Goal 02 human verification flow completed; Goal 03 publisher queue/browser submitter completed; Goal 04 catalog sell button completed; Goal 05 monitoring/reconciliation completed and deployed to production on 2026-06-13; Goal 06 UI separation refinement deployed; Goal 07 immutable deploy image completed in source
 - Running goals: none
 - Blocked goals: none
 - Remote repository: `alfares:/home/ssf/Documents/Github/bazos-service`
@@ -34,6 +34,7 @@ completeness_level: complete
 | 03 | `implementation-goals/GOAL-03-publisher-queue-browser-submitter.md` | completed | `codex/bazos-goal-03-publisher-queue` | 01, 02 |
 | 04 | `implementation-goals/GOAL-04-catalog-sell-button.md` | completed | `codex/bazos-goal-04-catalog-sell-button` | 01, 03 |
 | 05 | `implementation-goals/GOAL-05-monitoring-reconciliation.md` | completed | `codex/bazos-goal-05-monitoring-reconciliation` | 01, 03 |
+| 07 | `implementation-goals/GOAL-07-immutable-deploy-image.md` | completed | `codex/bazos-goal-05-monitoring-reconciliation` | Goal 06 deployment evidence |
 
 ## State Update Rules
 
@@ -54,6 +55,7 @@ Do not rely on chat history as the source of truth.
 Newest first:
 
 ```text
+2026-06-13: Goal 07 immutable deploy image completed in source. Updated `scripts/deploy.sh` to render the deployment manifest with the selected immutable image tag and set the rollout image to `$IMAGE` instead of `$IMAGE_LATEST`; `latest` remains build/push compatibility only. Validation: `bash -n scripts/deploy.sh` pass; `git diff --check` pass; static no-latest-rollout check pass. No production deployment performed for this tooling-only implementation. Reports: implementation-goals/GOAL-07-immutable-deploy-image.md, implementation-goals/GOAL-07-execution-plan.md, reports/validation/GOAL-07-pre-coding-readiness.md, reports/validation/GOAL-07-validation-report.md, reports/validation/GOAL-07-intent-compliance-report.md. Commit SHA: pending.
 2026-06-13: Goal 06 UI separation refinement deployed to production. Pushed branch `codex/bazos-goal-05-monitoring-reconciliation` through commit `ecac66c`; deploy script built and pushed image `localhost:5000/bazos-service:ecac66c` with digest `sha256:a75792885b49ad4dbe2ee04148a9f62fc6be9efe8137889510fc4f71e13bed93`. The script rollout against mutable `latest` timed out, then deployment was corrected by pinning Kubernetes to `localhost:5000/bazos-service:ecac66c`; pinned rollout completed. Final pod `bazos-service-6998f98c5c-v798d` 1/1 Running with 0 restarts. Production smoke passed for `/` pricing copy, `/admin`, `/client`, `/ui/app.css`, `/ui/auth/me` HTTP 401 without token, and `/health`. Report: reports/validation/GOAL-06-deployment-report.md. Follow-up: implement immutable-image deployment in `scripts/deploy.sh`.
 2026-06-13: Goal 06 UI separation refinement completed in source on branch codex/bazos-goal-05-monitoring-reconciliation. Landing page now presents 49 Kc/month customer pricing; `/admin` and `/client` render separate dashboard shells without cross-dashboard admin/client navigation; client auth supports sign-in or registration via existing AuthService; added `POST /ui/auth/register`. Validation: `npm --prefix services/aukro-service run build` pass; `npm test` pass (5 suites, 79 tests); `git diff --check` pass; compiled asset smoke checks pass for pricing, separated navigation, client register tab, and register endpoint script path. Production deployment not performed. Reports: implementation-goals/GOAL-06-landing-admin-client-ui.md, reports/validation/GOAL-06-pre-coding-readiness.md, reports/validation/GOAL-06-validation-report.md, reports/validation/GOAL-06-intent-compliance-report.md. Commit SHA: recorded in final session response.
 2026-06-13: Goal 06 production deployment completed on branch codex/bazos-goal-05-monitoring-reconciliation. Owner explicitly approved deployment. Initial deploy script completed but production smoke showed cached `latest` image content, so deployment was pinned to immutable image tags. Added follow-up commit `545b990` to make `/ui/auth/me` return clean HTTP 401 through AuthService token validation. Final deployment image: `localhost:5000/bazos-service:545b990`; final pod `bazos-service-5ffbc94797-hqbxn` 1/1 Running with 0 restarts. Production smoke passed: `/` HTTP 200 landing content, `/admin` HTTP 200 admin shell, `/client` HTTP 200 client shell, `/ui/app.css` HTTP 200, `/ui/auth/me` without token HTTP 401, `/health` HTTP 200. Report: reports/validation/GOAL-06-deployment-report.md. Follow-ups: avoid cached `latest` deploys with immutable tags or imagePullPolicy changes; add admin RBAC when Auth role claims are defined.
@@ -70,16 +72,16 @@ Newest first:
 ## Last Session Report
 
 ```text
-Goal: GOAL-06 UI separation refinement deployment
-Goal Impact: Deployed separated landing/admin/client UI and client registration without changing Bazos publishing controls.
+Goal: GOAL-07 immutable deploy image
+Goal Impact: Hardened deployment determinism by removing mutable `latest` from rollout selection without changing Bazos runtime behavior.
 Branch: codex/bazos-goal-05-monitoring-reconciliation
-Changed files: reports/validation/GOAL-06-deployment-report.md; docs/IMPLEMENTATION_STATE.md.
-Intent Compliance Report: reports/validation/GOAL-06-intent-compliance-report.md
-Validation: git push pass; deploy preflight/build/push pass; initial latest rollout timeout; immutable image pin rollout pass; production smoke pass for `/`, `/admin`, `/client`, `/ui/app.css`, `/ui/auth/me`, and `/health`.
-Readiness Gate Evidence: reports/validation/GOAL-06-pre-coding-readiness.md and owner deployment approval on 2026-06-13.
-Blockers: none for deployment. Follow-up required: make deploy script pin immutable image tags by default.
-Commit or no-commit reason: deployment record pending commit.
-Next command: Implement immutable-image deployment follow-up.
+Changed files: implementation-goals/GOAL-07-immutable-deploy-image.md; implementation-goals/GOAL-07-execution-plan.md; reports/validation/GOAL-07-pre-coding-readiness.md; reports/validation/GOAL-07-validation-report.md; reports/validation/GOAL-07-intent-compliance-report.md; scripts/deploy.sh; docs/IMPLEMENTATION_STATE.md.
+Intent Compliance Report: reports/validation/GOAL-07-intent-compliance-report.md
+Validation: bash -n pass; git diff --check pass; static no-latest-rollout check pass.
+Readiness Gate Evidence: reports/validation/GOAL-07-pre-coding-readiness.md.
+Blockers: none.
+Commit or no-commit reason: commit pending.
+Next command: Commit and push Goal 07.
 ```
 
 ## Required Session Report
@@ -101,10 +103,10 @@ Next command:
 
 ## Next Action
 
-Goal 06 UI separation refinement has been deployed. Next task is immutable-image deployment hardening.
+Goal 07 immutable deploy image is complete in source and awaits commit.
 
 ```text
-Implement immutable-image deployment in scripts/deploy.sh.
+Commit and push Goal 07.
 ```
 
 Source documents:
