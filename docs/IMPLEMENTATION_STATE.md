@@ -5,7 +5,7 @@ id: BAZOS-IMPLEMENTATION-STATE
 status: approved
 owner: project owner
 created: 2026-06-12
-last_updated: 2026-06-12
+last_updated: 2026-06-13
 completeness_level: complete
 ```
 
@@ -14,7 +14,7 @@ completeness_level: complete
 - Active goal: none
 - Active branch: `codex/bazos-goal-05-monitoring-reconciliation`
 - Current wave: Wave 1 - Bazos Compliance Backend
-- Completed goals: compliance-model recorded in `TASKS.md`; Goal 01 identity/session/compliance review completed; Goal 02 human verification flow completed; Goal 03 publisher queue/browser submitter completed; Goal 04 catalog sell button completed; Goal 05 monitoring/reconciliation completed
+- Completed goals: compliance-model recorded in `TASKS.md`; Goal 01 identity/session/compliance review completed; Goal 02 human verification flow completed; Goal 03 publisher queue/browser submitter completed; Goal 04 catalog sell button completed; Goal 05 monitoring/reconciliation completed and deployed to production on 2026-06-13
 - Running goals: none
 - Blocked goals: none
 - Remote repository: `alfares:/home/ssf/Documents/Github/bazos-service`
@@ -54,6 +54,7 @@ Do not rely on chat history as the source of truth.
 Newest first:
 
 ```text
+2026-06-13: Goal 05 production deployment completed on branch codex/bazos-goal-05-monitoring-reconciliation. Owner approved deployment after deployment-readiness review. Deployed commit 48c4e9e49b1f04c9bc4e9cf74bea907fd80aa922 using ./scripts/deploy.sh. Deployment evidence: preflight pass, image build/push pass, Kubernetes manifests applied, rollout completed, new pod bazos-service-fc879cc9c-ft7nk 1/1 Running with 0 restarts, deployment available 1/1, production health endpoint https://bazos.alfares.cz/health returned HTTP 200, startup logs showed database connection and successful Nest application startup. Report: reports/validation/GOAL-05-deployment-report.md. Blockers: none. Follow-up: triage npm audit findings in a separate dependency-hardening goal if required.
 2026-06-12: Goal 05 monitoring/reconciliation completed on branch codex/bazos-goal-05-monitoring-reconciliation. Verified docs-rag JWT token from the Bazos pod with HTTP 200 before implementation. Added sanitized monitoring endpoints for summary metrics, blocked attempts, review identities, active-ad count reconciliation, and stale submission expiry; added safe policy-block logs; added smoke/redaction/reconciliation tests. Validation: targeted monitoring test pass (1 suite, 7 tests), npm test pass (5 suites, 79 tests), npm --prefix shared test pass (5 suites, 79 tests), npm --prefix shared run build pass, git diff --check pass. Reports: implementation-goals/GOAL-05-execution-plan.md, reports/validation/GOAL-05-pre-coding-readiness.md, reports/validation/GOAL-05-validation-report.md, reports/validation/GOAL-05-intent-compliance-report.md. Production deployment for Goal 05 source changes not performed. Commit SHA: 103e2bd.
 2026-06-12: Goal 04 catalog sell button completed on branch codex/bazos-goal-04-catalog-sell-button. Added authenticated catalog sell action endpoints for draft prepare, explicit confirm, and status polling; reused active product/identity drafts; returned identity/category/policy context; required confirmation before queueing; delegated publish only to guarded publisher queue; surfaced policy and challenge states for human action. Validation: targeted catalog sell action test pass (1 suite, 6 tests), npm test pass (4 suites, 72 tests), npm --prefix shared test pass (4 suites, 72 tests), npm --prefix shared run build pass, git diff --check pass. Reports: implementation-goals/GOAL-04-execution-plan.md, reports/validation/GOAL-04-pre-coding-readiness.md, reports/validation/GOAL-04-validation-report.md, reports/validation/GOAL-04-intent-compliance-report.md. Production deployment not performed. Commit SHA: d09eba4. Unrelated dirty files observed and excluded from Goal 04: .env.example, k8s/external-secret.yaml.
 2026-06-12: Goal 03 publisher queue/browser submitter completed on branch codex/bazos-goal-03-publisher-queue. Added guarded publisher queue DTOs/service/controller, draft-from-catalog endpoint, POST publish endpoints, idempotent enqueue, persisted randomized notBefore reservation, claim-time policy re-check, per-identity submission serialization, challenge stop-state recording, success metadata storage, and policy self-duplicate exclusion for the current draft. Validation: npm test pass (3 suites, 66 tests), npm --prefix shared test pass (3 suites, 66 tests), npm --prefix shared run build pass, git diff --check pass. Reports: implementation-goals/GOAL-03-execution-plan.md, reports/validation/GOAL-03-pre-coding-readiness.md, reports/validation/GOAL-03-validation-report.md, reports/validation/GOAL-03-intent-compliance-report.md. Production deployment not performed. Commit SHA: a9bd367.
@@ -65,16 +66,16 @@ Newest first:
 ## Last Session Report
 
 ```text
-Goal: GOAL-05 Monitoring And Reconciliation
-Goal Impact: Operators can inspect sanitized Bazos compliance metrics, policy failures, challenge states, active-ad count drift, review identities, and stale submissions without adding any publish bypass path.
+Goal: GOAL-05 production deployment
+Goal Impact: Completed approved rollout of Bazos compliance monitoring/reconciliation changes without changing Bazos publishing bypass controls.
 Branch: codex/bazos-goal-05-monitoring-reconciliation
-Changed files: shared/bazos/monitoring/bazos-monitoring.controller.ts; shared/bazos/monitoring/bazos-monitoring.dto.ts; shared/bazos/monitoring/bazos-monitoring.service.ts; shared/bazos/monitoring/bazos-monitoring.service.spec.ts; shared/bazos/bazos.module.ts; shared/bazos/publisher/bazos-publisher-queue.service.ts; implementation-goals/GOAL-05-execution-plan.md; reports/validation/GOAL-05-pre-coding-readiness.md; reports/validation/GOAL-05-validation-report.md; reports/validation/GOAL-05-intent-compliance-report.md; docs/IMPLEMENTATION_STATE.md; TASKS.md.
+Changed files: reports/validation/GOAL-05-deployment-report.md; docs/IMPLEMENTATION_STATE.md.
 Intent Compliance Report: reports/validation/GOAL-05-intent-compliance-report.md
-Validation: docs-rag JWT token HTTP 200 from Bazos pod; targeted monitoring test pass; npm test pass; npm --prefix shared test pass; npm --prefix shared run build pass; git diff --check pass.
-Readiness Gate Evidence: reports/validation/GOAL-05-pre-coding-readiness.md
+Validation: pre-deploy npm test pass; npm --prefix shared test pass; npm --prefix shared run build pass; git diff --check pass; deploy script pass; Kubernetes deployment 1/1 available; production /health HTTP 200; startup logs clean.
+Readiness Gate Evidence: deployment-readiness review accepted with explicit owner approval on 2026-06-13; deployment report at reports/validation/GOAL-05-deployment-report.md.
 Blockers: none.
-Commit or no-commit reason: committed as 103e2bd.
-Next command: Request deployment-readiness review if owner wants production rollout.
+Commit or no-commit reason: deployment record committed after this state update.
+Next command: No action needed.
 ```
 
 ## Required Session Report
@@ -96,10 +97,10 @@ Next command:
 
 ## Next Action
 
-All current implementation goals are complete. Next action requires owner direction:
+All current implementation goals are complete and Goal 05 has been deployed to production.
 
 ```text
-BAZOS ORCHESTRATOR: request deployment-readiness review
+No action needed.
 ```
 
 Source documents:
