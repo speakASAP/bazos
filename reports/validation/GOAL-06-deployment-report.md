@@ -70,3 +70,53 @@ Accept deployment.
 ## Next Action
 
 No action needed.
+
+## 2026-06-13 UI Separation Refinement Deployment
+
+### Artifact Deployed
+
+Goal 06 UI separation refinement, commit `ecac66c`.
+
+### Deployment Scope
+
+Deployed the public landing pricing update, separated `/admin` and `/client` dashboard shells, client sign-in/register UI, and `POST /ui/auth/register`.
+
+### Commands Run
+
+- `ssh alfares 'cd /home/ssf/Documents/Github/bazos-service && git push origin HEAD'`
+- `ssh alfares 'cd /home/ssf/Documents/Github/bazos-service && ./scripts/deploy.sh'`
+- `ssh alfares 'kubectl set image deployment/bazos-service app=localhost:5000/bazos-service:ecac66c -n statex-apps && kubectl rollout status deployment/bazos-service -n statex-apps --timeout=180s'`
+- Production smoke checks for `/`, `/admin`, `/client`, `/ui/app.css`, `/ui/auth/me`, and `/health`.
+
+### Deployment Evidence
+
+- Git push completed: `b72a14b..ecac66c` to `origin/codex/bazos-goal-05-monitoring-reconciliation`.
+- Deploy script preflight passed.
+- Docker image built and pushed: `localhost:5000/bazos-service:ecac66c`, digest `sha256:a75792885b49ad4dbe2ee04148a9f62fc6be9efe8137889510fc4f71e13bed93`.
+- Initial script rollout against `latest` timed out because Kubernetes reused/pulled the mutable tag path.
+- Deployment was corrected by pinning the image to `localhost:5000/bazos-service:ecac66c`.
+- Pinned rollout completed successfully.
+- Final deployment image: `localhost:5000/bazos-service:ecac66c`.
+- Final pod observed: `bazos-service-6998f98c5c-v798d`, 1/1 Running, 0 restarts.
+
+### Smoke Evidence
+
+- `/` returned landing HTML with `49 Kc`, `Simple customer pricing`, and `Client login`.
+- `/admin` returned `Bazos Admin Console` and `Admin dashboard`.
+- `/client` returned `Sign in or register`, `49 Kc/month`, and `Client dashboard`.
+- `/ui/app.css` returned HTTP 200.
+- `/ui/auth/me` without token returned HTTP 401.
+- `/health` returned `{"status":"ok","service":"bazos-service"}`.
+- Startup logs mapped `/ui/auth/register` and showed Prisma connection plus successful Nest startup.
+
+### Compliance Evidence
+
+The deployment changed UI/auth shell behavior only. No Bazos publisher policy, queue, browser submitter, verification handling, duplicate checks, pacing, category cadence, active-ad cap, content checks, or stop-on-challenge behavior was changed.
+
+### Deviations
+
+The deploy script still applies `latest`, which again required manual immutable image pinning. This should be fixed in the next implementation task.
+
+### Recommendation
+
+Accept deployment. Start the next task by making deployment use immutable image tags so manual `kubectl set image` is not needed.
