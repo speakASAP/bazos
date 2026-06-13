@@ -6,8 +6,9 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { join } from 'path';
 import { AukroModule } from './aukro/aukro.module';
-import { PrismaModule, LoggerModule, HealthModule, RabbitMQModule } from '@bazos/shared';
+import { BazosModule, PrismaModule, LoggerModule, HealthModule, RabbitMQModule } from '@bazos/shared';
 import { HealthController } from './health/health.controller';
+import { UiModule } from './ui/ui.module';
 
 @Module({
   imports: [
@@ -19,9 +20,10 @@ import { HealthController } from './health/health.controller';
     LoggerModule,
     HealthModule,
     RabbitMQModule,
+    UiModule,
     AukroModule,
+    BazosModule,
   ],
   controllers: [HealthController],
 })
 export class AppModule {}
-

@@ -4,6 +4,7 @@ import {
   IDENTITY_STATUS,
   REVIEW_STATE,
   MAX_ACTIVE_ADS,
+  SESSION_STATE,
   PACING_MIN_SECONDS,
   PACING_MAX_SECONDS,
 } from '../identity/bazos-identity.types';
@@ -41,6 +42,7 @@ function baseIdentity(overrides: Partial<any> = {}): any {
     id: 'identity-1',
     status: IDENTITY_STATUS.VERIFIED,
     reviewState: REVIEW_STATE.CLEAR,
+    sessionState: SESSION_STATE.ACTIVE,
     verificationExpiresAt: null,
     activeAdCount: 0,
     nextPublishNotBefore: null,
@@ -54,6 +56,8 @@ describe('PublishPolicyService', () => {
     identityId: 'identity-1',
     bazosCategory: 'elektro',
     productId: 'product-1',
+    publicDuplicateCheck: { checkedAt: new Date(), likelyDuplicate: false },
+    contentPolicy: { checkedAt: new Date(), passed: true },
   };
 
   describe('Gate 1 — identity.status must be verified', () => {
@@ -116,7 +120,21 @@ describe('PublishPolicyService', () => {
     });
   });
 
-  describe('Gate 4 — active ad cap', () => {
+  describe('Gate 4 — sessionState must be active', () => {
+    it.each([
+      SESSION_STATE.MISSING,
+      SESSION_STATE.EXPIRED,
+      SESSION_STATE.CHALLENGE,
+    ])('blocks when sessionState is %s', async (sessionState) => {
+      const prisma = makePrismaStub({ identity: baseIdentity({ sessionState }) });
+      const svc = new PublishPolicyService(prisma, makeLogger());
+      const result = await svc.evaluate(input);
+      expect(result.allowed).toBe(false);
+      expect(result.failures.some((f) => f.gate === POLICY_GATE.IDENTITY_SESSION_NOT_ACTIVE)).toBe(true);
+    });
+  });
+
+  describe('Gate 5 — active ad cap', () => {
     it('blocks when activeAdCount >= 50', async () => {
       const prisma = makePrismaStub({ identity: baseIdentity({ activeAdCount: MAX_ACTIVE_ADS }) });
       const svc = new PublishPolicyService(prisma, makeLogger());
@@ -133,7 +151,7 @@ describe('PublishPolicyService', () => {
     });
   });
 
-  describe('Gate 5 — pacing: nextPublishNotBefore', () => {
+  describe('Gate 6 — pacing: nextPublishNotBefore', () => {
     it('blocks when nextPublishNotBefore is in the future', async () => {
       const future = new Date(Date.now() + 90_000);
       const prisma = makePrismaStub({ identity: baseIdentity({ nextPublishNotBefore: future }) });
@@ -153,7 +171,7 @@ describe('PublishPolicyService', () => {
     });
   });
 
-  describe('Gate 6 — 24h category cooldown', () => {
+  describe('Gate 7 — 24h category cooldown', () => {
     it('blocks when last category publish was less than 24h ago', async () => {
       const recentPublish = new Date(Date.now() - 23 * 60 * 60 * 1000);
       const identity = baseIdentity({
@@ -178,7 +196,7 @@ describe('PublishPolicyService', () => {
     });
   });
 
-  describe('Gate 7 — local duplicate check', () => {
+  describe('Gate 8 — local duplicate check', () => {
     it('blocks when an active local ad exists for same product and identity', async () => {
       const prisma = makePrismaStub({
         identity: baseIdentity(),
@@ -189,9 +207,97 @@ describe('PublishPolicyService', () => {
       expect(result.allowed).toBe(false);
       expect(result.failures.some((f) => f.gate === POLICY_GATE.LOCAL_DUPLICATE)).toBe(true);
     });
+
+    it('excludes the current draft from local duplicate detection', async () => {
+      const prisma = makePrismaStub({ identity: baseIdentity(), duplicateAd: null });
+      const svc = new PublishPolicyService(prisma, makeLogger());
+      const result = await svc.evaluate({ ...input, adId: 'current-ad' });
+      expect(result.allowed).toBe(true);
+      expect(prisma.bazosAd.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            id: { not: 'current-ad' },
+          }),
+        }),
+      );
+    });
   });
 
-  describe('Gate 8 — category mapping', () => {
+  describe('Gate 9 — public duplicate evidence', () => {
+    it('blocks when public duplicate evidence is missing', async () => {
+      const prisma = makePrismaStub({ identity: baseIdentity() });
+      const svc = new PublishPolicyService(prisma, makeLogger());
+      const result = await svc.evaluate({
+        identityId: input.identityId,
+        bazosCategory: input.bazosCategory,
+        productId: input.productId,
+        contentPolicy: input.contentPolicy,
+      });
+      expect(result.allowed).toBe(false);
+      expect(result.failures.some((f) => f.gate === POLICY_GATE.PUBLIC_DUPLICATE_CHECK_MISSING)).toBe(true);
+    });
+
+    it('blocks when public duplicate evidence is stale', async () => {
+      const prisma = makePrismaStub({ identity: baseIdentity() });
+      const svc = new PublishPolicyService(prisma, makeLogger());
+      const result = await svc.evaluate({
+        ...input,
+        publicDuplicateCheck: { checkedAt: new Date(Date.now() - 2 * 60 * 60 * 1000), likelyDuplicate: false },
+      });
+      expect(result.allowed).toBe(false);
+      expect(result.failures.some((f) => f.gate === POLICY_GATE.PUBLIC_DUPLICATE_CHECK_MISSING)).toBe(true);
+    });
+
+    it('blocks when public duplicate evidence reports a likely duplicate', async () => {
+      const prisma = makePrismaStub({ identity: baseIdentity() });
+      const svc = new PublishPolicyService(prisma, makeLogger());
+      const result = await svc.evaluate({
+        ...input,
+        publicDuplicateCheck: { checkedAt: new Date(), likelyDuplicate: true, reason: 'matching public listing' },
+      });
+      expect(result.allowed).toBe(false);
+      expect(result.failures.some((f) => f.gate === POLICY_GATE.PUBLIC_DUPLICATE)).toBe(true);
+    });
+  });
+
+  describe('Gate 10 — content policy evidence', () => {
+    it('blocks when content policy evidence is missing', async () => {
+      const prisma = makePrismaStub({ identity: baseIdentity() });
+      const svc = new PublishPolicyService(prisma, makeLogger());
+      const result = await svc.evaluate({
+        identityId: input.identityId,
+        bazosCategory: input.bazosCategory,
+        productId: input.productId,
+        publicDuplicateCheck: input.publicDuplicateCheck,
+      });
+      expect(result.allowed).toBe(false);
+      expect(result.failures.some((f) => f.gate === POLICY_GATE.CONTENT_POLICY_NOT_VALIDATED)).toBe(true);
+    });
+
+    it('blocks when content policy evidence is stale', async () => {
+      const prisma = makePrismaStub({ identity: baseIdentity() });
+      const svc = new PublishPolicyService(prisma, makeLogger());
+      const result = await svc.evaluate({
+        ...input,
+        contentPolicy: { checkedAt: new Date(Date.now() - 2 * 60 * 60 * 1000), passed: true },
+      });
+      expect(result.allowed).toBe(false);
+      expect(result.failures.some((f) => f.gate === POLICY_GATE.CONTENT_POLICY_NOT_VALIDATED)).toBe(true);
+    });
+
+    it('blocks when content policy validation fails', async () => {
+      const prisma = makePrismaStub({ identity: baseIdentity() });
+      const svc = new PublishPolicyService(prisma, makeLogger());
+      const result = await svc.evaluate({
+        ...input,
+        contentPolicy: { checkedAt: new Date(), passed: false, reason: 'forbidden content' },
+      });
+      expect(result.allowed).toBe(false);
+      expect(result.failures.some((f) => f.gate === POLICY_GATE.CONTENT_POLICY_FAIL)).toBe(true);
+    });
+  });
+
+  describe('Gate 11 — category mapping', () => {
     it('blocks when category mapping is missing', async () => {
       const prisma = makePrismaStub({ identity: baseIdentity(), categoryMapping: null });
       const svc = new PublishPolicyService(prisma, makeLogger());
