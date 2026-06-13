@@ -12,7 +12,7 @@ completeness_level: complete
 ## Current Status
 
 - Active goal: none
-- Active branch: `codex/bazos-goal-05-monitoring-reconciliation`
+- Active branch: `main`
 - Current wave: Wave 1 - Bazos Compliance Backend
 - Completed goals: compliance-model recorded in `TASKS.md`; Goal 01 identity/session/compliance review completed; Goal 02 human verification flow completed; Goal 03 publisher queue/browser submitter completed; Goal 04 catalog sell button completed; Goal 05 monitoring/reconciliation completed and deployed to production on 2026-06-13; Goal 06 UI separation refinement deployed; Goal 07 immutable deploy image completed in source; completed branch stack merged to main on 2026-06-13
 - Running goals: none
@@ -55,6 +55,7 @@ Do not rely on chat history as the source of truth.
 Newest first:
 
 ```text
+2026-06-13: Main integration merge prepared from `codex/bazos-goal-05-monitoring-reconciliation` into `main`. Verified all goal branches are ancestors of the source branch, refreshed origin refs, validated npm test pass (5 suites, 79 tests), npm --prefix shared run build pass, git diff --check pass, and non-fast-forward merge applied cleanly with no conflicts. Report: reports/validation/MAIN-INTEGRATION-2026-06-13-readiness-report.md. Commit SHA: recorded in final session response.
 2026-06-13: Goal 07 immutable deploy image completed in source. Updated `scripts/deploy.sh` to render the deployment manifest with the selected immutable image tag and set the rollout image to `$IMAGE` instead of `$IMAGE_LATEST`; `latest` remains build/push compatibility only. Validation: `bash -n scripts/deploy.sh` pass; `git diff --check` pass; static no-latest-rollout check pass. No production deployment performed for this tooling-only implementation. Reports: implementation-goals/GOAL-07-immutable-deploy-image.md, implementation-goals/GOAL-07-execution-plan.md, reports/validation/GOAL-07-pre-coding-readiness.md, reports/validation/GOAL-07-validation-report.md, reports/validation/GOAL-07-intent-compliance-report.md. Commit SHA: d2b1a35.
 2026-06-13: Goal 06 UI separation refinement deployed to production. Pushed branch `codex/bazos-goal-05-monitoring-reconciliation` through commit `ecac66c`; deploy script built and pushed image `localhost:5000/bazos-service:ecac66c` with digest `sha256:a75792885b49ad4dbe2ee04148a9f62fc6be9efe8137889510fc4f71e13bed93`. The script rollout against mutable `latest` timed out, then deployment was corrected by pinning Kubernetes to `localhost:5000/bazos-service:ecac66c`; pinned rollout completed. Final pod `bazos-service-6998f98c5c-v798d` 1/1 Running with 0 restarts. Production smoke passed for `/` pricing copy, `/admin`, `/client`, `/ui/app.css`, `/ui/auth/me` HTTP 401 without token, and `/health`. Report: reports/validation/GOAL-06-deployment-report.md. Follow-up: implement immutable-image deployment in `scripts/deploy.sh`.
 2026-06-13: Goal 06 UI separation refinement completed in source on branch codex/bazos-goal-05-monitoring-reconciliation. Landing page now presents 49 Kc/month customer pricing; `/admin` and `/client` render separate dashboard shells without cross-dashboard admin/client navigation; client auth supports sign-in or registration via existing AuthService; added `POST /ui/auth/register`. Validation: `npm --prefix services/aukro-service run build` pass; `npm test` pass (5 suites, 79 tests); `git diff --check` pass; compiled asset smoke checks pass for pricing, separated navigation, client register tab, and register endpoint script path. Production deployment not performed. Reports: implementation-goals/GOAL-06-landing-admin-client-ui.md, reports/validation/GOAL-06-pre-coding-readiness.md, reports/validation/GOAL-06-validation-report.md, reports/validation/GOAL-06-intent-compliance-report.md. Commit SHA: recorded in final session response.
@@ -72,15 +73,15 @@ Newest first:
 ## Last Session Report
 
 ```text
-Goal: GOAL-07 immutable deploy image
-Goal Impact: Hardened deployment determinism by removing mutable `latest` from rollout selection without changing Bazos runtime behavior.
-Branch: codex/bazos-goal-05-monitoring-reconciliation
-Changed files: implementation-goals/GOAL-07-immutable-deploy-image.md; implementation-goals/GOAL-07-execution-plan.md; reports/validation/GOAL-07-pre-coding-readiness.md; reports/validation/GOAL-07-validation-report.md; reports/validation/GOAL-07-intent-compliance-report.md; scripts/deploy.sh; docs/IMPLEMENTATION_STATE.md.
-Intent Compliance Report: reports/validation/GOAL-07-intent-compliance-report.md
-Validation: bash -n pass; git diff --check pass; static no-latest-rollout check pass.
-Readiness Gate Evidence: reports/validation/GOAL-07-pre-coding-readiness.md.
+Goal: Main integration merge
+Goal Impact: Consolidated completed Bazos implementation, UI, monitoring, deployment, and validation branches into main without changing approved compliance intent.
+Branch: main
+Changed files: branch stack from `codex/bazos-goal-05-monitoring-reconciliation` plus `reports/validation/MAIN-INTEGRATION-2026-06-13-readiness-report.md` and `docs/IMPLEMENTATION_STATE.md`.
+Intent Compliance Report: reports/validation/MAIN-INTEGRATION-2026-06-13-readiness-report.md
+Validation: npm test pass; npm --prefix shared run build pass; git diff --check pass; merge applied without conflicts.
+Readiness Gate Evidence: reports/validation/MAIN-INTEGRATION-2026-06-13-readiness-report.md.
 Blockers: none.
-Commit or no-commit reason: committed and pushed as d2b1a35.
+Commit or no-commit reason: merge commit to be created and pushed to origin/main.
 Next command: Select the next owner-approved goal; no unstarted implementation goal is currently listed in implementation-goals/README.md.
 ```
 
@@ -103,7 +104,7 @@ Next command:
 
 ## Next Action
 
-Completed branch stack is merged to main; push main after the merge commit is created.
+Completed branch stack is merged to `main`; push `main` after the merge commit is created.
 
 ```text
 Select the next owner-approved goal; no unstarted implementation goal is currently listed in implementation-goals/README.md.
