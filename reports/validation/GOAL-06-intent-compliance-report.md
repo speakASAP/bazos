@@ -74,3 +74,66 @@ Committed; final SHA recorded in session response.
 ## Next Action
 
 Commit Goal 06 source and report changes, then request owner approval before deployment.
+
+## 2026-06-13 UI Separation Refinement
+
+### Goal
+
+Separate the public landing page, administrator dashboard, and client dashboard more strictly, add visible customer pricing, and simplify the login/register experience.
+
+### Goal Impact
+
+The refinement improves customer acquisition and UI clarity. It does not change Bazos publishing controls, queue behavior, verification handling, pacing, duplicate detection, category limits, active-ad caps, or challenge stop behavior.
+
+### Implemented
+
+- Landing page pricing section for the 49 Kc/month client service.
+- Landing navigation focused on public benefits, pricing, compliance, and client login.
+- Admin dashboard shell navigation no longer links to client offers as a peer dashboard.
+- Client dashboard shell navigation no longer links to the admin dashboard as a peer dashboard.
+- Client auth form supports sign-in and registration.
+- `POST /ui/auth/register` delegates to the existing AuthService registration contract.
+
+### Not Implemented
+
+- No billing collection or subscription enforcement backend was added.
+- No production deployment was performed.
+- No admin RBAC was added because the repository still lacks an admin role/claim contract.
+
+### Bazos Compliance Check
+
+Pass. The change is UI/auth-shell only and preserves all Bazos compliance invariants. It does not weaken or bypass manual identity verification, SMS, CAPTCHA, device, cookie, session, ban, duplicate, rate, category, active-ad, content, or stop-on-challenge controls.
+
+### Validation Evidence
+
+- `npm --prefix services/aukro-service run build`: pass.
+- `npm test`: pass, 5 suites and 79 tests.
+- `git diff --check`: pass.
+- Compiled asset smoke checks: pass for landing pricing, separated admin/client nav, client register tab, and register endpoint script path.
+
+### Readiness Gate Evidence
+
+`reports/validation/GOAL-06-pre-coding-readiness.md` with contract update for `/ui/auth/register`.
+
+### Risks
+
+- Pricing is currently presented in UI copy only; billing enforcement remains a future goal if required.
+- Admin RBAC remains a future goal after Auth role claims are defined.
+
+### Files Changed
+
+- `implementation-goals/GOAL-06-landing-admin-client-ui.md`
+- `reports/validation/GOAL-06-pre-coding-readiness.md`
+- `reports/validation/GOAL-06-validation-report.md`
+- `reports/validation/GOAL-06-intent-compliance-report.md`
+- `services/aukro-service/src/ui/ui.controller.ts`
+- `services/aukro-service/src/ui/ui.assets.ts`
+- `docs/IMPLEMENTATION_STATE.md`
+
+### Commit Or No-Commit Reason
+
+Committed; final SHA recorded in session response.
+
+### Next Action
+
+Deploy only after explicit owner approval.
