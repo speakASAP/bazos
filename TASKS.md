@@ -19,3 +19,7 @@
 - 2026-06-12 goal-03-publisher-queue: added guarded publish queue, idempotent enqueue, persisted 60-180s pacing reservation, claim-time policy re-check, per-identity serialization, challenge stop handling, success metadata storage, and validation reports
 - 2026-06-12 goal-04-catalog-sell-button: added guarded catalog sell action API for draft prepare, explicit publish confirmation, and status polling through bazos-service policy/queue guardrails
 - 2026-06-12 goal-05-monitoring-reconciliation: added sanitized monitoring metrics, blocked-attempt and review-identity visibility, active-ad count reconciliation, stale submission expiry, safe policy-block logs, docs-rag token evidence, and validation reports
+
+## Project Completion Marker
+
+- 2026-06-21: Project marked completed/frozen after remote inventory. There are no active goals, active plans, open tasks, blockers, or pending human/AI actions. Do not ask for a new goal during routine status checks unless the owner explicitly creates one.
