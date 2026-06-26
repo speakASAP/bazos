@@ -163,14 +163,31 @@ export const renderLandingPage = () =>
     </footer>`,
   );
 
+export const renderAuthCallbackPage = () =>
+  pageShell(
+    'Dokončení přihlášení',
+    `<main class="callback-page">
+      <section class="auth-panel callback-panel">
+        <div class="auth-copy">
+          <h1>Dokončení přihlášení</h1>
+          <p id="callback-message">Ověřuje se návrat z Alfares Auth.</p>
+        </div>
+      </section>
+    </main>
+    <script>${authCallbackScript}</script>`,
+  );
+
 export const renderAppPage = (mode: AppMode) => {
   const title = mode === 'admin' ? 'Administrace Bazoš' : 'Klientský panel Bazoš';
   const navLabel = mode === 'admin' ? 'Administrátorský panel' : 'Klientský panel';
   const detailsLabel = mode === 'admin' ? 'Fronta ke kontrole' : 'Moje inzeráty';
   const authTitle = mode === 'admin' ? 'Přihlášení administrátora' : 'Přihlásit se nebo registrovat';
   const authCopy = mode === 'admin'
-    ? 'Použijte administrátorský účet AlfaRes pro přístup k nástrojům provozní kontroly.'
-    : 'Použijte účet AlfaRes nebo si vytvořte nový pomocí e-mailu a hesla a získejte přístup do klientského prostoru.';
+    ? 'Přihlášení administrátora probíhá přes jednotný Alfares Auth účet.'
+    : 'Přihlášení i registrace probíhá přes jednotný Alfares Auth účet pro celou ekosystémovou službu.';
+  const registerAuthAction = mode === 'client'
+    ? `<button class="button button-secondary" data-auth-action="register" type="button">${icon('client')}Registrovat v Alfares Auth</button>`
+    : '';
   return pageShell(
     title,
     `<div class="app-shell" data-mode="${mode}">
@@ -202,17 +219,11 @@ export const renderAppPage = (mode: AppMode) => {
             <h2>${authTitle}</h2>
             <p>${authCopy}</p>
           </div>
-          <form id="login-form" class="login-form">
-            <div class="auth-switch" role="tablist" aria-label="Režim ověření">
-              <button class="auth-tab active" data-auth-tab="login" type="button">Přihlásit se</button>
-              ${mode === 'client' ? '<button class="auth-tab" data-auth-tab="register" type="button">Registrovat</button>' : ''}
-            </div>
-            <label class="register-only hidden">Jméno<input name="firstName" type="text" autocomplete="given-name"></label>
-            <label class="register-only hidden">Příjmení<input name="lastName" type="text" autocomplete="family-name"></label>
-            <label>E-mail<input name="email" type="email" autocomplete="email" required></label>
-            <label>Heslo<input name="password" type="password" autocomplete="current-password" required minlength="8"></label>
-            <button class="button button-primary" id="auth-submit" type="submit">${icon('login')}Přihlásit se</button>
-          </form>
+          <div id="hosted-auth-actions" class="auth-actions">
+            <button class="button button-primary" data-auth-action="login" type="button">${icon('login')}Přihlásit se přes Alfares Auth</button>
+            ${registerAuthAction}
+            <p class="auth-note">Jednotný Alfares účet pro Bazoš i další služby.</p>
+          </div>
           <p class="form-message" id="form-message" role="status"></p>
         </section>
 
@@ -650,6 +661,27 @@ button, input { font: inherit; }
   font-size: 24px;
 }
 .auth-copy { display: grid; gap: 12px; }
+.auth-actions {
+  display: grid;
+  gap: 12px;
+}
+.auth-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+.callback-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: var(--bg-soft);
+}
+.callback-panel {
+  width: min(720px, 100%);
+  grid-template-columns: 1fr;
+}
 .login-form {
   display: grid;
   gap: 12px;
@@ -802,41 +834,107 @@ button, input { font: inherit; }
 }
 `;
 
+export const authCallbackScript = `
+(function () {
+  const tokenKey = 'bazosServiceToken';
+  const refreshTokenKey = 'bazosServiceRefreshToken';
+  const authStateKey = 'bazosAuthState';
+  const authReturnKey = 'bazosAuthReturnPath';
+  const message = document.getElementById('callback-message');
+  const setMessage = (text) => { if (message) message.textContent = text; };
+
+  function safeReturnPath(value) {
+    return value === '/admin' || value === '/client' ? value : '/client';
+  }
+
+  function clearPendingAuth() {
+    sessionStorage.removeItem(authStateKey);
+    sessionStorage.removeItem(authReturnKey);
+  }
+
+  try {
+    const hash = window.location.hash || '';
+    const params = new URLSearchParams(hash.startsWith('#') ? hash.slice(1) : hash);
+    const accessToken = params.get('access_token');
+    const refreshToken = params.get('refresh_token');
+    const returnedState = params.get('state');
+    const expectedState = sessionStorage.getItem(authStateKey);
+    const returnPath = safeReturnPath(sessionStorage.getItem(authReturnKey));
+    window.history.replaceState(null, document.title, '/auth/callback');
+
+    if (!accessToken) {
+      throw new Error('Auth nepředal přístupový token. Zkuste se přihlásit znovu.');
+    }
+    if (!expectedState || !returnedState || returnedState !== expectedState) {
+      localStorage.removeItem(tokenKey);
+      localStorage.removeItem(refreshTokenKey);
+      throw new Error('Návrat z Auth neodpovídá zahájené relaci. Zkuste se přihlásit znovu.');
+    }
+
+    localStorage.setItem(tokenKey, accessToken);
+    if (refreshToken) localStorage.setItem(refreshTokenKey, refreshToken);
+    clearPendingAuth();
+    window.location.replace(returnPath);
+  } catch (error) {
+    clearPendingAuth();
+    setMessage(error.message || 'Přihlášení se nepodařilo dokončit.');
+  }
+})();
+`;
+
 export const appScript = `
 (function () {
   const root = document.querySelector('.app-shell');
   if (!root) return;
   const mode = root.dataset.mode;
   const tokenKey = 'bazosServiceToken';
+  const refreshTokenKey = 'bazosServiceRefreshToken';
+  const authStateKey = 'bazosAuthState';
+  const authReturnKey = 'bazosAuthReturnPath';
+  const authClientId = 'bazos-service';
+  const authBaseUrl = 'https://auth.alfares.cz';
+  const authCallbackUrl = 'https://bazos.alfares.cz/auth/callback';
   const authPanel = document.getElementById('auth-panel');
   const workspace = document.getElementById('workspace');
   const content = document.getElementById('workspace-content');
-  const form = document.getElementById('login-form');
   const message = document.getElementById('form-message');
   const sessionLabel = document.getElementById('session-label');
   const signOut = document.getElementById('sign-out');
   const refresh = document.getElementById('refresh');
-  const authSubmit = document.getElementById('auth-submit');
   let activeView = 'overview';
-  let authMode = 'login';
 
   const token = () => localStorage.getItem(tokenKey);
   const setMessage = (text) => { if (message) message.textContent = text || ''; };
 
-  function setAuthMode(nextMode) {
-    authMode = nextMode;
-    document.querySelectorAll('[data-auth-tab]').forEach((tab) => tab.classList.toggle('active', tab.dataset.authTab === authMode));
-    document.querySelectorAll('.register-only').forEach((field) => field.classList.toggle('hidden', authMode !== 'register'));
-    if (authSubmit) authSubmit.innerHTML = authMode === 'register' ? '${icon('login')}Registrovat' : '${icon('login')}Přihlásit se';
-    const password = form.querySelector('input[name="password"]');
-    if (password) password.autocomplete = authMode === 'register' ? 'new-password' : 'current-password';
+  function createState() {
+    const bytes = new Uint8Array(16);
+    if (window.crypto && window.crypto.getRandomValues) {
+      window.crypto.getRandomValues(bytes);
+      return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+    }
+    return String(Date.now()) + '-' + Math.random().toString(16).slice(2);
   }
+
+  function startHostedAuth(action) {
+    const state = createState();
+    const returnPath = mode === 'admin' ? '/admin' : '/client';
+    sessionStorage.setItem(authStateKey, state);
+    sessionStorage.setItem(authReturnKey, returnPath);
+
+    const url = new URL(action === 'register' ? '/register' : '/login', authBaseUrl);
+    url.searchParams.set('client_id', authClientId);
+    url.searchParams.set('return_url', authCallbackUrl);
+    url.searchParams.set('state', state);
+    window.location.assign(url.toString());
+  }
+
   const headers = () => ({ 'Authorization': 'Bearer ' + token(), 'Content-Type': 'application/json' });
 
   async function request(path, options) {
     const response = await fetch(path, Object.assign({ headers: headers() }, options || {}));
     if (response.status === 401) {
       localStorage.removeItem(tokenKey);
+      localStorage.removeItem(refreshTokenKey);
       showAuth();
       throw new Error('Relace vypršela. Přihlaste se prosím znovu.');
     }
@@ -992,41 +1090,17 @@ export const appScript = `
     }
   }
 
-  form.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    setMessage('');
-    const data = Object.fromEntries(new FormData(form).entries());
-    try {
-      if (authMode !== 'register') {
-        delete data.firstName;
-        delete data.lastName;
-      }
-      const response = await fetch(authMode === 'register' ? '/ui/auth/register' : '/ui/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) {
-        const body = await response.json().catch(() => ({}));
-        throw new Error(body.message || (authMode === 'register' ? 'Registrace selhala' : 'Přihlášení selhalo'));
-      }
-      const body = await response.json();
-      localStorage.setItem(tokenKey, body.accessToken);
-      await render();
-    } catch (error) {
-      setMessage(error.message);
-    }
-  });
-
   signOut.addEventListener('click', () => {
     localStorage.removeItem(tokenKey);
+    localStorage.removeItem(refreshTokenKey);
+    sessionStorage.removeItem(authStateKey);
+    sessionStorage.removeItem(authReturnKey);
     showAuth();
   });
 
-  document.querySelectorAll('[data-auth-tab]').forEach((tab) => {
-    tab.addEventListener('click', () => setAuthMode(tab.dataset.authTab));
+  document.querySelectorAll('[data-auth-action]').forEach((button) => {
+    button.addEventListener('click', () => startHostedAuth(button.dataset.authAction));
   });
-  setAuthMode('login');
 
   refresh.addEventListener('click', render);
   document.querySelectorAll('.tab').forEach((tab) => {

@@ -22,6 +22,7 @@ Use these goals to continue Bazos implementation under the intent-preservation-s
 3. `GOAL-03-publisher-queue-browser-submitter.md` - implement guarded publisher queue and browser submitter.
 4. `GOAL-04-catalog-sell-button.md` - integrate catalog sell action only through Bazos guardrails.
 5. `GOAL-05-monitoring-reconciliation.md` - add operations, monitoring, reconciliation, and smoke evidence.
+6. `GOAL-08-hosted-auth-ui.md` - migrate Basus UI login/register to hosted Alfares Auth.
 
 ## Required Final Report Shape
 
