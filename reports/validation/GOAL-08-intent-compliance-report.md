@@ -36,7 +36,7 @@ See `reports/validation/GOAL-08-pre-coding-readiness.md`.
 
 ## Risks
 
-- Production deployment smoke is still pending until deploy completes.
+- Full credential callback/session smoke remains pending because no approved real/synthetic user credential was used.
 - `[PENDING: live post-deploy smoke without exposing token fragments]`.
 - `[PENDING: future BFF/httpOnly cookie adapter]`.
 
@@ -52,8 +52,8 @@ See `reports/validation/GOAL-08-pre-coding-readiness.md`.
 
 ## Commit Or No-Commit Reason
 
-Pending commit in this session before deployment.
+Committed in source commit `43a2f7d`; cache/deploy fix committed in `468a42f`; post-deploy report committed after rollout.
 
 ## Next Action
 
-Commit the source/docs update, deploy if deployment-readiness evidence remains clean, then run production smoke.
+No further action required for hosted Auth entry deployment; future work is BFF/httpOnly session adapter and approved credential callback smoke if needed.

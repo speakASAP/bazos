@@ -11,9 +11,13 @@ Date: 2026-06-26
 - Static hosted Auth marker scan: passed; source contains `data-auth-action`, `/auth/callback`, `client_id`, `return_url`, `access_token`, `history.replaceState`, and `bazosAuthState`.
 - Live Auth return URL validation: passed; `GET https://auth.alfares.cz/auth/validate-return-url?return_url=https%3A%2F%2Fbazos.alfares.cz%2Fauth%2Fcallback` returned `valid:true`.
 
+## Deployment Validation
+
+- Production deployment smoke: passed; see `reports/validation/GOAL-08-deployment-report.md`.
+- Browser QA for hosted login redirect: passed; click navigated to Auth with expected `client_id`, `return_url`, and generated `state`.
+
 ## Not Run Yet
 
-- Production deployment smoke.
 - Full live credential callback with a real or synthetic approved user.
 
 ## Notes
