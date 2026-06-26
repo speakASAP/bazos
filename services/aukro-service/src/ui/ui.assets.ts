@@ -1007,8 +1007,8 @@ export const appScript = `
 
   async function renderAdmin() {
     content.innerHTML = '<div class="data-panel empty-state">Načítají se administrátorská data...</div>';
-    const summary = await request('/publishing-monitoring/summary').catch((error) => ({ error: error.message }));
-    const blocked = await request('/publishing-monitoring/blocked?limit=25').catch(() => []);
+    const summary = await request('/api/bazos/monitoring/summary').catch((error) => ({ error: error.message }));
+    const blocked = await request('/api/bazos/monitoring/blocked-attempts?limit=25').catch(() => []);
     if (summary.error) {
       content.innerHTML = '<div class="data-panel empty-state">' + summary.error + '</div>';
       return;
@@ -1035,7 +1035,7 @@ export const appScript = `
   async function policyCheck(id) {
     content.innerHTML = '<div class="data-panel empty-state">Kontrolují se pravidla...</div>';
     try {
-      const result = await request('/offers/' + encodeURIComponent(id) + '/policy-check', { method: 'POST', body: '{}' });
+      const result = await request('/api/bazos/ads/' + encodeURIComponent(id) + '/evaluate-policy', { method: 'POST', body: '{}' });
       content.innerHTML = '<div class="data-panel"><h2>Výsledek kontroly pravidel</h2><pre>' + JSON.stringify(result, null, 2) + '</pre></div>';
     } catch (error) {
       content.innerHTML = '<div class="data-panel empty-state">' + error.message + '</div>';
@@ -1045,7 +1045,7 @@ export const appScript = `
   async function enqueuePublish(id) {
     content.innerHTML = '<div class="data-panel empty-state">Odesílá se žádost do hlídané publikační fronty...</div>';
     try {
-      const result = await request('/offers/' + encodeURIComponent(id) + '/enqueue-publish', { method: 'POST', body: '{}' });
+      const result = await request('/api/bazos/ads/' + encodeURIComponent(id) + '/publish', { method: 'POST', body: '{}' });
       content.innerHTML = '<div class="data-panel"><h2>Výsledek fronty</h2><pre>' + JSON.stringify(result, null, 2) + '</pre></div>';
     } catch (error) {
       content.innerHTML = '<div class="data-panel empty-state">' + error.message + '</div>';
@@ -1054,7 +1054,7 @@ export const appScript = `
 
   async function renderClient() {
     content.innerHTML = '<div class="data-panel empty-state">Načítají se inzeráty...</div>';
-    const result = await request('/offers').catch((error) => ({ error: error.message }));
+    const result = await request('/api/bazos/ads').catch((error) => ({ error: error.message }));
     if (result.error) {
       content.innerHTML = '<div class="data-panel empty-state">' + result.error + '</div>';
       return;
