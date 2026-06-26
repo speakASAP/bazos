@@ -24,6 +24,7 @@ Use these goals to continue Bazos implementation under the intent-preservation-s
 5. `GOAL-05-monitoring-reconciliation.md` - add operations, monitoring, reconciliation, and smoke evidence.
 6. `GOAL-08-hosted-auth-ui.md` - migrate Basus UI login/register to hosted Alfares Auth.
 7. `GOAL-11-admin-access-separation.md` - restrict `/admin` to administrator users and remove public admin links.
+8. `GOAL-12-client-overview-statistics.md` - add complete Bazos statistics to `/client` overview.
 
 ## Required Final Report Shape
 
