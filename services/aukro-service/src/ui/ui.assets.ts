@@ -172,8 +172,14 @@ export const renderAuthCallbackPage = () =>
 
 export const renderAppPage = (mode: AppMode) => {
   const title = mode === 'admin' ? 'Administrace Bazoš' : 'Klientský panel Bazoš';
-  const navLabel = mode === 'admin' ? 'Administrátorský panel' : 'Klientský panel';
+  const navLabel = mode === 'admin' ? 'Administrace' : 'Klientský panel';
   const detailsLabel = mode === 'admin' ? 'Fronta ke kontrole' : 'Moje inzeráty';
+  const sidebarNav = mode === 'admin'
+    ? `<a class="active" href="/admin">${icon('admin')}Administrace</a>`
+    : `<a class="active" href="/client">${icon('client')}${navLabel}</a>
+          <a href="#overview" data-sidebar-view="overview">${icon('layout')}Přehled</a>
+          <a href="#details" data-sidebar-view="details">${icon('catalog')}Moje inzeráty</a>
+          <a class="hidden" id="admin-link" href="/admin">${icon('admin')}Administrace</a>`;
   const authTitle = mode === 'admin' ? 'Přihlášení administrátora' : 'Přihlásit se nebo registrovat';
   const authCopy = mode === 'admin'
     ? 'Přihlášení administrátora probíhá přes jednotný Alfares Auth účet.'
@@ -190,9 +196,7 @@ export const renderAppPage = (mode: AppMode) => {
           <span>Služba Bazoš</span>
         </a>
         <nav class="app-nav" aria-label="Navigace pracovního prostoru">
-          <a class="active" href="/${mode}">${icon(mode === 'admin' ? 'admin' : 'client')}${navLabel}</a>
-          <a href="/">${icon('layout')}Úvodní stránka</a>
-          <a href="/#compliance">${icon('shield')}Soulad s pravidly</a>
+          ${sidebarNav}
         </nav>
       </aside>
       <main class="app-main">
@@ -203,7 +207,6 @@ export const renderAppPage = (mode: AppMode) => {
           </div>
           <div class="session-actions">
             <span id="session-label">Nejste přihlášeni</span>
-            <a class="button button-secondary hidden" id="admin-link" href="/admin">${icon('admin')}Administrace</a>
             <button class="button button-secondary hidden" id="sign-out" type="button">${icon('logout')}Odhlásit se</button>
           </div>
         </header>
@@ -1139,6 +1142,13 @@ export const appScript = `
   }
 
   refresh.addEventListener('click', render);
+  document.querySelectorAll('[data-sidebar-view]').forEach((link) => {
+    link.addEventListener('click', (event) => {
+      event.preventDefault();
+      const targetTab = document.querySelector('.tab[data-view="' + link.dataset.sidebarView + '"]');
+      targetTab?.click();
+    });
+  });
   document.querySelectorAll('.tab').forEach((tab) => {
     tab.addEventListener('click', () => {
       document.querySelectorAll('.tab').forEach((item) => item.classList.remove('active'));
