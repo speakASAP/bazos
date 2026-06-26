@@ -26,21 +26,20 @@ export const renderLandingPage = () =>
       </a>
       <nav class="site-nav" aria-label="Hlavní navigace">
         <a href="#benefits">Výhody</a>
-        <a href="#pricing">Cena</a>
+        <a href="#service">Služba</a>
         <a href="#compliance">Soulad s pravidly</a>
-        <a href="/client">Přihlášení klienta</a>
       </nav>
-      <a class="button button-primary" href="/client">${icon('login')}Přihlásit se</a>
+      <a class="button button-primary" href="/client">${icon('login')}Přihlásit se / registrovat</a>
     </header>
 
     <main>
       <section class="hero-section">
         <div class="hero-copy">
           <h1>Publikujte inzeráty na Bazoši z jednoho bezpečného pracovního prostoru.</h1>
-          <p class="hero-lede">Za 49 Kč měsíčně mohou prodejci připravovat inzeráty, sledovat stav na Bazoši a žádat o hlídané publikování přes AlfaRes, aniž by ztratili přehled o limitech Bazoš.cz.</p>
+          <p class="hero-lede">Prodejci mohou připravovat inzeráty, sledovat stav na Bazoši a žádat o hlídané publikování přes AlfaRes, aniž by ztratili přehled o limitech Bazoš.cz.</p>
           <div class="hero-actions">
-            <a class="button button-primary" href="/client">${icon('layout')}Začít za 49 Kč měsíčně</a>
-            <a class="button button-secondary" href="#pricing">${icon('catalog')}Zobrazit cenu</a>
+            <a class="button button-primary" href="/client">${icon('layout')}Otevřít klientský prostor</a>
+            <a class="button button-secondary" href="#service">${icon('catalog')}Zobrazit službu</a>
           </div>
         </div>
         <div class="product-frame" aria-label="Náhled ovládacího panelu služby Bazoš">
@@ -120,15 +119,15 @@ export const renderLandingPage = () =>
         </div>
       </section>
 
-      <section class="pricing-section" id="pricing">
+      <section class="pricing-section" id="service">
         <div class="pricing-copy">
-          <h2>Jednoduchá cena pro zákazníky</h2>
-          <p>Plaťte 49 Kč měsíčně za přístup do klientského panelu, přípravu inzerátů, sledování stavu a hlídané žádosti o publikování pro ověřené identity na Bazoši.</p>
+          <h2>Přístup ke službě pro ověřené prodejce</h2>
+          <p>Používejte klientský panel pro přípravu inzerátů, sledování stavu a hlídané žádosti o publikování pro ověřené identity na Bazoši.</p>
         </div>
         <div class="pricing-card">
-          <span>Měsíční služba</span>
-          <strong>49 Kč</strong>
-          <small>měsíčně</small>
+          <span>Klientský prostor</span>
+          <strong>Přístup</strong>
+          <small>pro ověřené uživatele AlfaRes</small>
           <a class="button button-primary" href="/client">${icon('login')}Přihlásit se nebo registrovat</a>
         </div>
       </section>
@@ -171,7 +170,7 @@ export const renderAppPage = (mode: AppMode) => {
   const authTitle = mode === 'admin' ? 'Přihlášení administrátora' : 'Přihlásit se nebo registrovat';
   const authCopy = mode === 'admin'
     ? 'Použijte administrátorský účet AlfaRes pro přístup k nástrojům provozní kontroly.'
-    : 'Použijte účet AlfaRes nebo si vytvořte nový pomocí e-mailu a hesla a začněte službu za 49 Kč měsíčně.';
+    : 'Použijte účet AlfaRes nebo si vytvořte nový pomocí e-mailu a hesla a získejte přístup do klientského prostoru.';
   return pageShell(
     title,
     `<div class="app-shell" data-mode="${mode}">
@@ -202,7 +201,6 @@ export const renderAppPage = (mode: AppMode) => {
           <div class="auth-copy">
             <h2>${authTitle}</h2>
             <p>${authCopy}</p>
-            ${mode === 'client' ? '<div class="price-note"><strong>49 Kč měsíčně</strong><span>Předplatné klientské služby</span></div>' : ''}
           </div>
           <form id="login-form" class="login-form">
             <div class="auth-switch" role="tablist" aria-label="Režim ověření">
@@ -652,17 +650,6 @@ button, input { font: inherit; }
   font-size: 24px;
 }
 .auth-copy { display: grid; gap: 12px; }
-.price-note {
-  display: inline-grid;
-  gap: 3px;
-  width: fit-content;
-  padding: 14px 16px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--panel);
-}
-.price-note strong { color: var(--red); font-size: 24px; }
-.price-note span { color: var(--muted); font-size: 13px; font-weight: 750; }
 .login-form {
   display: grid;
   gap: 12px;
