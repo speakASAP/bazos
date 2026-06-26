@@ -184,7 +184,7 @@ export const renderAppPage = (mode: AppMode) => {
     : '';
   return pageShell(
     title,
-    `<div class="app-shell" data-mode="${mode}">
+    `<div class="app-shell" data-mode="${mode}" data-auth-pending="${mode === 'client' ? 'true' : 'false'}">
       <aside class="app-sidebar">
         <a class="brand" href="/">
           <span class="brand-mark">B</span>
@@ -726,6 +726,16 @@ button, input { font: inherit; }
   font-weight: 700;
 }
 .hidden { display: none !important; }
+.app-shell[data-auth-pending="true"] {
+  min-height: 100vh;
+  background: var(--bg-soft);
+}
+.app-shell[data-auth-pending="true"] .app-sidebar,
+.app-shell[data-auth-pending="true"] .app-topbar,
+.app-shell[data-auth-pending="true"] #auth-panel,
+.app-shell[data-auth-pending="true"] #workspace {
+  display: none !important;
+}
 .workspace-content {
   display: grid;
   gap: 16px;
@@ -945,7 +955,11 @@ export const appScript = `
     if (response.status === 401) {
       localStorage.removeItem(tokenKey);
       localStorage.removeItem(refreshTokenKey);
-      showAuth();
+      if (mode === 'client') {
+        startHostedAuth('login');
+      } else {
+        showAuth();
+      }
       throw new Error('Relace vypršela. Přihlaste se prosím znovu.');
     }
     if (!response.ok) {
@@ -956,6 +970,7 @@ export const appScript = `
   }
 
   function showAuth() {
+    root.dataset.authPending = 'false';
     authPanel.classList.remove('hidden');
     workspace.classList.add('hidden');
     signOut.classList.add('hidden');
@@ -964,6 +979,7 @@ export const appScript = `
   }
 
   function showWorkspace(user, access) {
+    root.dataset.authPending = 'false';
     authPanel.classList.add('hidden');
     workspace.classList.remove('hidden');
     signOut.classList.remove('hidden');
@@ -1116,9 +1132,10 @@ export const appScript = `
   });
 
   const requestedAuthAction = new URLSearchParams(window.location.search).get('auth');
-  if (mode === 'client' && !token() && (requestedAuthAction === 'login' || requestedAuthAction === 'register')) {
+  if (mode === 'client' && !token()) {
+    const action = requestedAuthAction === 'register' ? 'register' : 'login';
     window.history.replaceState(null, document.title, '/client');
-    startHostedAuth(requestedAuthAction);
+    startHostedAuth(action);
     return;
   }
 
