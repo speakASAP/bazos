@@ -23,6 +23,7 @@ Use these goals to continue Bazos implementation under the intent-preservation-s
 4. `GOAL-04-catalog-sell-button.md` - integrate catalog sell action only through Bazos guardrails.
 5. `GOAL-05-monitoring-reconciliation.md` - add operations, monitoring, reconciliation, and smoke evidence.
 6. `GOAL-08-hosted-auth-ui.md` - migrate Basus UI login/register to hosted Alfares Auth.
+7. `GOAL-11-admin-access-separation.md` - restrict `/admin` to administrator users and remove public admin links.
 
 ## Required Final Report Shape
 

@@ -150,10 +150,6 @@ export const renderLandingPage = () =>
           <span>${icon('client')}Klientský panel</span>
           <strong>Registrujte se nebo se přihlaste pro správu inzerátů, sledování stavu na Bazoši a žádosti o publikování přes hlídané postupy.</strong>
         </a>
-        <a class="portal-card" href="/admin">
-          <span>${icon('admin')}Administrátorský panel</span>
-          <strong>Samostatná administrátorská stránka pro blokované pokusy, kontrolu identit a stav služby.</strong>
-        </a>
       </section>
     </main>
 
@@ -210,6 +206,7 @@ export const renderAppPage = (mode: AppMode) => {
           </div>
           <div class="session-actions">
             <span id="session-label">Nejste přihlášeni</span>
+            <a class="button button-secondary hidden" id="admin-link" href="/admin">${icon('admin')}Administrace</a>
             <button class="button button-secondary hidden" id="sign-out" type="button">${icon('logout')}Odhlásit se</button>
           </div>
         </header>
@@ -905,6 +902,7 @@ export const appScript = `
   const message = document.getElementById('form-message');
   const sessionLabel = document.getElementById('session-label');
   const signOut = document.getElementById('sign-out');
+  const adminLink = document.getElementById('admin-link');
   const refresh = document.getElementById('refresh');
   let activeView = 'overview';
 
@@ -954,13 +952,16 @@ export const appScript = `
     authPanel.classList.remove('hidden');
     workspace.classList.add('hidden');
     signOut.classList.add('hidden');
+    adminLink?.classList.add('hidden');
     sessionLabel.textContent = 'Nejste přihlášeni';
   }
 
-  function showWorkspace(user) {
+  function showWorkspace(user, access) {
     authPanel.classList.add('hidden');
     workspace.classList.remove('hidden');
     signOut.classList.remove('hidden');
+    if (mode === 'client' && access?.admin) adminLink?.classList.remove('hidden');
+    else adminLink?.classList.add('hidden');
     sessionLabel.textContent = user?.email || 'Přihlášeno';
   }
 
@@ -1086,8 +1087,8 @@ export const appScript = `
   async function render() {
     if (!token()) return showAuth();
     try {
-      const me = await request('/ui/auth/me');
-      showWorkspace(me.user);
+      const me = await request('/ui/auth/me?mode=' + encodeURIComponent(mode));
+      showWorkspace(me.user, me.access);
       if (mode === 'admin') await renderAdmin();
       else await renderClient();
     } catch (error) {
