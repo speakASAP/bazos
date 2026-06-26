@@ -179,7 +179,8 @@ export const renderAppPage = (mode: AppMode) => {
               <button class="tab" data-view="account" type="button">Účet Bazos.cz</button>`
     : '';
   const sidebarNav = mode === 'admin'
-    ? `<a class="active" href="/admin">${icon('admin')}Administrace</a>`
+    ? `<a class="active" href="/admin">${icon('admin')}Administrace</a>
+          <a href="/client">${icon('client')}Klientský panel</a>`
     : `<a class="active" href="/client" data-sidebar-view="overview">${icon('client')}${navLabel}</a>
           <a href="#details" data-sidebar-view="details">${icon('catalog')}Moje inzeráty</a>
           <a href="#publish" data-sidebar-view="publish">${icon('catalog')}Publikovat</a>
