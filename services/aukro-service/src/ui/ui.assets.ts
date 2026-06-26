@@ -781,6 +781,7 @@ button, input { font: inherit; }
   color: #5f241f;
   line-height: 1.45;
 }
+.identity-required-banner .setup-link { margin-top: 6px; }
 .identity-required-banner .button-primary { background: var(--danger-line); }
 .identity-required-banner .button-primary:hover { background: #b42318; }
 .connection-modal {
@@ -880,7 +881,7 @@ button, input { font: inherit; }
   font-size: 12px;
   line-height: 1.35;
 }
-.table-link, .link-button {
+.table-link, .link-button, .setup-link {
   color: var(--red-dark);
   font-weight: 800;
   text-decoration: underline;
@@ -893,6 +894,7 @@ button, input { font: inherit; }
   cursor: pointer;
   font: inherit;
 }
+.setup-link { display: inline-block; margin-top: 10px; }
 .data-table {
   width: 100%;
   border-collapse: collapse;
@@ -1320,13 +1322,13 @@ export const appScript = `
     return '<article class="stat-card"><span>' + escapeHtml(label) + '</span><strong>' + cell(value) + '</strong>' + (note ? '<small>' + cell(note) + '</small>' : '') + '</article>';
   }
 
-  function table(headers, rows, emptyText) {
-    if (!rows || rows.length === 0) return '<div class="data-panel empty-state">' + escapeHtml(emptyText) + '</div>';
-    return '<div class="data-panel">' + tableOnly(headers, rows, emptyText) + '</div>';
+  function table(headers, rows, emptyText, emptyAction) {
+    if (!rows || rows.length === 0) return '<div class="data-panel empty-state">' + escapeHtml(emptyText) + (emptyAction || '') + '</div>';
+    return '<div class="data-panel">' + tableOnly(headers, rows, emptyText, emptyAction) + '</div>';
   }
 
-  function tableOnly(headers, rows, emptyText) {
-    if (!rows || rows.length === 0) return '<p class="card-note">' + escapeHtml(emptyText) + '</p>';
+  function tableOnly(headers, rows, emptyText, emptyAction) {
+    if (!rows || rows.length === 0) return '<p class="card-note">' + escapeHtml(emptyText) + '</p>' + (emptyAction || '');
     return '<table class="data-table"><thead><tr>' +
       headers.map((h) => '<th>' + escapeHtml(h.label) + '</th>').join('') +
       '</tr></thead><tbody>' +
@@ -1434,6 +1436,17 @@ export const appScript = `
     return identities.map((identity) => '<option value="' + cell(identity.id) + '">' + cell(identity.displayName || identity.contactName || identity.phoneNumber) + ' - ' + statusLabel(identity.status) + '</option>').join('');
   }
 
+  function settingsLink(label, className) {
+    return '<a class="' + (className || 'setup-link') + '" href="#bazos-settings" data-nav-view="settings">' + escapeHtml(label || 'Nastavit') + '</a>';
+  }
+
+  function missingSettingsMarkup(message, label) {
+    return '<div class="data-panel empty-state">' + escapeHtml(message) + '<div class="flow-actions" style="justify-content:center;margin-top:14px">' + settingsLink(label || 'Nastavit v Nastavení Bazos.cz', 'button button-primary') + '</div></div>';
+  }
+
+  function settingsErrorMarkup(message) {
+    return escapeHtml(message) + '<br>' + settingsLink('Otevřít Nastavení Bazos.cz');
+  }
 
   function renderConnectionBanner(data) {
     if (mode !== 'client' || !identityBanner) return;
@@ -1443,8 +1456,8 @@ export const appScript = `
       return;
     }
     identityBanner.classList.remove('hidden');
-    identityBanner.innerHTML = '<div><strong>Účet zatím není připojen k Bazoši</strong><p>Po registraci je potřeba propojit Alfares účet s Bazoš účtem. E-mail na Bazoši musí být stejný jako v Alfares Auth: ' + cell(currentUser?.email || 'není k dispozici') + '.</p></div><button class="button button-primary" data-open-identity-wizard type="button">Připojit účet Bazoš</button>';
-    bindIdentityWizardButtons();
+    identityBanner.innerHTML = '<div><strong>Účet zatím není připojen k Bazoši</strong><p>Po registraci je potřeba propojit Alfares účet s Bazoš účtem. E-mail na Bazoši musí být stejný jako v Alfares Auth: ' + cell(currentUser?.email || 'není k dispozici') + '.</p>' + settingsLink('Připojit') + '</div>' + settingsLink('Připojit účet Bazoš', 'button button-primary');
+    bindNavigationLinks(identityBanner);
   }
 
   function connectionWizardMarkup() {
@@ -1525,7 +1538,7 @@ export const appScript = `
       const result = await request('/api/bazos/ads/' + encodeURIComponent(id) + '/evaluate-policy', { method: 'POST', body: '{}' });
       content.innerHTML = '<div class="data-panel"><h2>Výsledek kontroly pravidel</h2><pre>' + escapeHtml(JSON.stringify(result, null, 2)) + '</pre></div>';
     } catch (error) {
-      content.innerHTML = '<div class="data-panel empty-state">' + escapeHtml(error.message) + '</div>';
+      content.innerHTML = '<div class="data-panel empty-state">' + settingsErrorMarkup(error.message) + '</div>';
     }
   }
 
@@ -1537,7 +1550,7 @@ export const appScript = `
       const result = await request('/api/bazos/ads/' + encodeURIComponent(id) + '/publish', { method: 'POST', body: JSON.stringify(manualEvidence()) });
       content.innerHTML = '<div class="data-panel"><h2>Výsledek fronty</h2><pre>' + escapeHtml(JSON.stringify(result, null, 2)) + '</pre></div>';
     } catch (error) {
-      content.innerHTML = '<div class="data-panel empty-state">' + escapeHtml(error.message) + '</div>';
+      content.innerHTML = '<div class="data-panel empty-state">' + settingsErrorMarkup(error.message) + '</div>';
     }
   }
 
@@ -1564,7 +1577,8 @@ export const appScript = `
       syncActiveTabs();
       await renderClient();
     } catch (error) {
-      content.querySelector('[data-form-message]').textContent = error.message;
+      const formMessage = content.querySelector('[data-form-message]');
+      if (formMessage) formMessage.innerHTML = settingsErrorMarkup(error.message);
     }
   }
 
@@ -1592,7 +1606,7 @@ export const appScript = `
       syncActiveTabs();
       await renderClient();
     } catch (error) {
-      if (formMessage) formMessage.textContent = error.message;
+      if (formMessage) formMessage.innerHTML = settingsErrorMarkup(error.message);
     }
   }
 
@@ -1619,14 +1633,14 @@ export const appScript = `
       stat('Aktivní na Bazoši', summary.activeAds, 'Limit je 50 aktivních na ověřenou identitu') +
       stat('Vyžaduje kontrolu', data.ads.filter((ad) => statusClass(ad.publishStatus || ad.status || ad.bazosStatus) === 'risk').length, 'Blokované stavy nebo výzvy k ručnímu zásahu') +
       stat('Ve frontě', summary.queued, 'Hlídané publikování čeká na pravidla a cadence') +
-      '</div><div class="overview-actions"><button class="button button-primary" data-nav-view="publish" type="button">Přidat inzerát</button><button class="button button-secondary" data-nav-view="details" type="button">Otevřít moje inzeráty</button>' + (!hasLinkedBazosIdentity(data) ? '<button class="button button-primary" data-open-identity-wizard type="button">Připojit účet Bazoš</button>' : '') + '</div>' +
+      '</div><div class="overview-actions"><button class="button button-primary" data-nav-view="publish" type="button">Přidat inzerát</button><button class="button button-secondary" data-nav-view="details" type="button">Otevřít moje inzeráty</button>' + (!hasLinkedBazosIdentity(data) ? settingsLink('Připojit účet Bazoš', 'button button-primary') : '') + '</div>' +
       '<div class="overview-grid">' +
       '<div class="data-panel"><h2>Moje identity na Bazoši</h2>' +
       tableOnly([
         { label: 'Identita', render: (r) => '<strong>' + cell(r.displayName || r.contactName || r.id) + '</strong><small class="card-note">Telefon: ' + (isVerified(r) ? 'ověřen' : 'neověřen') + '</small>' },
         { label: 'Bazoš stav', render: (r) => '<span class="status ' + (isPublishableIdentity(r) ? 'ok' : 'risk') + '">' + (isPublishableIdentity(r) ? 'Připraveno' : 'Vyžaduje zásah') + '</span><small class="card-note">' + statusLabel(r.status) + ' / ' + statusLabel(r.sessionState) + ' / ' + statusLabel(r.reviewState || 'clear') + '</small>' },
         { label: 'Kapacita', render: (r) => '<strong>' + cell(r.remaining) + '</strong><small class="card-note">zbývá z 50, aktivní ' + cell(r.activeCount) + '</small>' },
-      ], identityRows, 'Pro tento účet zatím není připojena žádná Bazoš identita.') +
+      ], identityRows, 'Pro tento účet zatím není připojena žádná Bazoš identita.', settingsLink('Připojit')) +
       '</div><div class="data-panel"><h2>Moje inzeráty v přehledu</h2>' +
       tableOnly([
         { label: 'Inzerát', render: (r) => '<strong>' + cell(r.title || r.name || r.productName || r.id) + '</strong><small class="card-note">' + cell(r.category || r.categoryName || r.bazosCategory || r.productId || '') + '</small>' },
@@ -1653,8 +1667,8 @@ export const appScript = `
 
   function renderPublish(data) {
     if (!data.identities.length) {
-      content.innerHTML = '<div class="data-panel empty-state">Nejdříve připojte účet Bazoš.<div class="flow-actions" style="justify-content:center;margin-top:14px"><button class="button button-primary" data-open-identity-wizard type="button">Připojit účet Bazoš</button></div></div>';
-      bindIdentityWizardButtons();
+      content.innerHTML = missingSettingsMarkup('Nejdříve připojte účet Bazoš v sekci Nastavení Bazos.cz.', 'Připojit účet Bazoš');
+      bindContentNavButtons();
       return;
     }
     content.innerHTML = '<form class="form-panel panel-stack" id="draft-form"><div><h2>Nový inzerát pro Bazos.cz</h2><p class="card-note">Vyberte ověřenou identitu, vyplňte inzerát a případně ho zařaďte do hlídané publikační fronty.</p></div><div class="form-grid">' +
@@ -1684,7 +1698,7 @@ export const appScript = `
         { label: 'Relace', render: (r) => '<span class="status ' + statusClass(r.sessionState) + '">' + statusLabel(r.sessionState) + '</span>' },
         { label: 'Publikování', render: (r) => '<span class="status ' + (isPublishableIdentity(r) ? 'ok' : 'risk') + '">' + (isPublishableIdentity(r) ? 'Může publikovat' : 'Nelze publikovat') + '</span><small class="card-note">Aktivní: ' + cell(r.activeAdCount || 0) + ' / 50</small>' },
         { label: 'Kontrola', render: (r) => '<span class="status ' + statusClass(r.reviewState) + '">' + statusLabel(r.reviewState || 'clear') + '</span><small class="card-note">Platnost: ' + cell(r.verificationExpiresAt) + '</small>' },
-      ], data.identities, 'Pro účet nejsou nastavené žádné Bazos identity.');
+      ], data.identities, 'Pro účet nejsou nastavené žádné Bazos identity.', settingsLink('Nastavit'));
   }
 
   function renderSettings(data) {
@@ -1702,7 +1716,7 @@ export const appScript = `
         { label: 'Stav', render: (r) => '<span class="status ' + statusClass(r.status) + '">' + statusLabel(r.status) + '</span>' },
         { label: 'Relace', render: (r) => '<span class="status ' + statusClass(r.sessionState) + '">' + statusLabel(r.sessionState) + '</span>' },
         { label: 'Může publikovat', render: (r) => '<span class="status ' + (isPublishableIdentity(r) ? 'ok' : 'risk') + '">' + (isPublishableIdentity(r) ? 'Ano' : 'Ne') + '</span><small class="card-note">' + (hasLinkedAccount(r) ? 'Účet je propojený' : 'Čeká na propojení účtu') + '</small>' },
-      ], data.identities, 'Zatím není uložené žádné nastavení Bazos.cz.');
+      ], data.identities, 'Zatím není uložené žádné nastavení Bazos.cz.', settingsLink('Přidat nastavení'));
     document.getElementById('identity-form').addEventListener('submit', createIdentity);
   }
 
@@ -1805,7 +1819,8 @@ export const appScript = `
         });
         draw(document.getElementById('catalog-search')?.value || '');
       } catch (error) {
-        content.querySelector('[data-form-message]').textContent = error.message;
+        const formMessage = content.querySelector('[data-form-message]');
+        if (formMessage) formMessage.innerHTML = settingsErrorMarkup(error.message);
       }
     }
 
@@ -1818,24 +1833,25 @@ export const appScript = `
         });
         draw(document.getElementById('catalog-search')?.value || '');
       } catch (error) {
-        content.querySelector('[data-form-message]').textContent = error.message;
+        const formMessage = content.querySelector('[data-form-message]');
+        if (formMessage) formMessage.innerHTML = settingsErrorMarkup(error.message);
       }
     }
 
     try {
       await loadProducts('');
       if (!products.length) {
-        content.innerHTML = '<div class="data-panel empty-state">Katalog nevrátil žádné aktivní produkty.</div>';
+        content.innerHTML = missingSettingsMarkup('Katalog nevrátil žádné aktivní produkty. Pokud katalog není připojený, nastavte nejdříve Bazoš účet a návazné katalogové propojení.', 'Otevřít Nastavení Bazos.cz');
         return;
       }
       if (!data.identities.length) {
-        content.innerHTML = '<div class="data-panel empty-state">Nejdříve připojte účet Bazoš.<div class="flow-actions" style="justify-content:center;margin-top:14px"><button class="button button-primary" data-open-identity-wizard type="button">Připojit účet Bazoš</button></div></div>';
-        bindIdentityWizardButtons();
+        content.innerHTML = missingSettingsMarkup('Nejdříve připojte účet Bazoš v sekci Nastavení Bazos.cz.', 'Připojit účet Bazoš');
+        bindContentNavButtons();
         return;
       }
       draw('');
     } catch (error) {
-      content.innerHTML = '<div class="data-panel empty-state">' + escapeHtml(error.message) + '</div>';
+      content.innerHTML = '<div class="data-panel empty-state">' + settingsErrorMarkup(error.message) + '</div>';
     }
   }
 
@@ -1852,15 +1868,27 @@ export const appScript = `
     if (activeView === 'catalog') return renderCatalog(data);
   }
 
-  function bindContentNavButtons() {
-    content.querySelectorAll('[data-nav-view], [data-sidebar-view]').forEach((button) => {
+  function navigateTo(view) {
+    activeView = view;
+    const hash = activeView === 'settings' ? 'bazos-settings' : activeView;
+    if (mode === 'client') window.history.replaceState(null, document.title, '/client#' + hash);
+    syncActiveTabs();
+    render();
+  }
+
+  function bindNavigationLinks(container) {
+    (container || document).querySelectorAll('[data-nav-view], [data-sidebar-view]').forEach((button) => {
+      if (button.dataset.navBound === 'true') return;
+      button.dataset.navBound = 'true';
       button.addEventListener('click', (event) => {
         event.preventDefault();
-        activeView = button.dataset.navView || button.dataset.sidebarView;
-        syncActiveTabs();
-        render();
+        navigateTo(button.dataset.navView || button.dataset.sidebarView);
       });
     });
+  }
+
+  function bindContentNavButtons() {
+    bindNavigationLinks(content);
   }
 
   function syncActiveTabs() {
@@ -1894,16 +1922,7 @@ export const appScript = `
     button.addEventListener('click', () => startHostedAuth(button.dataset.authAction));
   });
 
-  document.querySelectorAll('[data-nav-view], [data-sidebar-view]').forEach((link) => {
-    link.addEventListener('click', (event) => {
-      event.preventDefault();
-      activeView = link.dataset.navView || link.dataset.sidebarView;
-      const hash = activeView === 'settings' ? 'bazos-settings' : activeView;
-      window.history.replaceState(null, document.title, '/client#' + hash);
-      syncActiveTabs();
-      render();
-    });
-  });
+  bindNavigationLinks(document);
 
   const requestedAuthAction = new URLSearchParams(window.location.search).get('auth');
   if (mode === 'client' && !token()) {
