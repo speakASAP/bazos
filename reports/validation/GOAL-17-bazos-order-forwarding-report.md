@@ -8,21 +8,21 @@ Make Bazos order forwarding compatible with product-level sales statistics, or p
 
 ### Goal Impact
 
-Bazos no longer forwards central Orders payloads with `items: []`. A central order is forwarded only when the incoming Bazos order payload identifies one or more Bazos ad lines and each line resolves to a local `BazosAd.productId` Catalog product ID.
+Bazos no longer forwards central Orders payloads with `items: []`. A central order is forwarded only when the incoming Bazos order payload identifies one or more Bazos ad lines that resolve to local `BazosAd.productId`, or when a synthetic/internal payload explicitly carries a canonical `catalogProductId`/`productId`.
 
 ### Implemented
 
 - Replaced the empty `items: []` forwarding stub in `OrdersService`.
-- Added item mapping from incoming `items`, `orderItems`, `lines`, `products`, or top-level ad identifiers.
-- Resolved each line through local `BazosAd` by local UUID `adId` or platform `bazosAdId`/`offerId`/`listingId`.
+- Added item mapping from incoming `items`, `orderItems`, `lines`, `products`, top-level ad identifiers, and synthetic/internal `catalogProductId`/`productId` fields.
+- Resolved Bazos ad/listing lines through local `BazosAd` by local UUID `adId` or platform `bazosAdId`/`offerId`/`listingId`.
 - Forwarded central Orders payloads only with non-empty items containing Catalog product IDs.
-- Returned a defensive unavailable forwarding result and left `forwarded` false when item lines are absent, an ad cannot be resolved, or a mapped ad has no Catalog product ID.
-- Changed the webhook handler from a placeholder success message to an explicit unavailable result.
-- Added focused service tests proving empty/missing item contracts are not forwarded and mapped ad lines are forwarded with Catalog product IDs.
+- Returned a defensive unavailable forwarding result and left `forwarded` false when item lines are absent, a referenced ad cannot be resolved, or a mapped ad has no Catalog product ID.
+- Changed the webhook handler to ingest only synthetic/internal envelopes and report `[UNKNOWN: live Bazos marketplace webhook support]`.
+- Added focused service tests proving empty/missing item contracts are not forwarded, mapped ad lines are forwarded with Catalog product IDs, synthetic/internal Catalog product ID payloads forward, and webhook envelopes preserve the live-webhook unknown marker.
 
 ### Not Implemented
 
-- True Bazos webhook/order ingestion remains blocked because no Bazos order item payload contract exists in this repo.
+- True live Bazos marketplace webhook/order ingestion remains blocked because live Bazos webhook support is `[UNKNOWN: live Bazos marketplace webhook support]`.
 - No Catalog, Orders, publishing, payment, refund, stock, session, CAPTCHA/SMS, challenge, or deployment changes were made.
 
 ### Bazos Compliance Check
@@ -31,7 +31,7 @@ Pass by scope. This change does not publish, mutate listings, automate Bazos bro
 
 ### Validation Evidence
 
-- `NODE_PATH=../../shared/node_modules ../../shared/node_modules/.bin/jest --config jest.config.js src/aukro/orders/orders.service.spec.ts --runInBand`: pass, 1 suite, 4 tests.
+- `NODE_PATH=../../shared/node_modules ../../shared/node_modules/.bin/jest --config jest.config.js src/aukro/orders/orders.service.spec.ts --runInBand`: pass, 1 suite, 5 tests.
 - `npm --prefix services/aukro-service run build`: pass.
 - `npm --prefix shared run build`: pass.
 - `npm test`: pass, 5 suites, 83 tests.
@@ -46,7 +46,7 @@ Pass by scope. This change does not publish, mutate listings, automate Bazos bro
 
 ### Risks
 
-- The service now supports a bounded ad-line payload shape, but actual Bazos webhook semantics remain `[MISSING: Bazos order item ingestion contract]`.
+- The service now supports bounded ad-line and synthetic/internal Catalog product ID payload shapes, but actual live Bazos webhook semantics remain `[UNKNOWN: live Bazos marketplace webhook support]`.
 - Orders created without item/ad identifiers are stored locally but are not forwarded to central Orders.
 - `services/aukro-service/src/aukro/*` paths remain legacy Aukro-named wrappers around Bazos semantics.
 
@@ -63,9 +63,9 @@ Pass by scope. This change does not publish, mutate listings, automate Bazos bro
 
 ### Commit Or No-Commit Reason
 
-Commit after final validation.
+Commit `5d6b920` created the empty-item forwarding guard. Follow-up commit after final validation records synthetic/internal order payload support.
 
 ### Next Action
 
-Rerun Catalog Goal 17 validation against Bazos. True webhook/order ingestion needs the missing Bazos order item ingestion contract before further implementation.
+Rerun Catalog Goal 17 validation against Bazos. True live Bazos marketplace webhook ingestion needs a real Bazos order item ingestion contract before further implementation.
 

@@ -32,7 +32,7 @@ const ad = {
 function makePrisma(overrides: Partial<Record<string, any>> = {}) {
   return {
     bazosOrder: {
-      create: jest.fn().mockResolvedValue(overrides.order ?? order),
+      create: jest.fn().mockImplementation(({ data }) => Promise.resolve({ ...order, ...data })),
       update: jest.fn().mockImplementation(({ data }) => Promise.resolve({ ...order, ...data })),
     },
     bazosAd: {
@@ -77,7 +77,7 @@ describe('OrdersService', () => {
 
     expect(orderClient.createOrder).not.toHaveBeenCalled();
     expect(prisma.bazosOrder.update).not.toHaveBeenCalled();
-    expect(result.forwarding.reason).toContain('Mapped Bazos ad has no Catalog product ID');
+    expect(result.forwarding.reason).toContain('mapped Bazos ad has no Catalog product ID');
   });
 
   it('maps Bazos ad item lines to Catalog product IDs before forwarding', async () => {
@@ -86,6 +86,8 @@ describe('OrdersService', () => {
 
     const result = await service.create({
       accountId: 'account-1',
+      bazosOrderId: 'bazos-order-1',
+      total: 1000,
       items: [{ bazosAdId: 'bazos-ad-1', quantity: 2, totalPrice: 2000 }],
     }) as any;
 
@@ -100,6 +102,8 @@ describe('OrdersService', () => {
         unitPrice: 1000,
         totalPrice: 2000,
       }],
+      subtotal: 1000,
+      total: 1000,
     }));
     expect(prisma.bazosOrder.update).toHaveBeenCalledWith(expect.objectContaining({
       where: { id: order.id },
@@ -108,17 +112,68 @@ describe('OrdersService', () => {
     expect(result.forwarding).toEqual({ forwarded: true, orderId: 'central-order-1', itemCount: 1 });
   });
 
-  it('reports webhook ingestion unavailable instead of pretending to ingest orders', async () => {
-    const prisma = makePrisma();
+  it('forwards synthetic internal item payloads that already carry Catalog product IDs', async () => {
+    const prisma = makePrisma({ ad: null });
     const { service, orderClient } = makeService(prisma);
 
-    const result = await service.handleWebhook({ event: 'order.created' });
+    const result = await service.create({
+      accountId: 'account-1',
+      bazosOrderId: 'synthetic-bazos-1',
+      items: [{
+        catalogProductId: '33333333-3333-4333-8333-333333333333',
+        title: 'Synthetic Bazos item',
+        quantity: 3,
+        unitPrice: 250,
+      }],
+    }) as any;
 
-    expect(orderClient.createOrder).not.toHaveBeenCalled();
+    expect(orderClient.createOrder).toHaveBeenCalledWith(expect.objectContaining({
+      externalOrderId: 'synthetic-bazos-1',
+      channel: 'bazos',
+      items: [{
+        productId: '33333333-3333-4333-8333-333333333333',
+        sku: undefined,
+        title: 'Synthetic Bazos item',
+        quantity: 3,
+        unitPrice: 250,
+        totalPrice: 750,
+      }],
+      subtotal: 750,
+      total: 750,
+    }));
+    expect(result.forwarding).toEqual({ forwarded: true, orderId: 'central-order-1', itemCount: 1 });
+  });
+
+  it('ingests synthetic/internal webhook envelopes while keeping live Bazos webhook support unknown', async () => {
+    const prisma = makePrisma({ ad: null });
+    const { service, orderClient } = makeService(prisma);
+
+    const result = await service.handleWebhook({
+      payload: {
+        accountId: 'account-1',
+        externalOrderId: 'webhook-synthetic-1',
+        items: [{
+          productId: '44444444-4444-4444-8444-444444444444',
+          quantity: 1,
+          price: 499,
+        }],
+      },
+    });
+
+    expect(orderClient.createOrder).toHaveBeenCalledWith(expect.objectContaining({
+      externalOrderId: 'webhook-synthetic-1',
+      channel: 'bazos',
+      items: [expect.objectContaining({
+        productId: '44444444-4444-4444-8444-444444444444',
+        quantity: 1,
+        unitPrice: 499,
+        totalPrice: 499,
+      })],
+    }));
     expect(result).toEqual(expect.objectContaining({
-      available: false,
-      reason: 'BAZOS_ORDER_ITEM_MAPPING_UNAVAILABLE',
-      missing: '[MISSING: Bazos order item ingestion contract]',
+      message: 'Synthetic/internal Bazos order ingested',
+      liveWebhookSupport: '[UNKNOWN: live Bazos marketplace webhook support]',
+      forwarding: { forwarded: true, orderId: 'central-order-1', itemCount: 1 },
     }));
   });
 });

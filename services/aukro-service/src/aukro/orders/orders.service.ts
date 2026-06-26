@@ -3,12 +3,15 @@ import { PrismaService, LoggerService, OrderClientService } from '@bazos/shared'
 
 const BAZOS_ORDER_ITEM_CONTRACT_MISSING = '[MISSING: Bazos order item ingestion contract]';
 const BAZOS_ORDER_ITEM_MAPPING_UNAVAILABLE = 'BAZOS_ORDER_ITEM_MAPPING_UNAVAILABLE';
+const LIVE_BAZOS_WEBHOOK_SUPPORT = '[UNKNOWN: live Bazos marketplace webhook support]';
 
 interface SourceOrderLine {
   adId?: string;
   bazosAdId?: string;
   offerId?: string;
   listingId?: string;
+  catalogProductId?: string;
+  productId?: string;
   title?: string;
   name?: string;
   sku?: string;
@@ -67,7 +70,7 @@ export class OrdersService {
 
   async create(data: any) {
     const order = await this.prisma.bazosOrder.create({
-      data,
+      data: this.toBazosOrderData(data),
     });
 
     const itemMapping = await this.buildCentralOrderItems(data, order);
@@ -85,6 +88,9 @@ export class OrdersService {
     }
 
     try {
+      const itemTotal = itemMapping.items.reduce((sum, item) => sum + item.totalPrice, 0);
+      const orderTotal = Number(order.total);
+      const centralTotal = orderTotal > 0 ? orderTotal : itemTotal;
       const centralOrder = await this.orderClient.createOrder({
         externalOrderId: order.bazosOrderId || order.id,
         channel: 'bazos',
@@ -94,10 +100,10 @@ export class OrdersService {
           phone: order.customerPhone,
         },
         items: itemMapping.items,
-        subtotal: Number(order.total),
+        subtotal: centralTotal,
         shippingCost: 0,
         taxAmount: 0,
-        total: Number(order.total),
+        total: centralTotal,
         currency: order.currency,
         orderedAt: order.createdAt,
       });
@@ -126,29 +132,38 @@ export class OrdersService {
   }
 
   async handleWebhook(data: any) {
-    this.logger.warn(`Webhook handler unavailable: ${BAZOS_ORDER_ITEM_CONTRACT_MISSING}`);
+    const payload = data?.order || data?.payload || data;
+    const order: any = await this.create(payload);
+
     return {
-      available: false,
-      reason: BAZOS_ORDER_ITEM_MAPPING_UNAVAILABLE,
-      missing: BAZOS_ORDER_ITEM_CONTRACT_MISSING,
-      received: Boolean(data),
+      message: 'Synthetic/internal Bazos order ingested',
+      liveWebhookSupport: LIVE_BAZOS_WEBHOOK_SUPPORT,
+      orderId: order.id,
+      forwarding: order.forwarding,
     };
   }
 
   private async buildCentralOrderItems(data: any, order: any): Promise<ItemMappingResult> {
     const sourceLines = this.extractSourceLines(data);
     if (sourceLines.length === 0) {
-      return this.unavailableItemMapping('No Bazos order item lines were provided');
+      return this.unavailableItemMapping('missing catalogProductId: no Bazos order item lines were provided');
     }
 
     const items: CentralOrderItem[] = [];
     for (const line of sourceLines) {
       const ad = await this.findBazosAdForLine(order.accountId, line);
-      if (!ad) {
-        return this.unavailableItemMapping('Bazos order item line does not identify a known Bazos ad');
+      if (this.hasLineIdentifier(line) && !ad) {
+        return this.unavailableItemMapping('missing catalogProductId: Bazos order item line does not identify a known Bazos ad');
       }
-      if (!ad.productId) {
-        return this.unavailableItemMapping('Mapped Bazos ad has no Catalog product ID');
+      if (ad && !ad.productId) {
+        return this.unavailableItemMapping('missing catalogProductId: mapped Bazos ad has no Catalog product ID');
+      }
+
+      const productId = this.cleanIdentifier(ad?.productId || line.catalogProductId || line.productId);
+      if (!productId) {
+        return this.unavailableItemMapping(
+          'missing catalogProductId: provide catalogProductId/productId or a Bazos ad/listing reference linked to a Catalog product',
+        );
       }
 
       const quantity = this.toPositiveNumber(line.quantity, 1);
@@ -156,9 +171,9 @@ export class OrdersService {
       const totalPrice = this.toPositiveNumber(line.totalPrice ?? line.total, unitPrice * quantity);
 
       items.push({
-        productId: ad.productId,
+        productId,
         sku: line.sku,
-        title: String(line.title || line.name || ad.title),
+        title: String(line.title || line.name || ad?.title || 'Bazos item'),
         quantity,
         unitPrice,
         totalPrice,
@@ -166,10 +181,35 @@ export class OrdersService {
     }
 
     if (items.length === 0) {
-      return this.unavailableItemMapping('No mapped Bazos order items were produced');
+      return this.unavailableItemMapping('missing catalogProductId: no mapped Bazos order items were produced');
     }
 
     return { available: true, items };
+  }
+
+  private toBazosOrderData(data: any) {
+    return {
+      accountId: data.accountId,
+      bazosOrderId: this.cleanIdentifier(data.bazosOrderId ?? data.externalOrderId),
+      customerEmail: this.cleanIdentifier(data.customerEmail ?? data.customer?.email),
+      customerPhone: this.cleanIdentifier(data.customerPhone ?? data.customer?.phone),
+      total: this.resolveOrderTotal(data),
+      currency: this.cleanIdentifier(data.currency) || 'CZK',
+      status: this.cleanIdentifier(data.status) || 'pending',
+    };
+  }
+
+  private resolveOrderTotal(data: any): number {
+    const explicitTotal = this.toPositiveNumber(data?.total ?? data?.orderTotal ?? data?.subtotal, 0);
+    if (explicitTotal > 0) {
+      return explicitTotal;
+    }
+
+    return this.extractSourceLines(data).reduce((sum, line) => {
+      const quantity = this.toPositiveNumber(line.quantity, 1);
+      const unitPrice = this.toPositiveNumber(line.unitPrice ?? line.price, 0);
+      return sum + this.toPositiveNumber(line.totalPrice ?? line.total, unitPrice * quantity);
+    }, 0);
   }
 
   private extractSourceLines(data: any): SourceOrderLine[] {
@@ -179,7 +219,7 @@ export class OrdersService {
       return sourceArray.filter((line) => line && typeof line === 'object');
     }
 
-    if (this.hasLineIdentifier(data)) {
+    if (this.hasLineIdentifier(data) || this.hasCatalogProductIdentifier(data)) {
       return [data];
     }
 
@@ -219,11 +259,15 @@ export class OrdersService {
       return total / quantity;
     }
 
-    return this.toPositiveNumber(ad.price, 0);
+    return this.toPositiveNumber(ad?.price, 0);
   }
 
   private hasLineIdentifier(data: SourceOrderLine | undefined): boolean {
     return Boolean(data?.adId || data?.bazosAdId || data?.offerId || data?.listingId);
+  }
+
+  private hasCatalogProductIdentifier(data: SourceOrderLine | undefined): boolean {
+    return Boolean(data?.catalogProductId || data?.productId);
   }
 
   private cleanIdentifier(value: unknown): string | undefined {

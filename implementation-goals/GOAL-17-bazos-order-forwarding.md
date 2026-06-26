@@ -28,6 +28,7 @@ Forbidden:
 ## Parallel Execution
 
 - Workstream: Bazos order forwarding guard - status `ready now`; owner role `Bazos channel sub-agent`; files `services/aukro-service/src/aukro/orders/*`; validation owner same session.
-- Workstream: true Bazos order ingestion contract - status `blocked`; blocker `[MISSING: Bazos order item ingestion contract]`; requires owner/API contract input before another agent can safely implement webhook ingestion.
+- Workstream: synthetic/internal order payload compatibility - status `ready now`; supports explicit `catalogProductId`/`productId` item payloads for validation and bounded internal ingestion.
+- Workstream: true live Bazos order ingestion contract - status `blocked`; blocker `[UNKNOWN: live Bazos marketplace webhook support]`; requires owner/API contract input before another agent can safely implement live webhook ingestion.
 - Final integration: original Catalog Goal 17 orchestrator; merge order `Bazos guard commit -> Catalog/Orders validator rerun`.
 
