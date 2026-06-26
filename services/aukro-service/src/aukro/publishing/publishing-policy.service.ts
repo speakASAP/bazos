@@ -7,6 +7,23 @@ type PolicyReason = {
   retryAt?: Date;
 };
 
+type EvidenceSource = 'manual_review' | 'trusted_backend';
+
+type PublishEvidence = {
+  publicDuplicateCheck?: {
+    checkedAt?: string | Date;
+    source?: EvidenceSource;
+    likelyDuplicate?: boolean;
+    reason?: string;
+  };
+  contentPolicy?: {
+    checkedAt?: string | Date;
+    source?: EvidenceSource;
+    passed?: boolean;
+    reason?: string;
+  };
+};
+
 type PolicyDecision = {
   allowed: boolean;
   reasons: PolicyReason[];
@@ -27,6 +44,7 @@ const ACTIVE_AD_LIMIT = 50;
 const MIN_PUBLISH_DELAY_SECONDS = 60;
 const MAX_PUBLISH_DELAY_SECONDS = 180;
 const SAME_CATEGORY_COOLDOWN_HOURS = 24;
+const EVIDENCE_TTL_MS = 60 * 60 * 1000;
 
 @Injectable()
 export class PublishingPolicyService {
@@ -40,7 +58,7 @@ export class PublishingPolicyService {
     this.logger.setContext('PublishingPolicyService');
   }
 
-  async evaluateOffer(adId: string, requestedIdentityId?: string): Promise<PolicyDecision> {
+  async evaluateOffer(adId: string, userId: string, requestedIdentityId?: string, evidence: PublishEvidence = {}): Promise<PolicyDecision> {
     const ad = await this.prisma.bazosAd.findUnique({
       where: { id: adId },
       include: { identity: true },
@@ -50,14 +68,14 @@ export class PublishingPolicyService {
       throw new Error(`Ad ${adId} not found`);
     }
 
-    const identity = await this.resolveIdentity(ad.accountId, ad.identityId, requestedIdentityId);
+    const identity = await this.resolveIdentity(ad.accountId, userId, ad.identityId, requestedIdentityId);
     const now = new Date();
     const reasons: PolicyReason[] = [];
 
     if (!identity) {
       reasons.push({
         code: 'identity_required',
-        message: 'A verified Bazos identity with a phone number is required before publishing.',
+        message: 'A verified Bazos identity owned by the current user is required before publishing.',
       });
     } else {
       if (identity.status !== 'verified') {
@@ -74,10 +92,10 @@ export class PublishingPolicyService {
         });
       }
 
-      if (identity.sessionState !== 'ready') {
+      if (identity.sessionState !== 'active') {
         reasons.push({
-          code: 'session_not_ready',
-          message: 'A human-approved Bazos browser session is required; CAPTCHA, SMS, or bank checks must not be bypassed.',
+          code: 'session_not_active',
+          message: 'A human-approved active Bazos browser session is required; CAPTCHA, SMS, or bank checks must not be bypassed.',
         });
       }
 
@@ -103,6 +121,23 @@ export class PublishingPolicyService {
         });
       }
 
+      if (ad.productId) {
+        const duplicate = await this.prisma.bazosAd.findFirst({
+          where: {
+            identityId: identity.id,
+            productId: ad.productId,
+            isActive: true,
+            id: { not: ad.id },
+          },
+        });
+        if (duplicate) {
+          reasons.push({
+            code: 'local_duplicate',
+            message: 'An active local Bazos ad already exists for this product and identity.',
+          });
+        }
+      }
+
       if (ad.category) {
         const cadence = await this.prisma.bazosIdentityCategoryCadence.findUnique({
           where: {
@@ -125,6 +160,26 @@ export class PublishingPolicyService {
         }
       }
     }
+
+    if (!ad.category) {
+      reasons.push({
+        code: 'category_required',
+        message: 'A mapped Bazos category is required before publishing.',
+      });
+    } else {
+      const categoryMapping = await this.prisma.bazosCategory.findFirst({
+        where: { bazosCategory: ad.category, isActive: true },
+      });
+      if (!categoryMapping) {
+        reasons.push({
+          code: 'category_missing_or_blocked',
+          message: `Bazos category ${ad.category} has no active mapping; human review is required.`,
+        });
+      }
+    }
+
+    this.validatePublicDuplicateEvidence(evidence.publicDuplicateCheck, now, reasons);
+    this.validateContentPolicyEvidence(evidence.contentPolicy, now, reasons);
 
     if (!ad.isActive || ad.stockQuantity <= 0) {
       reasons.push({
@@ -192,8 +247,8 @@ export class PublishingPolicyService {
     return decision;
   }
 
-  async reserveOfferPublishSlot(adId: string, requestedIdentityId?: string) {
-    const decision = await this.evaluateOffer(adId, requestedIdentityId);
+  async reserveOfferPublishSlot(adId: string, userId: string, requestedIdentityId?: string, evidence: PublishEvidence = {}) {
+    const decision = await this.evaluateOffer(adId, userId, requestedIdentityId, evidence);
 
     if (!decision.allowed || !decision.identityId) {
       return decision;
@@ -232,16 +287,17 @@ export class PublishingPolicyService {
     };
   }
 
-  private async resolveIdentity(accountId: string, adIdentityId?: string | null, requestedIdentityId?: string) {
+  private async resolveIdentity(accountId: string, userId: string, adIdentityId?: string | null, requestedIdentityId?: string) {
     if (requestedIdentityId || adIdentityId) {
-      return this.prisma.bazosIdentity.findUnique({
-        where: { id: requestedIdentityId || adIdentityId || '' },
+      return this.prisma.bazosIdentity.findFirst({
+        where: { id: requestedIdentityId || adIdentityId || '', userId },
       });
     }
 
     return this.prisma.bazosIdentity.findFirst({
       where: {
         accountId,
+        userId,
         status: 'verified',
         reviewState: 'clear',
       },
@@ -250,6 +306,47 @@ export class PublishingPolicyService {
         { updatedAt: 'asc' },
       ],
     });
+  }
+
+  private validatePublicDuplicateEvidence(evidence: PublishEvidence['publicDuplicateCheck'], now: Date, reasons: PolicyReason[]) {
+    if (!evidence || !this.isTrustedEvidence(evidence.source) || this.isEvidenceExpired(evidence.checkedAt, now)) {
+      reasons.push({
+        code: 'public_duplicate_evidence_required',
+        message: 'Fresh public duplicate evidence from manual_review or trusted_backend is required before publishing.',
+      });
+      return;
+    }
+    if (evidence.likelyDuplicate) {
+      reasons.push({
+        code: 'public_duplicate',
+        message: evidence.reason || 'Public duplicate evidence found a likely matching Bazos ad.',
+      });
+    }
+  }
+
+  private validateContentPolicyEvidence(evidence: PublishEvidence['contentPolicy'], now: Date, reasons: PolicyReason[]) {
+    if (!evidence || !this.isTrustedEvidence(evidence.source) || this.isEvidenceExpired(evidence.checkedAt, now)) {
+      reasons.push({
+        code: 'content_policy_evidence_required',
+        message: 'Fresh content policy evidence from manual_review or trusted_backend is required before publishing.',
+      });
+      return;
+    }
+    if (!evidence.passed) {
+      reasons.push({
+        code: 'content_policy_failed',
+        message: evidence.reason || 'Content policy validation failed.',
+      });
+    }
+  }
+
+  private isEvidenceExpired(value: string | Date | undefined, now: Date): boolean {
+    const time = value instanceof Date ? value.getTime() : new Date(value || '').getTime();
+    return !Number.isFinite(time) || time > now.getTime() || now.getTime() - time > EVIDENCE_TTL_MS;
+  }
+
+  private isTrustedEvidence(source?: string): boolean {
+    return source === 'manual_review' || source === 'trusted_backend';
   }
 
   private randomPublishDelaySeconds() {

@@ -4,9 +4,10 @@ This service must publish to Bazos.cz only in ways that respect Bazos rules and 
 
 ## Current Bazos Constraints
 
-Observed on 2026-06-12:
+Observed on 2026-06-26:
 
-- Bazos.cz does not provide a public API for creating ads.
+- Bazos.cz does not provide a public API for general third-party ad publishing.
+- Bazos terms say direct API integrations require Bazos.cz consent; the public help page only describes bulk automatic import for selected real-estate systems in Reality.Bazos.cz.
 - Posting is performed through Bazos web forms on category subdomains.
 - Before adding an ad, Bazos requires mobile phone verification by SMS.
 - Bazos states that verified devices are stored in cookies for up to one year.
@@ -14,6 +15,7 @@ Observed on 2026-06-12:
 - Bazos publishes non-promoted ads for a limited period and states a maximum of 50 non-promoted ads per user.
 - Bazos deletes duplicate ads and may delete ads that violate category/content rules.
 - Bazos says it is not a product catalog and restricts repeated advertising of the same new goods.
+- Bazos robots.txt disallows automated use of search/filter URLs and sensitive endpoints such as phone, mail, rating, report, recovery, and payment paths.
 
 Because Bazos can change these rules, the implementation must be conservative. If a live Bazos page is stricter than this document, the live stricter rule wins and automation must stop until the policy is updated.
 
@@ -32,6 +34,13 @@ Because Bazos can change these rules, the implementation must be conservative. I
 - Each phone identity must be explicitly authorized and verified.
 - Limits are enforced per identity and across the users known identities where duplicate or evasion risk exists.
 - Multiple phones must not be used to repost duplicates, bypass bans, exceed category cadence, or avoid the 50 active-ad cap.
+
+### Network Origin And Automation Boundary
+
+- The backend must not send direct server-side posting requests to Bazos unless a separate owner-approved integration contract exists.
+- The supported default flow is operator-browser handoff: the verified seller operates their own browser/session and the backend only prepares, gates, queues, audits, and records outcomes.
+- The service must not use proxy rotation, fingerprint spoofing, device spoofing, user-agent spoofing, CAPTCHA solving, rented phone numbers, or any other anti-detection or evasion mechanism.
+- Client-side handoff must not be used to hide server-origin automation; if a human challenge appears, the workflow stops and records a challenge state.
 
 ### Posting Pace
 
@@ -56,7 +65,7 @@ Because Bazos can change these rules, the implementation must be conservative. I
 ### Duplicate Prevention
 
 - The service must check for an existing local active ad for the same product and identity.
-- The service must search public Bazos listings for likely duplicates before submitting.
+- The service must search public Bazos listings for likely duplicates before submitting, but must not use Bazos-disallowed automated search/filter endpoints without a separate approved integration path.
 - Duplicate detection should compare title, normalized product identifiers, seller phone/name, location, and image/product metadata where available.
 - If a duplicate is likely, publishing must stop and request human review.
 
@@ -107,6 +116,7 @@ Any of these states must pause publishing for the affected identity or draft unt
 - Store Bazos cookies/session data encrypted at rest.
 - Do not log raw phone verification codes, cookies, passwords, or payment details.
 - Log policy decisions, selected random delays, and challenge states.
+- Public duplicate and content-policy evidence must come from manual review or a trusted backend validator; caller self-attestation is not sufficient.
 - Keep publish attempts idempotent with a stable attempt ID.
 - Prefer a queue with per-identity locking over synchronous HTTP publishing.
 - Re-check policy gates immediately before browser submission, not only when the job is queued.

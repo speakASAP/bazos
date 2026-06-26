@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, Request, UseGuards } from '@nestjs/common';
 import { OffersService } from './offers.service';
 import { JwtAuthGuard } from '@bazos/shared';
 import { PublishingPolicyService } from '../publishing/publishing-policy.service';
@@ -44,18 +44,18 @@ export class OffersController {
   }
 
   @Post(':id/policy-check')
-  async checkPublishPolicy(@Param('id') id: string, @Body() data?: { identityId?: string }) {
-    return this.publishingPolicyService.evaluateOffer(id, data?.identityId);
+  async checkPublishPolicy(@Param('id') id: string, @Request() req, @Body() data?: any) {
+    return this.publishingPolicyService.evaluateOffer(id, req.user.id, data?.identityId, data);
   }
 
   @Post(':id/enqueue-publish')
-  async enqueuePublish(@Param('id') id: string, @Body() data?: { identityId?: string }) {
-    return this.publisherQueueService.enqueueOffer(id, data);
+  async enqueuePublish(@Param('id') id: string, @Request() req, @Body() data?: any) {
+    return this.publisherQueueService.enqueueOffer(id, req.user.id, data);
   }
 
   @Post(':id/reserve-publish')
-  async reservePublish(@Param('id') id: string, @Body() data?: { identityId?: string }) {
-    return this.publishingPolicyService.reserveOfferPublishSlot(id, data?.identityId);
+  async reservePublish(@Param('id') id: string, @Request() req, @Body() data?: any) {
+    return this.publishingPolicyService.reserveOfferPublishSlot(id, req.user.id, data?.identityId, data);
   }
 
   @Post(':id/renew')

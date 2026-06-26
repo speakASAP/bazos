@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, Request, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '@bazos/shared';
 import { PublisherQueueService } from './publisher-queue.service';
 
@@ -8,27 +8,27 @@ export class PublisherQueueController {
   constructor(private readonly publisherQueueService: PublisherQueueService) {}
 
   @Get()
-  async listQueue(@Query() query: any) {
-    return this.publisherQueueService.listQueue(query);
+  async listQueue(@Request() req, @Query() query: any) {
+    return this.publisherQueueService.listQueue(req.user.id, query);
   }
 
   @Get('due')
-  async due(@Query() query: any) {
-    return this.publisherQueueService.nextDue(Number(query.limit || 5));
+  async due(@Request() req, @Query() query: any) {
+    return this.publisherQueueService.nextDue(req.user.id, Number(query.limit || 5));
   }
 
   @Post('offers/:id/enqueue')
-  async enqueueOffer(@Param('id') id: string, @Body() data?: any) {
-    return this.publisherQueueService.enqueueOffer(id, data);
+  async enqueueOffer(@Param('id') id: string, @Request() req, @Body() data?: any) {
+    return this.publisherQueueService.enqueueOffer(id, req.user.id, data);
   }
 
   @Post('claim-next')
-  async claimNext(@Body() data?: any) {
-    return this.publisherQueueService.claimNext(data);
+  async claimNext(@Request() req, @Body() data?: any) {
+    return this.publisherQueueService.claimNext(req.user.id, data);
   }
 
   @Post('attempts/:id/result')
-  async recordResult(@Param('id') id: string, @Body() data: any) {
-    return this.publisherQueueService.recordResult(id, data);
+  async recordResult(@Param('id') id: string, @Request() req, @Body() data: any) {
+    return this.publisherQueueService.recordResult(id, req.user.id, data);
   }
 }

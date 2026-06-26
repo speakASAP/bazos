@@ -56,8 +56,8 @@ describe('PublishPolicyService', () => {
     identityId: 'identity-1',
     bazosCategory: 'elektro',
     productId: 'product-1',
-    publicDuplicateCheck: { checkedAt: new Date(), likelyDuplicate: false },
-    contentPolicy: { checkedAt: new Date(), passed: true },
+    publicDuplicateCheck: { checkedAt: new Date(), source: 'manual_review' as const, likelyDuplicate: false },
+    contentPolicy: { checkedAt: new Date(), source: 'manual_review' as const, passed: true },
   };
 
   describe('Gate 1 — identity.status must be verified', () => {
@@ -242,7 +242,29 @@ describe('PublishPolicyService', () => {
       const svc = new PublishPolicyService(prisma, makeLogger());
       const result = await svc.evaluate({
         ...input,
-        publicDuplicateCheck: { checkedAt: new Date(Date.now() - 2 * 60 * 60 * 1000), likelyDuplicate: false },
+        publicDuplicateCheck: { checkedAt: new Date(Date.now() - 2 * 60 * 60 * 1000), source: 'manual_review' as const, likelyDuplicate: false },
+      });
+      expect(result.allowed).toBe(false);
+      expect(result.failures.some((f) => f.gate === POLICY_GATE.PUBLIC_DUPLICATE_CHECK_MISSING)).toBe(true);
+    });
+
+    it('blocks when public duplicate evidence is not from a trusted source', async () => {
+      const prisma = makePrismaStub({ identity: baseIdentity() });
+      const svc = new PublishPolicyService(prisma, makeLogger());
+      const result = await svc.evaluate({
+        ...input,
+        publicDuplicateCheck: { checkedAt: new Date(), likelyDuplicate: false } as any,
+      });
+      expect(result.allowed).toBe(false);
+      expect(result.failures.some((f) => f.gate === POLICY_GATE.PUBLIC_DUPLICATE_CHECK_MISSING)).toBe(true);
+    });
+
+    it('blocks when public duplicate evidence has an invalid timestamp', async () => {
+      const prisma = makePrismaStub({ identity: baseIdentity() });
+      const svc = new PublishPolicyService(prisma, makeLogger());
+      const result = await svc.evaluate({
+        ...input,
+        publicDuplicateCheck: { checkedAt: new Date('bad-date'), source: 'manual_review', likelyDuplicate: false },
       });
       expect(result.allowed).toBe(false);
       expect(result.failures.some((f) => f.gate === POLICY_GATE.PUBLIC_DUPLICATE_CHECK_MISSING)).toBe(true);
@@ -253,7 +275,7 @@ describe('PublishPolicyService', () => {
       const svc = new PublishPolicyService(prisma, makeLogger());
       const result = await svc.evaluate({
         ...input,
-        publicDuplicateCheck: { checkedAt: new Date(), likelyDuplicate: true, reason: 'matching public listing' },
+        publicDuplicateCheck: { checkedAt: new Date(), source: 'manual_review' as const, likelyDuplicate: true, reason: 'matching public listing' },
       });
       expect(result.allowed).toBe(false);
       expect(result.failures.some((f) => f.gate === POLICY_GATE.PUBLIC_DUPLICATE)).toBe(true);
@@ -279,7 +301,18 @@ describe('PublishPolicyService', () => {
       const svc = new PublishPolicyService(prisma, makeLogger());
       const result = await svc.evaluate({
         ...input,
-        contentPolicy: { checkedAt: new Date(Date.now() - 2 * 60 * 60 * 1000), passed: true },
+        contentPolicy: { checkedAt: new Date(Date.now() - 2 * 60 * 60 * 1000), source: 'manual_review' as const, passed: true },
+      });
+      expect(result.allowed).toBe(false);
+      expect(result.failures.some((f) => f.gate === POLICY_GATE.CONTENT_POLICY_NOT_VALIDATED)).toBe(true);
+    });
+
+    it('blocks when content policy evidence is not from a trusted source', async () => {
+      const prisma = makePrismaStub({ identity: baseIdentity() });
+      const svc = new PublishPolicyService(prisma, makeLogger());
+      const result = await svc.evaluate({
+        ...input,
+        contentPolicy: { checkedAt: new Date(), passed: true } as any,
       });
       expect(result.allowed).toBe(false);
       expect(result.failures.some((f) => f.gate === POLICY_GATE.CONTENT_POLICY_NOT_VALIDATED)).toBe(true);
@@ -290,7 +323,7 @@ describe('PublishPolicyService', () => {
       const svc = new PublishPolicyService(prisma, makeLogger());
       const result = await svc.evaluate({
         ...input,
-        contentPolicy: { checkedAt: new Date(), passed: false, reason: 'forbidden content' },
+        contentPolicy: { checkedAt: new Date(), source: 'manual_review' as const, passed: false, reason: 'forbidden content' },
       });
       expect(result.allowed).toBe(false);
       expect(result.failures.some((f) => f.gate === POLICY_GATE.CONTENT_POLICY_FAIL)).toBe(true);

@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService, LoggerService } from '@bazos/shared';
 import { PublishingPolicyService } from './publishing-policy.service';
 
+const TERMINAL_ATTEMPT_STATUSES = ['submitted', 'challenge_required', 'failed', 'policy_blocked'];
+
 @Injectable()
 export class PublisherQueueService {
   private readonly logger: LoggerService;
@@ -15,8 +17,8 @@ export class PublisherQueueService {
     this.logger.setContext('PublisherQueueService');
   }
 
-  async enqueueOffer(adId: string, data: any = {}) {
-    const decision = await this.publishingPolicyService.reserveOfferPublishSlot(adId, data.identityId);
+  async enqueueOffer(adId: string, userId: string, data: any = {}) {
+    const decision = await this.publishingPolicyService.reserveOfferPublishSlot(adId, userId, data.identityId, data);
 
     if (!decision.allowed || !decision.identityId) {
       return { queued: false, decision };
@@ -45,12 +47,13 @@ export class PublisherQueueService {
     };
   }
 
-  async listQueue(query: any = {}) {
+  async listQueue(userId: string, query: any = {}) {
     return this.prisma.bazosPublishAttempt.findMany({
       where: {
         status: query.status || undefined,
         identityId: query.identityId,
         adId: query.adId,
+        identity: { userId },
       },
       include: {
         identity: true,
@@ -64,15 +67,16 @@ export class PublisherQueueService {
     });
   }
 
-  async nextDue(limit = 5) {
+  async nextDue(userId: string, limit = 5) {
     const now = new Date();
     const attempts = await this.prisma.bazosPublishAttempt.findMany({
       where: {
         status: 'queued',
         OR: [{ notBefore: null }, { notBefore: { lte: now } }],
         identity: {
+          userId,
           status: 'verified',
-          sessionState: 'ready',
+          sessionState: 'active',
           reviewState: 'clear',
         },
       },
@@ -90,12 +94,29 @@ export class PublisherQueueService {
     return attempts.filter((attempt) => !!attempt.ad && attempt.ad.isActive);
   }
 
-  async claimNext(data: any = {}) {
-    const due = await this.nextDue(Number(data.limit || 1));
+  async claimNext(userId: string, data: any = {}) {
+    const due = await this.nextDue(userId, Number(data.limit || 1));
     const attempt = due[0];
 
     if (!attempt || !attempt.ad) {
       return { claimed: false, reason: 'no_due_attempts' };
+    }
+
+    const decision = await this.publishingPolicyService.evaluateOffer(attempt.ad.id, userId, attempt.identityId, data);
+    if (!decision.allowed) {
+      await this.prisma.bazosPublishAttempt.update({
+        where: { id: attempt.id },
+        data: {
+          status: 'policy_blocked',
+          policyResult: decision as any,
+          completedAt: new Date(),
+        },
+      });
+      await this.prisma.bazosAd.update({
+        where: { id: attempt.ad.id },
+        data: { publishStatus: 'blocked_policy', lastPolicyCheck: decision as any },
+      });
+      return { claimed: false, reason: 'policy_blocked', decision };
     }
 
     const updated = await this.prisma.bazosPublishAttempt.update({
@@ -103,6 +124,7 @@ export class PublisherQueueService {
       data: {
         status: 'submitting',
         startedAt: new Date(),
+        policyResult: decision as any,
       },
       include: {
         identity: true,
@@ -112,7 +134,7 @@ export class PublisherQueueService {
 
     await this.prisma.bazosAd.update({
       where: { id: attempt.ad.id },
-      data: { publishStatus: 'publishing' },
+      data: { publishStatus: 'publishing', lastPolicyCheck: decision as any },
     });
 
     return {
@@ -122,13 +144,28 @@ export class PublisherQueueService {
     };
   }
 
-  async recordResult(attemptId: string, data: any = {}) {
-    const status = data.success ? 'submitted' : (data.challengeType ? 'challenge_required' : 'failed');
+  async recordResult(attemptId: string, userId: string, data: any = {}) {
+    const existing = await this.prisma.bazosPublishAttempt.findFirst({
+      where: { id: attemptId, identity: { userId } },
+      include: { identity: true, ad: true },
+    });
+    if (!existing) {
+      throw new Error(`Bazos publish attempt ${attemptId} not found`);
+    }
+    if (TERMINAL_ATTEMPT_STATUSES.includes(existing.status)) {
+      throw new Error(`Publish attempt is already terminal: ${existing.status}`);
+    }
+    if (data.success && !data.bazosAdId) {
+      throw new Error('bazosAdId is required for successful publish results');
+    }
+
+    const challengeType = data.challengeType || data.challengeState;
+    const status = data.success ? 'submitted' : (challengeType ? 'challenge_required' : 'failed');
     const attempt = await this.prisma.bazosPublishAttempt.update({
       where: { id: attemptId },
       data: {
         status,
-        challengeState: data.challengeType,
+        challengeState: challengeType,
         completedAt: new Date(),
         error: data.error,
       },
@@ -142,19 +179,29 @@ export class PublisherQueueService {
       await this.prisma.bazosAd.update({
         where: { id: attempt.ad.id },
         data: {
-          bazosAdId: data.bazosAdId,
-          publishStatus: data.success ? 'published' : (data.challengeType ? 'blocked_challenge' : 'failed'),
+          bazosAdId: data.success ? data.bazosAdId : undefined,
+          publishStatus: data.success ? 'published' : (challengeType ? 'blocked_challenge' : 'failed'),
+          challengeState: challengeType || null,
           lastPublishedAt: data.success ? new Date() : undefined,
         },
       });
     }
 
-    if (data.challengeType) {
+    if (challengeType) {
       await this.prisma.bazosIdentity.update({
         where: { id: attempt.identityId },
         data: {
-          sessionState: 'challenge_required',
-          reviewState: data.challengeType === 'manual_review' ? 'review_required' : 'clear',
+          sessionState: 'challenge',
+          reviewState: challengeType,
+        },
+      });
+    }
+
+    if (data.success) {
+      await this.prisma.bazosIdentity.update({
+        where: { id: attempt.identityId },
+        data: {
+          activeAdCount: { increment: 1 },
         },
       });
     }
@@ -187,10 +234,12 @@ export class PublisherQueueService {
     return {
       targetUrl: 'https://www.bazos.cz/pridat-inzerat.php',
       requiresVerifiedHumanSession: true,
-      prohibitedAutomation: ['captcha_bypass', 'sms_bypass', 'bank_check_bypass', 'device_fingerprint_spoofing'],
+      requiresOperatorBrowser: true,
+      serverSideBazosRequestsAllowed: false,
+      mustNotSpoofNetworkOrigin: true,
+      prohibitedAutomation: ['captcha_bypass', 'sms_bypass', 'bank_check_bypass', 'device_fingerprint_spoofing', 'proxy_rotation'],
       identity: {
         id: identity.id,
-        phoneNumber: identity.phoneNumber,
         displayName: identity.displayName,
         contactName: identity.contactName,
         contactPhone: identity.contactPhone || identity.phoneNumber,

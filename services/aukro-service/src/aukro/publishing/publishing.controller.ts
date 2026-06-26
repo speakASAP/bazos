@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Request, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '@bazos/shared';
 import { PublishingPolicyService } from './publishing-policy.service';
 
@@ -13,12 +13,12 @@ export class PublishingController {
   }
 
   @Post('offers/:id/policy-check')
-  async checkOffer(@Param('id') id: string, @Body() data?: { identityId?: string }) {
-    return this.publishingPolicyService.evaluateOffer(id, data?.identityId);
+  async checkOffer(@Param('id') id: string, @Request() req, @Body() data?: any) {
+    return this.publishingPolicyService.evaluateOffer(id, req.user.id, data?.identityId, data);
   }
 
   @Post('offers/:id/reserve')
-  async reserveOffer(@Param('id') id: string, @Body() data?: { identityId?: string }) {
-    return this.publishingPolicyService.reserveOfferPublishSlot(id, data?.identityId);
+  async reserveOffer(@Param('id') id: string, @Request() req, @Body() data?: any) {
+    return this.publishingPolicyService.reserveOfferPublishSlot(id, req.user.id, data?.identityId, data);
   }
 }

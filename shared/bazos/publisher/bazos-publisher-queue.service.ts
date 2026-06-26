@@ -331,6 +331,7 @@ export class BazosPublisherQueueService {
       publicDuplicateCheck: evidence.publicDuplicateCheck
         ? {
             checkedAt: new Date(evidence.publicDuplicateCheck.checkedAt),
+            source: evidence.publicDuplicateCheck.source,
             likelyDuplicate: evidence.publicDuplicateCheck.likelyDuplicate,
             reason: evidence.publicDuplicateCheck.reason,
           }
@@ -338,6 +339,7 @@ export class BazosPublisherQueueService {
       contentPolicy: evidence.contentPolicy
         ? {
             checkedAt: new Date(evidence.contentPolicy.checkedAt),
+            source: evidence.contentPolicy.source,
             passed: evidence.contentPolicy.passed,
             reason: evidence.contentPolicy.reason,
           }
@@ -351,6 +353,9 @@ export class BazosPublisherQueueService {
     return {
       targetUrl: 'https://www.bazos.cz/pridat-inzerat.php',
       requiresVerifiedHumanSession: true,
+      requiresOperatorBrowser: true,
+      serverSideBazosRequestsAllowed: false,
+      mustNotSpoofNetworkOrigin: true,
       stopOnChallenges: [
         REVIEW_STATE.VERIFICATION_REQUIRED,
         REVIEW_STATE.BANK_VERIFICATION_REQUIRED,

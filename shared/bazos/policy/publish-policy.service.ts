@@ -16,6 +16,8 @@ import {
   PolicyGateFailure,
 } from './publish-policy.types';
 
+type EvidenceSource = 'manual_review' | 'trusted_backend';
+
 export interface PolicyCheckInput {
   identityId: string;
   bazosCategory: string;
@@ -23,15 +25,17 @@ export interface PolicyCheckInput {
   adId?: string;
   /** Ad title used for local duplicate detection */
   adTitle?: string;
-  /** Evidence from the public Bazos duplicate search. Missing evidence blocks publishing. */
+  /** Trusted backend/manual evidence. Client self-attestation must not pass this gate. */
   publicDuplicateCheck?: {
     checkedAt: Date;
+    source?: EvidenceSource;
     likelyDuplicate: boolean;
     reason?: string;
   };
-  /** Evidence from content policy validation. Missing evidence blocks publishing. */
+  /** Trusted backend/manual evidence. Client self-attestation must not pass this gate. */
   contentPolicy?: {
     checkedAt: Date;
+    source?: EvidenceSource;
     passed: boolean;
     reason?: string;
   };
@@ -167,16 +171,21 @@ export class PublishPolicyService {
       }
     }
 
-    // Gate 9 — public duplicate evidence must exist and be clean.
+    // Gate 9 — public duplicate evidence must exist, be trusted, and be clean.
     if (!input.publicDuplicateCheck) {
       failures.push({
         gate: POLICY_GATE.PUBLIC_DUPLICATE_CHECK_MISSING,
-        message: 'Public Bazos duplicate search evidence is required before publishing',
+        message: 'Trusted public duplicate evidence is required before publishing',
+      });
+    } else if (!this.isTrustedEvidence(input.publicDuplicateCheck.source)) {
+      failures.push({
+        gate: POLICY_GATE.PUBLIC_DUPLICATE_CHECK_MISSING,
+        message: 'Public duplicate evidence must come from manual_review or trusted_backend',
       });
     } else if (this.isEvidenceExpired(input.publicDuplicateCheck.checkedAt, now, this.publicDuplicateEvidenceTtlMs)) {
       failures.push({
         gate: POLICY_GATE.PUBLIC_DUPLICATE_CHECK_MISSING,
-        message: `Public Bazos duplicate search evidence expired at ${input.publicDuplicateCheck.checkedAt.toISOString()}`,
+        message: 'Public duplicate evidence is missing, invalid, future-dated, or stale',
       });
     } else if (input.publicDuplicateCheck.likelyDuplicate) {
       failures.push({
@@ -196,16 +205,21 @@ export class PublishPolicyService {
       });
     }
 
-    // Gate 11 — content policy evidence must exist and pass.
+    // Gate 11 — content policy evidence must exist, be trusted, and pass.
     if (!input.contentPolicy) {
       failures.push({
         gate: POLICY_GATE.CONTENT_POLICY_NOT_VALIDATED,
-        message: 'Content policy validation evidence is required before publishing',
+        message: 'Trusted content policy evidence is required before publishing',
+      });
+    } else if (!this.isTrustedEvidence(input.contentPolicy.source)) {
+      failures.push({
+        gate: POLICY_GATE.CONTENT_POLICY_NOT_VALIDATED,
+        message: 'Content policy evidence must come from manual_review or trusted_backend',
       });
     } else if (this.isEvidenceExpired(input.contentPolicy.checkedAt, now, this.contentPolicyEvidenceTtlMs)) {
       failures.push({
         gate: POLICY_GATE.CONTENT_POLICY_NOT_VALIDATED,
-        message: `Content policy validation evidence expired at ${input.contentPolicy.checkedAt.toISOString()}`,
+        message: 'Content policy evidence is missing, invalid, future-dated, or stale',
       });
     } else if (!input.contentPolicy.passed) {
       failures.push({
@@ -248,6 +262,11 @@ export class PublishPolicyService {
   }
 
   private isEvidenceExpired(checkedAt: Date, now: Date, ttlMs: number): boolean {
-    return checkedAt.getTime() > now.getTime() || now.getTime() - checkedAt.getTime() > ttlMs;
+    const checkedAtMs = checkedAt?.getTime();
+    return !Number.isFinite(checkedAtMs) || checkedAtMs > now.getTime() || now.getTime() - checkedAtMs > ttlMs;
+  }
+
+  private isTrustedEvidence(source?: string): boolean {
+    return source === 'manual_review' || source === 'trusted_backend';
   }
 }

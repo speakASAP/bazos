@@ -3,10 +3,14 @@ import { IsBoolean, IsDateString, IsIn, IsInt, IsNotEmpty, IsOptional, IsString,
 import { REVIEW_STATE } from '../identity/bazos-identity.types';
 
 const CHALLENGE_STATES = Object.values(REVIEW_STATE).filter((state) => state !== REVIEW_STATE.CLEAR);
+const EVIDENCE_SOURCES = ['manual_review', 'trusted_backend'] as const;
 
 export class PublicDuplicateEvidenceDto {
   @IsDateString()
   checkedAt: string;
+
+  @IsIn(EVIDENCE_SOURCES)
+  source: typeof EVIDENCE_SOURCES[number];
 
   @IsBoolean()
   likelyDuplicate: boolean;
@@ -19,6 +23,9 @@ export class PublicDuplicateEvidenceDto {
 export class ContentPolicyEvidenceDto {
   @IsDateString()
   checkedAt: string;
+
+  @IsIn(EVIDENCE_SOURCES)
+  source: typeof EVIDENCE_SOURCES[number];
 
   @IsBoolean()
   passed: boolean;

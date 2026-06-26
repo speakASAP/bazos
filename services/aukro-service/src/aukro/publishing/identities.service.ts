@@ -79,7 +79,7 @@ export class IdentitiesService {
       where: { id },
       data: {
         status: 'verified',
-        sessionState: data.sessionState || 'ready',
+        sessionState: data.sessionState || 'active',
         reviewState: 'clear',
         verificationExpiresAt,
         notes: data.notes,

@@ -56,8 +56,8 @@ const allowedPolicy = {
 };
 
 const cleanEvidence = {
-  publicDuplicateCheck: { checkedAt: new Date().toISOString(), likelyDuplicate: false },
-  contentPolicy: { checkedAt: new Date().toISOString(), passed: true },
+  publicDuplicateCheck: { checkedAt: new Date().toISOString(), source: 'manual_review' as const, likelyDuplicate: false },
+  contentPolicy: { checkedAt: new Date().toISOString(), source: 'manual_review' as const, passed: true },
 };
 
 function makePrisma(overrides: Record<string, any> = {}) {

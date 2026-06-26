@@ -72,8 +72,8 @@ export class HumanVerificationService {
     await this.prisma.bazosIdentity.update({
       where: { id: session.identityId },
       data: {
-        sessionState: 'challenge_required',
-        reviewState: challengeType === 'manual_review' ? 'review_required' : 'clear',
+        sessionState: 'challenge',
+        reviewState: challengeType,
       },
     });
 
@@ -96,7 +96,7 @@ export class HumanVerificationService {
     const session = await this.prisma.bazosVerificationSession.update({
       where: { id: sessionId },
       data: {
-        state: 'verified',
+        state: 'completed',
         humanConfirmed: true,
         evidence: data.evidence,
         expiresAt: verificationExpiresAt,
@@ -109,7 +109,7 @@ export class HumanVerificationService {
       where: { id: session.identityId },
       data: {
         status: 'verified',
-        sessionState: 'ready',
+        sessionState: 'active',
         reviewState: 'clear',
         encryptedSession: sessionPayload,
         verificationExpiresAt,
@@ -137,8 +137,8 @@ export class HumanVerificationService {
     await this.prisma.bazosIdentity.update({
       where: { id: session.identityId },
       data: {
-        sessionState: 'failed',
-        reviewState: 'paused',
+        sessionState: 'challenge',
+        reviewState: data.challengeType || 'captcha_or_human_check_required',
         notes: data.reason || data.notes,
       },
     });
