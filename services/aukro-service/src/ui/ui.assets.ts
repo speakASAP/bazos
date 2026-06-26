@@ -7,7 +7,7 @@ const pageShell = (title: string, body: string) => `<!doctype html>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${title}</title>
   <meta name="description" content="Služba AlfaRes Bazoš pomáhá prodejcům připravovat, sledovat a spravovat inzeráty na Bazoš.cz v souladu s pravidly.">
-  <link rel="stylesheet" href="/ui/app.css?v=catalog-bazos-flow-20260626">
+  <link rel="stylesheet" href="/ui/app.css?v=czech-settings-20260627">
 </head>
 <body>
 ${body}
@@ -232,6 +232,7 @@ export const renderAppPage = (mode: AppMode) => {
         </section>
 
         <section class="workspace hidden" id="workspace">
+          <div class="identity-required-banner hidden" id="identity-required-banner" role="status"></div>
           <div class="toolbar">
             <div class="tabs" role="tablist">
               <button class="tab active" data-view="overview" type="button">Přehled</button>
@@ -245,7 +246,7 @@ export const renderAppPage = (mode: AppMode) => {
         </section>
       </main>
     </div>
-    <script src="/ui/app.js?v=client-overview-stats-20260626"></script>`,
+    <script src="/ui/app.js?v=czech-settings-20260627"></script>`,
   );
 };
 
@@ -266,6 +267,9 @@ export const appStyles = `
   --highlight: #FFD9BF;
   --highlight-line: #E4C2AB;
   --hover-red: #CC3333;
+  --danger-bg: #fff1f0;
+  --danger-line: #d92d20;
+  --danger-text: #9f1f17;
   --shadow: 0 18px 55px rgba(0, 0, 0, 0.10);
 }
 * { box-sizing: border-box; }
@@ -753,6 +757,87 @@ button, input { font: inherit; }
   gap: 16px;
   margin-top: 16px;
 }
+.identity-required-banner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  margin-bottom: 16px;
+  padding: 16px;
+  border: 1px solid var(--danger-line);
+  border-left-width: 5px;
+  border-radius: 8px;
+  background: var(--danger-bg);
+  color: var(--danger-text);
+}
+.identity-required-banner strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--danger-text);
+}
+.identity-required-banner p {
+  margin: 0;
+  color: #5f241f;
+  line-height: 1.45;
+}
+.identity-required-banner .button-primary { background: var(--danger-line); }
+.identity-required-banner .button-primary:hover { background: #b42318; }
+.connection-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.42);
+}
+.connection-dialog {
+  width: min(760px, 100%);
+  max-height: min(92vh, 820px);
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: var(--shadow);
+}
+.connection-dialog-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 22px 22px 14px;
+  border-bottom: 1px solid var(--line);
+}
+.connection-dialog-header h2 { margin: 0 0 8px; font-size: 24px; }
+.connection-dialog-header p { margin: 0; color: var(--muted); line-height: 1.5; }
+.icon-button {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 22px;
+  line-height: 1;
+}
+.connection-dialog .form-panel {
+  border: 0;
+  border-radius: 0;
+}
+.connection-requirement {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 1.45;
+}
+.connection-requirement strong { display: block; color: var(--ink); margin-bottom: 4px; }
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1034,6 +1119,7 @@ button, input { font: inherit; }
   .app-nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .app-main { padding: 18px; }
   .app-topbar, .toolbar { align-items: flex-start; flex-direction: column; }
+  .identity-required-banner { grid-template-columns: 1fr; }
   .data-table { display: block; overflow-x: auto; }
 }
 @media (max-width: 560px) {
@@ -1110,6 +1196,7 @@ export const appScript = `
   const authCallbackUrl = 'https://bazos.alfares.cz/auth/callback';
   const authPanel = document.getElementById('auth-panel');
   const workspace = document.getElementById('workspace');
+  const identityBanner = document.getElementById('identity-required-banner');
   const content = document.getElementById('workspace-content');
   const message = document.getElementById('form-message');
   const sessionLabel = document.getElementById('session-label');
@@ -1117,6 +1204,7 @@ export const appScript = `
   const adminLink = document.getElementById('admin-link');
   const refresh = document.getElementById('refresh');
   let activeView = initialView();
+  let currentUser = null;
 
   function initialView() {
     if (mode !== 'client') return 'overview';
@@ -1184,6 +1272,7 @@ export const appScript = `
     signOut.classList.remove('hidden');
     if (mode === 'client' && access?.admin) adminLink?.classList.remove('hidden');
     else adminLink?.classList.add('hidden');
+    currentUser = user || null;
     sessionLabel.textContent = user?.email || 'Přihlášeno';
   }
 
@@ -1248,7 +1337,14 @@ export const appScript = `
   const isVerified = (identity) => String(identity?.status || '').toLowerCase() === 'verified';
   const hasActiveSession = (identity) => String(identity?.sessionState || '').toLowerCase() === 'active';
   const isReviewClear = (identity) => !identity?.reviewState || String(identity.reviewState).toLowerCase() === 'clear';
-  const isPublishableIdentity = (identity) => Boolean(identity?.accountId) && isVerified(identity) && hasActiveSession(identity) && isReviewClear(identity) && Number(identity?.activeAdCount || 0) < 50;
+  const hasLinkedAccount = (identity) => Boolean(identity?.accountId);
+  const hasLinkedBazosIdentity = (data) => Array.isArray(data?.identities) && data.identities.length > 0;
+  const isPublishableIdentity = (identity) => hasLinkedAccount(identity) && isVerified(identity) && hasActiveSession(identity) && isReviewClear(identity) && Number(identity?.activeAdCount || 0) < 50;
+
+  function connectionWizardKey() {
+    const email = String(currentUser?.email || 'anonymous').trim().toLowerCase();
+    return 'bazosIdentityWizardDismissed:' + email;
+  }
 
   function toDate(value) {
     const date = value ? new Date(value) : null;
@@ -1290,8 +1386,8 @@ export const appScript = `
   function manualEvidence() {
     const checkedAt = new Date().toISOString();
     return {
-      publicDuplicateCheck: { checkedAt, source: 'manual_review', likelyDuplicate: false, reason: 'Confirmed in Basus client before enqueue.' },
-      contentPolicy: { checkedAt, source: 'manual_review', passed: true, reason: 'Confirmed in Basus client before enqueue.' },
+      publicDuplicateCheck: { checkedAt, source: 'manual_review', likelyDuplicate: false, reason: 'Potvrzeno v klientském panelu Basus před odesláním do fronty.' },
+      contentPolicy: { checkedAt, source: 'manual_review', passed: true, reason: 'Potvrzeno v klientském panelu Basus před odesláním do fronty.' },
     };
   }
 
@@ -1335,6 +1431,64 @@ export const appScript = `
 
   function renderIdentityOptions(identities) {
     return identities.map((identity) => '<option value="' + cell(identity.id) + '">' + cell(identity.displayName || identity.contactName || identity.phoneNumber) + ' - ' + statusLabel(identity.status) + '</option>').join('');
+  }
+
+
+  function renderConnectionBanner(data) {
+    if (mode !== 'client' || !identityBanner) return;
+    if (hasLinkedBazosIdentity(data)) {
+      identityBanner.classList.add('hidden');
+      identityBanner.innerHTML = '';
+      return;
+    }
+    identityBanner.classList.remove('hidden');
+    identityBanner.innerHTML = '<div><strong>Účet zatím není připojen k Bazoši</strong><p>Po registraci je potřeba propojit Alfares účet s Bazoš účtem. E-mail na Bazoši musí být stejný jako v Alfares Auth: ' + cell(currentUser?.email || 'není k dispozici') + '.</p></div><button class="button button-primary" data-open-identity-wizard type="button">Připojit účet Bazoš</button>';
+    bindIdentityWizardButtons();
+  }
+
+  function connectionWizardMarkup() {
+    const email = currentUser?.email || '';
+    return '<div class="connection-modal" id="connection-modal" role="dialog" aria-modal="true" aria-labelledby="connection-title">' +
+      '<div class="connection-dialog"><div class="connection-dialog-header"><div><h2 id="connection-title">Připojit účet Bazoš</h2><p>Vyplňte údaje používané na Bazoši. Tím vznikne vazba mezi vaším Alfares účtem a Bazoš identitou; ověření telefonu a relace se dokončuje podle pravidel Bazoš.cz.</p></div><button class="icon-button" data-close-identity-wizard type="button" aria-label="Zavřít">×</button></div>' +
+      '<form class="form-panel panel-stack" id="identity-wizard-form"><div class="connection-requirement"><strong>Požadavek na e-mail</strong>E-mail na Bazoši musí být stejný jako v Alfares Auth. Aktuální Alfares e-mail: ' + cell(email || 'není k dispozici') + '.</div><div class="form-grid">' +
+      '<label class="wide">E-mail Alfares / Bazoš<input name="authEmail" value="' + cell(email) + '" readonly></label>' +
+      '<label>Telefon Bazoš<input name="phoneNumber" minlength="9" maxlength="20" autocomplete="tel" required></label>' +
+      '<label>Název účtu<input name="displayName" maxlength="200" required></label>' +
+      '<label>Kontaktní jméno<input name="contactName" maxlength="200" autocomplete="name"></label>' +
+      '<label>Kontaktní telefon<input name="contactPhone" maxlength="50" autocomplete="tel"></label>' +
+      '<label>PSČ<input name="defaultZip" maxlength="20" autocomplete="postal-code"></label>' +
+      '<label>Lokalita<input name="defaultLocation" maxlength="200" autocomplete="address-level2"></label>' +
+      '<label class="wide">Poznámky<textarea name="notes" placeholder="Doplňující informace k ručnímu ověření nebo propojení účtu"></textarea></label>' +
+      '</div><p class="form-message" data-form-message></p><div class="flow-actions"><button class="button button-primary" type="submit">Uložit a připojit</button><button class="button button-secondary" data-close-identity-wizard type="button">Dokončit později</button></div></form></div></div>';
+  }
+
+  function openConnectionWizard(auto) {
+    if (mode !== 'client') return;
+    if (document.getElementById('connection-modal')) return;
+    document.body.insertAdjacentHTML('beforeend', connectionWizardMarkup());
+    document.getElementById('identity-wizard-form')?.addEventListener('submit', createIdentity);
+    document.querySelectorAll('[data-close-identity-wizard]').forEach((button) => button.addEventListener('click', () => {
+      if (auto) sessionStorage.setItem(connectionWizardKey(), 'dismissed');
+      closeConnectionWizard();
+    }));
+  }
+
+  function closeConnectionWizard() {
+    document.getElementById('connection-modal')?.remove();
+  }
+
+  function bindIdentityWizardButtons() {
+    document.querySelectorAll('[data-open-identity-wizard]').forEach((button) => {
+      if (button.dataset.bound === 'true') return;
+      button.dataset.bound = 'true';
+      button.addEventListener('click', () => openConnectionWizard(false));
+    });
+  }
+
+  function maybeAutoOpenConnectionWizard(data) {
+    if (mode !== 'client' || hasLinkedBazosIdentity(data)) return;
+    if (sessionStorage.getItem(connectionWizardKey())) return;
+    openConnectionWizard(true);
   }
 
   async function renderAdmin() {
@@ -1417,6 +1571,8 @@ export const appScript = `
     event.preventDefault();
     const form = event.currentTarget;
     const data = Object.fromEntries(new FormData(form).entries());
+    const authEmail = String(currentUser?.email || data.authEmail || '').trim();
+    const notes = [data.notes, authEmail ? 'E-mail v Alfares Auth se musí shodovat s e-mailem účtu na Bazoši: ' + authEmail : ''].filter(Boolean).join('\\n');
     const payload = {
       phoneNumber: data.phoneNumber,
       displayName: data.displayName,
@@ -1424,14 +1580,18 @@ export const appScript = `
       contactPhone: data.contactPhone || undefined,
       defaultZip: data.defaultZip || undefined,
       defaultLocation: data.defaultLocation || undefined,
-      accountId: data.accountId || undefined,
-      notes: data.notes || undefined,
+      notes: notes || undefined,
     };
+    const formMessage = form.querySelector('[data-form-message]') || content.querySelector('[data-form-message]');
     try {
       await request('/api/bazos/identities', { method: 'POST', body: JSON.stringify(payload) });
+      sessionStorage.setItem(connectionWizardKey(), 'completed');
+      closeConnectionWizard();
+      activeView = 'account';
+      syncActiveTabs();
       await renderClient();
     } catch (error) {
-      content.querySelector('[data-form-message]').textContent = error.message;
+      if (formMessage) formMessage.textContent = error.message;
     }
   }
 
@@ -1456,9 +1616,9 @@ export const appScript = `
       stat('Tento měsíc', summary.monthCreated, summary.monthPublished + ' publikováno') +
       stat('Celkem inzerátů', data.ads.length, summary.publishedAds + ' publikováno') +
       stat('Aktivní na Bazoši', summary.activeAds, 'Limit je 50 aktivních na ověřenou identitu') +
-      stat('Vyžaduje kontrolu', data.ads.filter((ad) => statusClass(ad.publishStatus || ad.status || ad.bazosStatus) === 'risk').length, 'Blokované nebo challenge stavy') +
+      stat('Vyžaduje kontrolu', data.ads.filter((ad) => statusClass(ad.publishStatus || ad.status || ad.bazosStatus) === 'risk').length, 'Blokované stavy nebo výzvy k ručnímu zásahu') +
       stat('Ve frontě', summary.queued, 'Hlídané publikování čeká na pravidla a cadence') +
-      '</div><div class="overview-actions"><button class="button button-primary" data-nav-view="publish" type="button">Přidat inzerát</button><button class="button button-secondary" data-nav-view="details" type="button">Otevřít moje inzeráty</button></div>' +
+      '</div><div class="overview-actions"><button class="button button-primary" data-nav-view="publish" type="button">Přidat inzerát</button><button class="button button-secondary" data-nav-view="details" type="button">Otevřít moje inzeráty</button>' + (!hasLinkedBazosIdentity(data) ? '<button class="button button-primary" data-open-identity-wizard type="button">Připojit účet Bazoš</button>' : '') + '</div>' +
       '<div class="overview-grid">' +
       '<div class="data-panel"><h2>Moje identity na Bazoši</h2>' +
       tableOnly([
@@ -1474,6 +1634,7 @@ export const appScript = `
       ], recentAds, 'Pro tento účet nebyly vráceny žádné inzeráty.') +
       '</div></div>';
     bindContentNavButtons();
+    bindIdentityWizardButtons();
   }
 
   function renderDetails(data) {
@@ -1491,12 +1652,13 @@ export const appScript = `
 
   function renderPublish(data) {
     if (!data.identities.length) {
-      content.innerHTML = '<div class="data-panel empty-state">Nejdříve přidejte účet v sekci Nastavení Bazos.cz.</div>';
+      content.innerHTML = '<div class="data-panel empty-state">Nejdříve připojte účet Bazoš.<div class="flow-actions" style="justify-content:center;margin-top:14px"><button class="button button-primary" data-open-identity-wizard type="button">Připojit účet Bazoš</button></div></div>';
+      bindIdentityWizardButtons();
       return;
     }
     content.innerHTML = '<form class="form-panel panel-stack" id="draft-form"><div><h2>Nový inzerát pro Bazos.cz</h2><p class="card-note">Vyberte ověřenou identitu, vyplňte inzerát a případně ho zařaďte do hlídané publikační fronty.</p></div><div class="form-grid">' +
       '<label>Účet / telefon<select name="identityId" required>' + renderIdentityOptions(data.identities) + '</select></label>' +
-      '<label>Cena CZK<input name="price" type="number" min="0" step="1" required></label>' +
+      '<label>Cena v Kč<input name="price" type="number" min="0" step="1" required></label>' +
       '<label class="wide">Název<input name="title" maxlength="500" required></label>' +
       '<label class="wide">Popis<textarea name="description"></textarea></label>' +
       '<label>Kategorie Bazos.cz<input name="category" maxlength="200"></label>' +
@@ -1511,12 +1673,12 @@ export const appScript = `
   function renderAccount(data) {
     const summary = accountSummary(data.identities, data.ads, data.queue);
     content.innerHTML = '<div class="summary-grid">' +
-      stat('Bazos identity', data.identities.length) +
+      stat('Bazoš identity', data.identities.length) +
       stat('Ověřené telefony', data.identities.filter(isVerified).length) +
       stat('Aktivní relace', data.identities.filter(hasActiveSession).length) +
       stat('Může publikovat', summary.publishable.length) +
       '</div>' + table([
-        { label: 'Účet', render: (r) => '<strong>' + cell(r.displayName || r.phoneNumber) + '</strong><small class="card-note">Account ID: ' + cell(r.accountId) + '</small>' },
+        { label: 'Účet', render: (r) => '<strong>' + cell(r.displayName || r.phoneNumber) + '</strong><small class="card-note">Propojení účtu: ' + (hasLinkedAccount(r) ? 'propojeno' : 'čeká na dokončení') + '</small>' },
         { label: 'Telefon', render: (r) => '<span class="status ' + (isVerified(r) ? 'ok' : 'risk') + '">' + statusLabel(r.status) + '</span><small class="card-note">' + cell(r.phoneNumber) + '</small>' },
         { label: 'Relace', render: (r) => '<span class="status ' + statusClass(r.sessionState) + '">' + statusLabel(r.sessionState) + '</span>' },
         { label: 'Publikování', render: (r) => '<span class="status ' + (isPublishableIdentity(r) ? 'ok' : 'risk') + '">' + (isPublishableIdentity(r) ? 'Může publikovat' : 'Nelze publikovat') + '</span><small class="card-note">Aktivní: ' + cell(r.activeAdCount || 0) + ' / 50</small>' },
@@ -1525,21 +1687,20 @@ export const appScript = `
   }
 
   function renderSettings(data) {
-    content.innerHTML = '<div class="account-grid"><form class="form-panel panel-stack" id="identity-form"><div><h2>Nastavení Bazos.cz</h2><p class="card-note">Přidejte vazbu na svůj Bazos účet a telefon. Ověření telefonu a relace se dokončuje ručně přes Bazos.cz; tato sekce pouze ukládá vazbu a stav.</p></div><div class="form-grid">' +
+    content.innerHTML = '<div class="account-grid"><form class="form-panel panel-stack" id="identity-form"><div><h2>Nastavení Bazos.cz</h2><p class="card-note">Přidejte telefon a údaje prodejce. Interní ID Bazoš účtu není potřeba hledat ani vyplňovat; systém ho doplní při propojení účtu. Ověření telefonu a relace se dokončuje ručně přes Bazos.cz.</p></div><div class="form-grid">' +
       '<label>Telefon<input name="phoneNumber" minlength="9" maxlength="20" required></label>' +
       '<label>Název účtu<input name="displayName" maxlength="200" required></label>' +
       '<label>Kontaktní jméno<input name="contactName" maxlength="200"></label>' +
       '<label>Kontaktní telefon<input name="contactPhone" maxlength="50"></label>' +
       '<label>PSČ<input name="defaultZip" maxlength="20"></label>' +
       '<label>Lokalita<input name="defaultLocation" maxlength="200"></label>' +
-      '<label class="wide">Bazos account ID<input name="accountId" placeholder="volitelné UUID účtu"></label>' +
-      '<label class="wide">Poznámky<textarea name="notes"></textarea></label>' +
-      '</div><p class="form-message" data-form-message></p><button class="button button-primary" type="submit">Uložit nastavení</button></form><div class="data-panel"><h2>Co musí být splněno</h2><div class="gate-grid"><div class="gate-item"><strong>Telefon</strong>status verified</div><div class="gate-item"><strong>Relace</strong>sessionState active</div><div class="gate-item"><strong>Kontrola</strong>reviewState clear</div><div class="gate-item"><strong>Limit</strong>méně než 50 aktivních inzerátů</div></div></div></div>' +
+      '<label class="wide">Poznámky<textarea name="notes" placeholder="např. informace pro správce k propojení účtu"></textarea></label>' +
+      '</div><p class="form-message" data-form-message></p><button class="button button-primary" type="submit">Uložit nastavení</button></form><div class="data-panel"><h2>Co musí být splněno</h2><div class="gate-grid"><div class="gate-item"><strong>Telefon</strong>ověřený</div><div class="gate-item"><strong>Relace</strong>aktivní</div><div class="gate-item"><strong>Kontrola</strong>bez blokace</div><div class="gate-item"><strong>Účet</strong>propojený systémem</div><div class="gate-item"><strong>Limit</strong>méně než 50 aktivních inzerátů</div></div></div></div>' +
       table([
         { label: 'Identita', render: (r) => cell(r.displayName || r.phoneNumber) },
-        { label: 'Status', render: (r) => '<span class="status ' + statusClass(r.status) + '">' + statusLabel(r.status) + '</span>' },
+        { label: 'Stav', render: (r) => '<span class="status ' + statusClass(r.status) + '">' + statusLabel(r.status) + '</span>' },
         { label: 'Relace', render: (r) => '<span class="status ' + statusClass(r.sessionState) + '">' + statusLabel(r.sessionState) + '</span>' },
-        { label: 'Může publikovat', render: (r) => '<span class="status ' + (isPublishableIdentity(r) ? 'ok' : 'risk') + '">' + (isPublishableIdentity(r) ? 'Ano' : 'Ne') + '</span>' },
+        { label: 'Může publikovat', render: (r) => '<span class="status ' + (isPublishableIdentity(r) ? 'ok' : 'risk') + '">' + (isPublishableIdentity(r) ? 'Ano' : 'Ne') + '</span><small class="card-note">' + (hasLinkedAccount(r) ? 'Účet je propojený' : 'Čeká na propojení účtu') + '</small>' },
       ], data.identities, 'Zatím není uložené žádné nastavení Bazos.cz.');
     document.getElementById('identity-form').addEventListener('submit', createIdentity);
   }
@@ -1606,7 +1767,7 @@ export const appScript = `
       const options = data.identities.length ? renderIdentityOptions(data.identities) : '';
       content.innerHTML = '<div class="catalog-flow"><div class="data-panel flow-column"><h2>Katalog</h2><div class="search-row"><input class="input" id="catalog-search" value="' + cell(searchValue || '') + '" placeholder="Hledat produkt podle názvu, SKU nebo značky"><button class="button button-secondary" id="catalog-search-button" type="button">Hledat</button></div><div class="product-list">' +
         products.map((product, index) => '<button class="product-option' + (product === selected ? ' active' : '') + '" type="button" data-product-index="' + index + '"><span class="product-thumb"></span><span><strong>' + cell(productTitle(product)) + '</strong><small class="card-note">' + cell(product.sku || product.id) + '</small></span></button>').join('') +
-        '</div></div><div class="flow-column"><form class="form-panel panel-stack" id="catalog-draft-form"><div><h2>Publikovat z katalogu</h2><p class="card-note">Produkt se nejdříve převede do Basus konceptu. Teprve po náhledu a schválení se odešle do hlídané publikační fronty.</p></div><div class="form-grid"><label>Účet / telefon<select name="identityId" required>' + options + '</select></label><label>Cena CZK<input name="price" type="number" min="0" step="1" required></label><label class="wide">Název<input name="title" maxlength="500" required></label><label class="wide">Popis<textarea name="description"></textarea></label><label>Kategorie Bazos.cz<input name="category" maxlength="200" required></label><label>Lokalita<input name="location" maxlength="200"></label></div><p class="form-message" data-form-message></p><button class="button button-primary" type="submit">Sformovat inzerát</button></form>' + renderPreview() + '</div></div>';
+        '</div></div><div class="flow-column"><form class="form-panel panel-stack" id="catalog-draft-form"><div><h2>Publikovat z katalogu</h2><p class="card-note">Produkt se nejdříve převede do Basus konceptu. Teprve po náhledu a schválení se odešle do hlídané publikační fronty.</p></div><div class="form-grid"><label>Účet / telefon<select name="identityId" required>' + options + '</select></label><label>Cena v Kč<input name="price" type="number" min="0" step="1" required></label><label class="wide">Název<input name="title" maxlength="500" required></label><label class="wide">Popis<textarea name="description"></textarea></label><label>Kategorie Bazos.cz<input name="category" maxlength="200" required></label><label>Lokalita<input name="location" maxlength="200"></label></div><p class="form-message" data-form-message></p><button class="button button-primary" type="submit">Sformovat inzerát</button></form>' + renderPreview() + '</div></div>';
       fillForm(selected);
       document.getElementById('catalog-search-button')?.addEventListener('click', async () => {
         prepared = null;
@@ -1667,7 +1828,8 @@ export const appScript = `
         return;
       }
       if (!data.identities.length) {
-        content.innerHTML = '<div class="data-panel empty-state">Nejdříve přidejte účet v sekci Nastavení Bazos.cz.</div>';
+        content.innerHTML = '<div class="data-panel empty-state">Nejdříve připojte účet Bazoš.<div class="flow-actions" style="justify-content:center;margin-top:14px"><button class="button button-primary" data-open-identity-wizard type="button">Připojit účet Bazoš</button></div></div>';
+        bindIdentityWizardButtons();
         return;
       }
       draw('');
@@ -1679,6 +1841,8 @@ export const appScript = `
   async function renderClient() {
     content.innerHTML = '<div class="data-panel empty-state">Načítají se data Bazos.cz...</div>';
     const data = await loadClientData();
+    renderConnectionBanner(data);
+    maybeAutoOpenConnectionWizard(data);
     if (activeView === 'overview') return renderOverview(data);
     if (activeView === 'details') return renderDetails(data);
     if (activeView === 'publish') return renderPublish(data);
