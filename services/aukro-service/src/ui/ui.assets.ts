@@ -180,9 +180,11 @@ export const renderAppPage = (mode: AppMode) => {
     : '';
   const sidebarNav = mode === 'admin'
     ? `<a class="active" href="/admin">${icon('admin')}Administrace</a>`
-    : `<a class="active" href="/client">${icon('client')}${navLabel}</a>
-          <a href="#overview" data-sidebar-view="overview">${icon('layout')}Přehled</a>
+    : `<a class="active" href="/client" data-sidebar-view="overview">${icon('client')}${navLabel}</a>
           <a href="#details" data-sidebar-view="details">${icon('catalog')}Moje inzeráty</a>
+          <a href="#publish" data-sidebar-view="publish">${icon('catalog')}Publikovat</a>
+          <a href="#account" data-sidebar-view="account">${icon('client')}Účet Bazos.cz</a>
+          <a href="#bazos-settings" data-sidebar-view="settings">${icon('settings')}Nastavení Bazos.cz</a>
           <a href="#catalog" data-sidebar-view="catalog">${icon('catalog')}Katalog</a>
           <a class="hidden" id="admin-link" href="/admin">${icon('admin')}Administrace</a>`;
   const authTitle = mode === 'admin' ? 'Přihlášení administrátora' : 'Přihlásit se nebo registrovat';
@@ -1081,7 +1083,14 @@ export const appScript = `
   const signOut = document.getElementById('sign-out');
   const adminLink = document.getElementById('admin-link');
   const refresh = document.getElementById('refresh');
-  let activeView = window.location.hash === '#bazos-settings' && mode === 'client' ? 'settings' : 'overview';
+  let activeView = initialView();
+
+  function initialView() {
+    if (mode !== 'client') return 'overview';
+    const view = String(window.location.hash || '').replace('#', '');
+    if (view === 'bazos-settings') return 'settings';
+    return ['overview', 'details', 'publish', 'account', 'settings', 'catalog'].includes(view) ? view : 'overview';
+  }
 
   const token = () => localStorage.getItem(tokenKey);
   const setMessage = (value) => { if (message) message.textContent = value || ''; };
@@ -1423,6 +1432,52 @@ export const appScript = `
     document.getElementById('identity-form').addEventListener('submit', createIdentity);
   }
 
+
+  async function renderCatalog(data) {
+    content.innerHTML = '<div class="data-panel empty-state">Načítá se katalog...</div>';
+    const catalog = await request('/ui/catalog/products?limit=20&activeOnly=true').catch((error) => ({ error: error.message }));
+    if (catalog.error) {
+      content.innerHTML = '<div class="data-panel empty-state">' + escapeHtml(catalog.error) + '</div>';
+      return;
+    }
+    const products = asArray(catalog, ['items', 'products', 'data']);
+    if (!products.length) {
+      content.innerHTML = '<div class="data-panel empty-state">Katalog nevrátil žádné aktivní produkty.</div>';
+      return;
+    }
+    const options = data.identities.length ? renderIdentityOptions(data.identities) : '';
+    content.innerHTML = '<div class="catalog-flow"><div class="data-panel flow-column"><h2>Katalog</h2><div class="product-list">' + products.map((product, index) => '<button class="product-option' + (index === 0 ? ' active' : '') + '" type="button" data-product-index="' + index + '"><span class="product-thumb"></span><span><strong>' + cell(product.name || product.title || product.id) + '</strong><small class="card-note">' + cell(product.sku || product.id) + '</small></span></button>').join('') + '</div></div><form class="form-panel panel-stack" id="catalog-draft-form"><div><h2>Publikovat z katalogu</h2><p class="card-note">Vybraný produkt se uloží jako Bazos koncept a může pokračovat přes stejnou hlídanou publikační frontu.</p></div><div class="form-grid"><label>Účet / telefon<select name="identityId" required>' + options + '</select></label><label>Cena CZK<input name="price" type="number" min="0" step="1" required></label><label class="wide">Název<input name="title" maxlength="500" required></label><label class="wide">Popis<textarea name="description"></textarea></label><label>Kategorie Bazos.cz<input name="category" maxlength="200" required></label><label>Lokalita<input name="location" maxlength="200"></label><label class="check-row"><input name="enqueue" type="checkbox"><span>Po vytvoření rovnou odeslat do fronty. Potvrzuji ruční kontrolu duplicity a obsahu.</span></label></div><p class="form-message" data-form-message></p><button class="button button-primary" type="submit">Vytvořit z katalogu</button></form></div>';
+    let selected = products[0];
+    const fill = (product) => {
+      const form = document.getElementById('catalog-draft-form');
+      selected = product;
+      form.elements.title.value = product.name || product.title || '';
+      form.elements.description.value = product.description || product.shortDescription || '';
+      form.elements.price.value = Number(product.price || product.salePrice || 0);
+      form.elements.category.value = product.categoryName || product.category || '';
+    };
+    fill(selected);
+    content.querySelectorAll('[data-product-index]').forEach((button) => button.addEventListener('click', () => {
+      content.querySelectorAll('[data-product-index]').forEach((item) => item.classList.remove('active'));
+      button.classList.add('active');
+      fill(products[Number(button.dataset.productIndex)]);
+    }));
+    document.getElementById('catalog-draft-form').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const values = Object.fromEntries(new FormData(form).entries());
+      try {
+        const draft = await request('/api/bazos/ads/from-catalog', { method: 'POST', body: JSON.stringify({ identityId: values.identityId, productId: selected.id, title: values.title, description: values.description || undefined, price: Number(values.price || 0), category: values.category, location: values.location || undefined }) });
+        if (values.enqueue === 'on') await request('/api/bazos/ads/' + encodeURIComponent(draft.id) + '/publish', { method: 'POST', body: JSON.stringify(manualEvidence()) });
+        activeView = 'details';
+        syncActiveTabs();
+        await renderClient();
+      } catch (error) {
+        content.querySelector('[data-form-message]').textContent = error.message;
+      }
+    });
+  }
+
   async function renderClient() {
     content.innerHTML = '<div class="data-panel empty-state">Načítají se data Bazos.cz...</div>';
     const data = await loadClientData();
@@ -1431,11 +1486,13 @@ export const appScript = `
     if (activeView === 'publish') return renderPublish(data);
     if (activeView === 'account') return renderAccount(data);
     if (activeView === 'settings') return renderSettings(data);
+    if (activeView === 'catalog') return renderCatalog(data);
   }
 
   function syncActiveTabs() {
     document.querySelectorAll('.tab').forEach((item) => item.classList.toggle('active', item.dataset.view === activeView));
     document.querySelectorAll('[data-nav-view]').forEach((item) => item.classList.toggle('active', item.dataset.navView === activeView));
+    document.querySelectorAll('[data-sidebar-view]').forEach((item) => item.classList.toggle('active', item.dataset.sidebarView === activeView));
   }
 
   async function render() {
@@ -1463,11 +1520,12 @@ export const appScript = `
     button.addEventListener('click', () => startHostedAuth(button.dataset.authAction));
   });
 
-  document.querySelectorAll('[data-nav-view]').forEach((link) => {
+  document.querySelectorAll('[data-nav-view], [data-sidebar-view]').forEach((link) => {
     link.addEventListener('click', (event) => {
       event.preventDefault();
-      activeView = link.dataset.navView;
-      window.history.replaceState(null, document.title, '/client#bazos-settings');
+      activeView = link.dataset.navView || link.dataset.sidebarView;
+      const hash = activeView === 'settings' ? 'bazos-settings' : activeView;
+      window.history.replaceState(null, document.title, '/client#' + hash);
       syncActiveTabs();
       render();
     });
