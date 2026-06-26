@@ -11,6 +11,7 @@ import {
 
 const REUSABLE_DRAFT_STATUSES = ['draft', 'blocked_policy', 'failed', 'challenge'];
 const HUMAN_ACTION_ATTEMPT_STATUSES = ['policy_blocked', 'challenge_required', 'failed'];
+const ACTIVE_PUBLISHED_STATUSES = ['published', 'publishing', 'queued'];
 
 @Injectable()
 export class BazosCatalogSellActionService {
@@ -80,6 +81,9 @@ export class BazosCatalogSellActionService {
     });
     const categoryMapping = await this.findCategoryMapping(draft.category);
 
+    const listingUrl = this.buildBazosListingUrl(draft.bazosAdId);
+    const publishedOnBasus = Boolean(draft.isActive && draft.bazosAdId && draft.publishStatus === 'published');
+
     return {
       action: 'sell_on_bazos',
       productId,
@@ -87,6 +91,8 @@ export class BazosCatalogSellActionService {
       identity: this.describeIdentity(draft.identity),
       categoryMapping: this.describeCategoryMapping(draft.category, categoryMapping),
       latestAttempt: latestAttempt ? this.describeAttempt(latestAttempt) : null,
+      publishedOnBasus,
+      listingUrl,
       requiresConfirmation: draft.publishStatus === 'draft',
       requiresHumanAction: this.requiresHumanAction(draft, latestAttempt),
     };
@@ -127,19 +133,19 @@ export class BazosCatalogSellActionService {
   }
 
   private async findLatestDraftForStatus(userId: string, productId: string, query: CatalogSellActionStatusQueryDto) {
-    if (!query.adId && !query.identityId) {
-      throw new BadRequestException('Either adId or identityId is required for sell action status polling');
-    }
-
     const draft = await this.prisma.bazosAd.findFirst({
       where: {
         productId,
+        isActive: true,
         ...(query.adId ? { id: query.adId } : {}),
         ...(query.identityId ? { identityId: query.identityId } : {}),
         identity: { userId },
       },
       include: { identity: true },
-      orderBy: { createdAt: 'desc' },
+      orderBy: [
+        { updatedAt: 'desc' },
+        { createdAt: 'desc' },
+      ],
     });
     if (!draft) throw new NotFoundException('Catalog Bazos draft not found for this product');
     return draft;
@@ -191,8 +197,20 @@ export class BazosCatalogSellActionService {
       publishStatus: draft.publishStatus,
       challengeState: draft.challengeState,
       bazosAdId: draft.bazosAdId,
+      isActive: draft.isActive,
+      publishedOnBasus: Boolean(draft.isActive && draft.bazosAdId && draft.publishStatus === 'published'),
+      activeOnBasus: Boolean(draft.isActive && ACTIVE_PUBLISHED_STATUSES.includes(draft.publishStatus)),
+      listingUrl: this.buildBazosListingUrl(draft.bazosAdId),
       lastPolicyCheck: draft.lastPolicyCheck,
     };
+  }
+
+  private buildBazosListingUrl(bazosAdId: string | null | undefined) {
+    const value = String(bazosAdId || '').trim();
+    if (!value) return null;
+    if (/^https?:\/\//i.test(value)) return value;
+    const baseUrl = (process.env.BAZOS_PUBLIC_AD_BASE_URL || 'https://www.bazos.cz/inzerat').replace(/\/$/, '');
+    return `${baseUrl}/${encodeURIComponent(value)}/`;
   }
 
   private describeIdentity(identity: any) {

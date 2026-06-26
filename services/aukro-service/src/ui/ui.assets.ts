@@ -245,7 +245,7 @@ export const renderAppPage = (mode: AppMode) => {
         </section>
       </main>
     </div>
-    <script src="/ui/app.js?v=catalog-bazos-flow-20260626"></script>`,
+    <script src="/ui/app.js?v=client-overview-stats-20260626"></script>`,
   );
 };
 
@@ -758,6 +758,19 @@ button, input { font: inherit; }
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
 }
+.overview-stats {
+  grid-template-columns: repeat(4, minmax(180px, 1fr));
+}
+.overview-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: 16px;
+}
+.overview-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
 .stat-card, .data-panel, .form-panel {
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -773,6 +786,26 @@ button, input { font: inherit; }
   display: block;
   margin-top: 8px;
   font-size: 30px;
+}
+.stat-card small {
+  display: block;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+.table-link, .link-button {
+  color: var(--red-dark);
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.link-button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
 }
 .data-table {
   width: 100%;
@@ -986,7 +1019,7 @@ button, input { font: inherit; }
   }
   .hero-section { padding: 44px 20px; }
   .product-frame { min-width: 0; }
-  .preview-grid, .benefit-grid, .workflow, .summary-grid, .form-grid, .account-grid, .gate-grid {
+  .preview-grid, .benefit-grid, .workflow, .summary-grid, .overview-grid, .form-grid, .account-grid, .gate-grid {
     grid-template-columns: 1fr;
   }
   .benefit-band, .workflow-section { padding: 52px 20px; }
@@ -1193,17 +1226,22 @@ export const appScript = `
     return cell(value);
   }
 
-  function stat(label, value) {
-    return '<article class="stat-card"><span>' + escapeHtml(label) + '</span><strong>' + cell(value) + '</strong></article>';
+  function stat(label, value, note) {
+    return '<article class="stat-card"><span>' + escapeHtml(label) + '</span><strong>' + cell(value) + '</strong>' + (note ? '<small>' + cell(note) + '</small>' : '') + '</article>';
   }
 
   function table(headers, rows, emptyText) {
     if (!rows || rows.length === 0) return '<div class="data-panel empty-state">' + escapeHtml(emptyText) + '</div>';
-    return '<div class="data-panel"><table class="data-table"><thead><tr>' +
+    return '<div class="data-panel">' + tableOnly(headers, rows, emptyText) + '</div>';
+  }
+
+  function tableOnly(headers, rows, emptyText) {
+    if (!rows || rows.length === 0) return '<p class="card-note">' + escapeHtml(emptyText) + '</p>';
+    return '<table class="data-table"><thead><tr>' +
       headers.map((h) => '<th>' + escapeHtml(h.label) + '</th>').join('') +
       '</tr></thead><tbody>' +
       rows.map((row) => '<tr>' + headers.map((h) => '<td>' + h.render(row) + '</td>').join('') + '</tr>').join('') +
-      '</tbody></table></div>';
+      '</tbody></table>';
   }
 
   const asArray = (value, keys) => Array.isArray(value) ? value : keys.reduce((items, key) => items.length ? items : (Array.isArray(value?.[key]) ? value[key] : []), []);
@@ -1211,6 +1249,43 @@ export const appScript = `
   const hasActiveSession = (identity) => String(identity?.sessionState || '').toLowerCase() === 'active';
   const isReviewClear = (identity) => !identity?.reviewState || String(identity.reviewState).toLowerCase() === 'clear';
   const isPublishableIdentity = (identity) => Boolean(identity?.accountId) && isVerified(identity) && hasActiveSession(identity) && isReviewClear(identity) && Number(identity?.activeAdCount || 0) < 50;
+
+  function toDate(value) {
+    const date = value ? new Date(value) : null;
+    return date && !Number.isNaN(date.getTime()) ? date : null;
+  }
+
+  function isThisMonth(value) {
+    const date = toDate(value);
+    if (!date) return false;
+    const now = new Date();
+    return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
+  }
+
+  function publishStatus(ad) {
+    return String(ad.publishStatus || ad.bazosStatus || ad.status || 'draft').toLowerCase();
+  }
+
+  function isPublishedAd(ad) {
+    const status = publishStatus(ad);
+    return status === 'published' || status === 'active' || Boolean(ad.bazosAdId);
+  }
+
+  function isActiveAd(ad) {
+    const status = publishStatus(ad);
+    return ad.isActive !== false && (status === 'published' || status === 'active');
+  }
+
+  function identityActiveCount(identity, ads) {
+    const tracked = Number(identity.activeAdCount || 0);
+    const listed = ads.filter((ad) => ad.identityId === identity.id && isActiveAd(ad)).length;
+    return Math.max(tracked, listed);
+  }
+
+  function bazosAdUrl(ad) {
+    if (!ad.bazosAdId) return '';
+    return 'https://www.bazos.cz/inzerat/' + encodeURIComponent(String(ad.bazosAdId)) + '/';
+  }
 
   function manualEvidence() {
     const checkedAt = new Date().toISOString();
@@ -1236,10 +1311,26 @@ export const appScript = `
   }
 
   function accountSummary(identities, ads, queue) {
-    const activeAds = ads.filter((ad) => ad.isActive !== false && String(ad.publishStatus || ad.status || '').toLowerCase().includes('published')).length;
+    const activeAds = ads.filter(isActiveAd).length;
+    const publishedAds = ads.filter(isPublishedAd).length;
+    const verified = identities.filter(isVerified);
     const publishable = identities.filter(isPublishableIdentity);
+    const capacityTotal = verified.length * 50;
+    const capacityUsed = verified.reduce((sum, identity) => sum + identityActiveCount(identity, ads), 0);
     const nextNotBefore = identities.map((identity) => identity.nextPublishNotBefore).filter(Boolean).sort()[0];
-    return { activeAds, publishable, nextNotBefore, queued: queue.filter((item) => String(item.status || '').toLowerCase().includes('queued')).length };
+    return {
+      activeAds,
+      publishedAds,
+      verified,
+      publishable,
+      capacityTotal,
+      capacityUsed,
+      capacityRemaining: Math.max(capacityTotal - capacityUsed, 0),
+      monthCreated: ads.filter((ad) => isThisMonth(ad.createdAt)).length,
+      monthPublished: ads.filter((ad) => isThisMonth(ad.lastPublishedAt)).length,
+      nextNotBefore,
+      queued: queue.filter((item) => String(item.status || '').toLowerCase().includes('queued')).length,
+    };
   }
 
   function renderIdentityOptions(identities) {
@@ -1350,19 +1441,39 @@ export const appScript = `
       return;
     }
     const summary = accountSummary(data.identities, data.ads, data.queue);
-    const active = data.ads.filter((offer) => String(offer.status || offer.bazosStatus || offer.publishStatus || '').toLowerCase().includes('active') || String(offer.publishStatus || '').toLowerCase().includes('published')).length;
+    const identitiesNeedingReview = data.identities.filter((identity) => !isVerified(identity) || !hasActiveSession(identity) || !isReviewClear(identity)).length;
+    const identityRows = data.identities.map((identity) => ({
+      ...identity,
+      activeCount: identityActiveCount(identity, data.ads),
+      remaining: isVerified(identity) ? Math.max(50 - identityActiveCount(identity, data.ads), 0) : 0,
+    }));
+    const recentAds = data.ads.slice(0, 8);
     content.innerHTML =
-      '<div class="summary-grid">' +
-      stat('Celkem inzerátů', data.ads.length) +
-      stat('Aktivní na Bazoši', active) +
-      stat('Publikovatelné účty', summary.publishable.length + ' / ' + data.identities.length) +
-      stat('Ve frontě', summary.queued) +
-      '</div><div class="account-grid"><div class="data-panel"><h2>Stav účtu Bazos.cz</h2><div class="gate-grid">' +
-      '<div class="gate-item"><strong>Telefon</strong><span class="status ' + (summary.publishable.length ? 'ok' : 'risk') + '">' + (summary.publishable.length ? 'Ověřený' : 'Není připraven') + '</span></div>' +
-      '<div class="gate-item"><strong>Publikování</strong><span class="status ' + (summary.publishable.length ? 'ok' : 'risk') + '">' + (summary.publishable.length ? 'Povoleno frontou' : 'Blokováno pravidly') + '</span></div>' +
-      '<div class="gate-item"><strong>Aktivní inzeráty</strong>' + cell(summary.activeAds) + ' / 50</div>' +
-      '<div class="gate-item"><strong>Další pokus nejdříve</strong>' + cell(summary.nextNotBefore) + '</div>' +
-      '</div></div><div class="data-panel"><h2>Bezpečné publikování</h2><p class="card-note">Nový inzerát se nejdříve uloží jako lokální koncept. Odeslání tlačítkem Publikovat pouze zařadí žádost do hlídané fronty; backend znovu kontroluje ověřený telefon, aktivní relaci, limity, duplicity, kategorii a obsah.</p></div></div>';
+      '<div class="summary-grid overview-stats">' +
+      stat('Stav přihlášení', 'Přihlášeno', 'Alfares Auth relace je aktivní') +
+      stat('Ověřené identity', summary.publishable.length + ' / ' + data.identities.length, identitiesNeedingReview ? identitiesNeedingReview + ' vyžaduje kontrolu' : 'Telefon a relace připraveny') +
+      stat('Zbývá vložit', summary.capacityRemaining, summary.capacityUsed + ' z ' + summary.capacityTotal + ' aktivních míst použito') +
+      stat('Tento měsíc', summary.monthCreated, summary.monthPublished + ' publikováno') +
+      stat('Celkem inzerátů', data.ads.length, summary.publishedAds + ' publikováno') +
+      stat('Aktivní na Bazoši', summary.activeAds, 'Limit je 50 aktivních na ověřenou identitu') +
+      stat('Vyžaduje kontrolu', data.ads.filter((ad) => statusClass(ad.publishStatus || ad.status || ad.bazosStatus) === 'risk').length, 'Blokované nebo challenge stavy') +
+      stat('Ve frontě', summary.queued, 'Hlídané publikování čeká na pravidla a cadence') +
+      '</div><div class="overview-actions"><button class="button button-primary" data-nav-view="publish" type="button">Přidat inzerát</button><button class="button button-secondary" data-nav-view="details" type="button">Otevřít moje inzeráty</button></div>' +
+      '<div class="overview-grid">' +
+      '<div class="data-panel"><h2>Moje identity na Bazoši</h2>' +
+      tableOnly([
+        { label: 'Identita', render: (r) => '<strong>' + cell(r.displayName || r.contactName || r.id) + '</strong><small class="card-note">Telefon: ' + (isVerified(r) ? 'ověřen' : 'neověřen') + '</small>' },
+        { label: 'Bazoš stav', render: (r) => '<span class="status ' + (isPublishableIdentity(r) ? 'ok' : 'risk') + '">' + (isPublishableIdentity(r) ? 'Připraveno' : 'Vyžaduje zásah') + '</span><small class="card-note">' + statusLabel(r.status) + ' / ' + statusLabel(r.sessionState) + ' / ' + statusLabel(r.reviewState || 'clear') + '</small>' },
+        { label: 'Kapacita', render: (r) => '<strong>' + cell(r.remaining) + '</strong><small class="card-note">zbývá z 50, aktivní ' + cell(r.activeCount) + '</small>' },
+      ], identityRows, 'Pro tento účet zatím není připojena žádná Bazoš identita.') +
+      '</div><div class="data-panel"><h2>Moje inzeráty v přehledu</h2>' +
+      tableOnly([
+        { label: 'Inzerát', render: (r) => '<strong>' + cell(r.title || r.name || r.productName || r.id) + '</strong><small class="card-note">' + cell(r.category || r.categoryName || r.bazosCategory || r.productId || '') + '</small>' },
+        { label: 'Stav', render: (r) => '<span class="status ' + statusClass(r.publishStatus || r.status || r.bazosStatus) + '">' + statusLabel(r.publishStatus || r.status || r.bazosStatus || 'draft') + '</span>' },
+        { label: 'Odkaz', render: (r) => bazosAdUrl(r) ? '<a class="table-link" href="' + escapeHtml(bazosAdUrl(r)) + '" target="_blank" rel="noopener">Zobrazit na Bazoši</a>' : '<button class="link-button" data-nav-view="details" type="button">Otevřít v mých inzerátech</button>' },
+      ], recentAds, 'Pro tento účet nebyly vráceny žádné inzeráty.') +
+      '</div></div>';
+    bindContentNavButtons();
   }
 
   function renderDetails(data) {
@@ -1370,6 +1481,7 @@ export const appScript = `
       { label: 'Inzerát', render: (r) => '<strong>' + cell(r.title || r.name || r.productName || r.id) + '</strong><small class="card-note">' + cell(r.productId || r.sku || '') + '</small>' },
       { label: 'Stav na Bazoši', render: (r) => '<span class="status ' + statusClass(r.status || r.bazosStatus || r.publishStatus) + '">' + statusLabel(r.status || r.bazosStatus || r.publishStatus || 'draft') + '</span>' },
       { label: 'Kategorie', render: (r) => cell(r.category || r.categoryName || r.bazosCategory) },
+      { label: 'Odkaz', render: (r) => bazosAdUrl(r) ? '<a class="table-link" href="' + escapeHtml(bazosAdUrl(r)) + '" target="_blank" rel="noopener">Zobrazit</a>' : cell('Zatím bez Bazoš ID') },
       { label: 'Aktualizováno', render: (r) => cell(r.updatedAt || r.createdAt) },
       { label: 'Akce', render: (r) => '<div class="row-actions"><button class="button button-secondary" data-policy="' + cell(r.id) + '" type="button">Pravidla</button><button class="button button-primary" data-publish="' + cell(r.id) + '" type="button">Publikovat</button></div>' },
     ], data.ads, 'Pro tento účet nebyly vráceny žádné inzeráty.');
@@ -1435,47 +1547,133 @@ export const appScript = `
 
   async function renderCatalog(data) {
     content.innerHTML = '<div class="data-panel empty-state">Načítá se katalog...</div>';
-    const catalog = await request('/ui/catalog/products?limit=20&activeOnly=true').catch((error) => ({ error: error.message }));
-    if (catalog.error) {
-      content.innerHTML = '<div class="data-panel empty-state">' + escapeHtml(catalog.error) + '</div>';
-      return;
-    }
-    const products = asArray(catalog, ['items', 'products', 'data']);
-    if (!products.length) {
-      content.innerHTML = '<div class="data-panel empty-state">Katalog nevrátil žádné aktivní produkty.</div>';
-      return;
-    }
-    const options = data.identities.length ? renderIdentityOptions(data.identities) : '';
-    content.innerHTML = '<div class="catalog-flow"><div class="data-panel flow-column"><h2>Katalog</h2><div class="product-list">' + products.map((product, index) => '<button class="product-option' + (index === 0 ? ' active' : '') + '" type="button" data-product-index="' + index + '"><span class="product-thumb"></span><span><strong>' + cell(product.name || product.title || product.id) + '</strong><small class="card-note">' + cell(product.sku || product.id) + '</small></span></button>').join('') + '</div></div><form class="form-panel panel-stack" id="catalog-draft-form"><div><h2>Publikovat z katalogu</h2><p class="card-note">Vybraný produkt se uloží jako Bazos koncept a může pokračovat přes stejnou hlídanou publikační frontu.</p></div><div class="form-grid"><label>Účet / telefon<select name="identityId" required>' + options + '</select></label><label>Cena CZK<input name="price" type="number" min="0" step="1" required></label><label class="wide">Název<input name="title" maxlength="500" required></label><label class="wide">Popis<textarea name="description"></textarea></label><label>Kategorie Bazos.cz<input name="category" maxlength="200" required></label><label>Lokalita<input name="location" maxlength="200"></label><label class="check-row"><input name="enqueue" type="checkbox"><span>Po vytvoření rovnou odeslat do fronty. Potvrzuji ruční kontrolu duplicity a obsahu.</span></label></div><p class="form-message" data-form-message></p><button class="button button-primary" type="submit">Vytvořit z katalogu</button></form></div>';
-    let selected = products[0];
-    const fill = (product) => {
-      const form = document.getElementById('catalog-draft-form');
-      selected = product;
-      form.elements.title.value = product.name || product.title || '';
-      form.elements.description.value = product.description || product.shortDescription || '';
-      form.elements.price.value = Number(product.price || product.salePrice || 0);
-      form.elements.category.value = product.categoryName || product.category || '';
+    let prepared = null;
+    let products = [];
+    let selected = null;
+
+    const productPrice = (product) => {
+      const pricing = Array.isArray(product?.pricing) ? product.pricing[0] : product?.pricing;
+      return Number(pricing?.basePrice || pricing?.price || product?.price || product?.salePrice || 0);
     };
-    fill(selected);
-    content.querySelectorAll('[data-product-index]').forEach((button) => button.addEventListener('click', () => {
-      content.querySelectorAll('[data-product-index]').forEach((item) => item.classList.remove('active'));
-      button.classList.add('active');
-      fill(products[Number(button.dataset.productIndex)]);
-    }));
-    document.getElementById('catalog-draft-form').addEventListener('submit', async (event) => {
+    const productCategory = (product) => {
+      const category = Array.isArray(product?.categories) ? product.categories[0] : product?.category;
+      return category?.bazosCategory || category?.name || category?.title || product?.categoryName || product?.category || '';
+    };
+    const productDescription = (product) => product?.description || product?.shortDescription || '';
+    const productTitle = (product) => product?.name || product?.title || product?.sku || product?.id || '';
+    const selectedIdentityId = () => document.getElementById('catalog-draft-form')?.elements.identityId?.value || data.identities[0]?.id || '';
+
+    async function loadProducts(search) {
+      const query = new URLSearchParams({ limit: '20', activeOnly: 'true' });
+      if (search) query.set('search', search);
+      const catalog = await request('/ui/catalog/products?' + query.toString()).catch((error) => ({ error: error.message }));
+      if (catalog.error) throw new Error(catalog.error);
+      products = asArray(catalog, ['items', 'products', 'data']);
+      selected = products[0] || null;
+    }
+
+    function renderPreview() {
+      if (!prepared?.draft) return '';
+      const draft = prepared.draft;
+      const allowed = Boolean(prepared.policyStatus?.allowed);
+      return '<div class="preview-card">' +
+        '<div class="panel-header"><h2>Náhled pro Bazoš</h2><span class="status ' + (allowed ? 'ok' : 'risk') + '">' + (allowed ? 'Pravidla splněna' : 'Vyžaduje kontrolu') + '</span></div>' +
+        '<h3 class="preview-title">' + cell(draft.title) + '</h3>' +
+        '<div class="preview-price">' + cell(draft.price) + ' Kč</div>' +
+        '<div class="preview-description">' + cell(document.getElementById('catalog-draft-form')?.elements.description?.value || selected?.description || '') + '</div>' +
+        '<div class="flow-meta">' +
+          '<span>Kategorie<strong>' + cell(draft.category) + '</strong></span>' +
+          '<span>Mapování<strong>' + (prepared.categoryMapping?.mapped ? 'Nalezeno' : 'Chybí / ke kontrole') + '</strong></span>' +
+          '<span>Aktivní inzeráty identity<strong>' + cell(prepared.identity?.activeAdCount) + '</strong></span>' +
+          '<span>Další krok<strong>' + cell(prepared.nextAction) + '</strong></span>' +
+        '</div>' +
+        (prepared.requiresHumanAction?.required ? '<p class="form-message">Vyžaduje zásah: ' + cell(prepared.requiresHumanAction.reason) + '</p>' : '') +
+        '<div class="flow-actions"><button class="button button-primary" id="catalog-confirm" type="button"' + (allowed ? '' : ' disabled') + '>Schválit a odeslat na Bazoš</button><button class="button button-secondary" data-policy="' + cell(draft.id) + '" type="button">Ověřit pravidla</button></div>' +
+      '</div>';
+    }
+
+    function fillForm(product) {
+      const form = document.getElementById('catalog-draft-form');
+      if (!form || !product) return;
+      form.elements.title.value = productTitle(product);
+      form.elements.description.value = productDescription(product);
+      form.elements.price.value = productPrice(product);
+      form.elements.category.value = productCategory(product);
+      form.elements.location.value = '';
+    }
+
+    function draw(searchValue) {
+      const options = data.identities.length ? renderIdentityOptions(data.identities) : '';
+      content.innerHTML = '<div class="catalog-flow"><div class="data-panel flow-column"><h2>Katalog</h2><div class="search-row"><input class="input" id="catalog-search" value="' + cell(searchValue || '') + '" placeholder="Hledat produkt podle názvu, SKU nebo značky"><button class="button button-secondary" id="catalog-search-button" type="button">Hledat</button></div><div class="product-list">' +
+        products.map((product, index) => '<button class="product-option' + (product === selected ? ' active' : '') + '" type="button" data-product-index="' + index + '"><span class="product-thumb"></span><span><strong>' + cell(productTitle(product)) + '</strong><small class="card-note">' + cell(product.sku || product.id) + '</small></span></button>').join('') +
+        '</div></div><div class="flow-column"><form class="form-panel panel-stack" id="catalog-draft-form"><div><h2>Publikovat z katalogu</h2><p class="card-note">Produkt se nejdříve převede do Basus konceptu. Teprve po náhledu a schválení se odešle do hlídané publikační fronty.</p></div><div class="form-grid"><label>Účet / telefon<select name="identityId" required>' + options + '</select></label><label>Cena CZK<input name="price" type="number" min="0" step="1" required></label><label class="wide">Název<input name="title" maxlength="500" required></label><label class="wide">Popis<textarea name="description"></textarea></label><label>Kategorie Bazos.cz<input name="category" maxlength="200" required></label><label>Lokalita<input name="location" maxlength="200"></label></div><p class="form-message" data-form-message></p><button class="button button-primary" type="submit">Sformovat inzerát</button></form>' + renderPreview() + '</div></div>';
+      fillForm(selected);
+      document.getElementById('catalog-search-button')?.addEventListener('click', async () => {
+        prepared = null;
+        await loadProducts(document.getElementById('catalog-search').value.trim());
+        draw(document.getElementById('catalog-search').value.trim());
+      });
+      content.querySelectorAll('[data-product-index]').forEach((button) => button.addEventListener('click', () => {
+        selected = products[Number(button.dataset.productIndex)];
+        prepared = null;
+        draw(document.getElementById('catalog-search')?.value || '');
+      }));
+      document.getElementById('catalog-draft-form')?.addEventListener('submit', prepare);
+      document.getElementById('catalog-confirm')?.addEventListener('click', confirm);
+      content.querySelector('[data-policy]')?.addEventListener('click', () => policyCheck(prepared?.draft?.id));
+    }
+
+    async function prepare(event) {
       event.preventDefault();
+      if (!selected) return;
       const form = event.currentTarget;
       const values = Object.fromEntries(new FormData(form).entries());
       try {
-        const draft = await request('/api/bazos/ads/from-catalog', { method: 'POST', body: JSON.stringify({ identityId: values.identityId, productId: selected.id, title: values.title, description: values.description || undefined, price: Number(values.price || 0), category: values.category, location: values.location || undefined }) });
-        if (values.enqueue === 'on') await request('/api/bazos/ads/' + encodeURIComponent(draft.id) + '/publish', { method: 'POST', body: JSON.stringify(manualEvidence()) });
-        activeView = 'details';
-        syncActiveTabs();
-        await renderClient();
+        prepared = await request('/api/bazos/catalog/products/' + encodeURIComponent(selected.id) + '/sell-action', {
+          method: 'POST',
+          body: JSON.stringify({
+            identityId: values.identityId,
+            title: values.title,
+            description: values.description || undefined,
+            price: Number(values.price || 0),
+            category: values.category,
+            location: values.location || undefined,
+            stockQuantity: Number(selected.stockQuantity || selected.stock || 0),
+          }),
+        });
+        draw(document.getElementById('catalog-search')?.value || '');
       } catch (error) {
         content.querySelector('[data-form-message]').textContent = error.message;
       }
-    });
+    }
+
+    async function confirm() {
+      if (!selected || !prepared?.draft?.id) return;
+      try {
+        prepared = await request('/api/bazos/catalog/products/' + encodeURIComponent(selected.id) + '/sell-action/confirm', {
+          method: 'POST',
+          body: JSON.stringify(Object.assign({ adId: prepared.draft.id, confirmed: true }, manualEvidence())),
+        });
+        draw(document.getElementById('catalog-search')?.value || '');
+      } catch (error) {
+        content.querySelector('[data-form-message]').textContent = error.message;
+      }
+    }
+
+    try {
+      await loadProducts('');
+      if (!products.length) {
+        content.innerHTML = '<div class="data-panel empty-state">Katalog nevrátil žádné aktivní produkty.</div>';
+        return;
+      }
+      if (!data.identities.length) {
+        content.innerHTML = '<div class="data-panel empty-state">Nejdříve přidejte účet v sekci Nastavení Bazos.cz.</div>';
+        return;
+      }
+      draw('');
+    } catch (error) {
+      content.innerHTML = '<div class="data-panel empty-state">' + escapeHtml(error.message) + '</div>';
+    }
   }
 
   async function renderClient() {
@@ -1487,6 +1685,17 @@ export const appScript = `
     if (activeView === 'account') return renderAccount(data);
     if (activeView === 'settings') return renderSettings(data);
     if (activeView === 'catalog') return renderCatalog(data);
+  }
+
+  function bindContentNavButtons() {
+    content.querySelectorAll('[data-nav-view], [data-sidebar-view]').forEach((button) => {
+      button.addEventListener('click', (event) => {
+        event.preventDefault();
+        activeView = button.dataset.navView || button.dataset.sidebarView;
+        syncActiveTabs();
+        render();
+      });
+    });
   }
 
   function syncActiveTabs() {

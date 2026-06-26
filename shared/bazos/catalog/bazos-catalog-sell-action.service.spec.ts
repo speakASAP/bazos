@@ -185,6 +185,30 @@ describe('BazosCatalogSellActionService', () => {
     expect(result.requiresHumanAction.policyFailures).toEqual(blockedPolicy.failures);
   });
 
+
+  it('returns published status and listing URL by product without requiring ad or identity query', async () => {
+    const publishedDraft = {
+      ...draft,
+      publishStatus: 'published',
+      bazosAdId: '123456789',
+      isActive: true,
+      updatedAt: new Date('2026-06-12T13:00:00.000Z'),
+      identity,
+    };
+    const prisma = makePrisma({ draft: publishedDraft });
+    const { service } = makeService(prisma);
+
+    const result = await service.status('user-1', draft.productId, {});
+
+    expect(prisma.bazosAd.findFirst).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ productId: draft.productId, isActive: true, identity: { userId: 'user-1' } }),
+    }));
+    expect(result.publishedOnBasus).toBe(true);
+    expect(result.listingUrl).toBe('https://www.bazos.cz/inzerat/123456789/');
+    expect(result.draft.publishedOnBasus).toBe(true);
+    expect(result.draft.listingUrl).toBe('https://www.bazos.cz/inzerat/123456789/');
+  });
+
   it('surfaces Bazos challenge states for human action without secrets', async () => {
     const challengeDraft = {
       ...draft,
