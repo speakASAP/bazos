@@ -1,5 +1,5 @@
-import { Controller, ForbiddenException, Get, Query, Request, Res, UnauthorizedException } from '@nestjs/common';
-import { AuthService } from '@bazos/shared';
+import { Controller, ForbiddenException, Get, Query, Request, Res, UnauthorizedException, UseGuards } from '@nestjs/common';
+import { AuthService, CatalogClientService, JwtAuthGuard } from '@bazos/shared';
 import { appScript, appStyles, renderAppPage, renderAuthCallbackPage, renderLandingPage } from './ui.assets';
 
 const ADMIN_ROLE_NAMES = new Set(['admin', 'administrator', 'owner']);
@@ -9,7 +9,10 @@ const ADMIN_APPLICATION_IDS = new Set(['bazos-service', 'bazos', 'basus']);
 
 @Controller()
 export class UiController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly catalogClient: CatalogClientService,
+  ) {}
 
   @Get()
   landing(@Res() res: any) {
@@ -39,6 +42,25 @@ export class UiController {
   @Get('ui/app.js')
   script(@Res() res: any) {
     return res.set('Cache-Control', 'no-store, max-age=0').type('application/javascript').send(appScript);
+  }
+
+
+  @Get('ui/catalog/products')
+  @UseGuards(JwtAuthGuard)
+  async catalogProducts(
+    @Query('search') search?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('activeOnly') activeOnly?: string,
+  ) {
+    const parsedPage = Number(page || 1);
+    const parsedLimit = Math.min(Math.max(Number(limit || 20), 1), 50);
+    return this.catalogClient.searchProducts({
+      search: search?.trim() || undefined,
+      isActive: activeOnly === 'false' ? undefined : true,
+      page: Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1,
+      limit: Number.isFinite(parsedLimit) ? parsedLimit : 20,
+    });
   }
 
 

@@ -7,7 +7,7 @@ const pageShell = (title: string, body: string) => `<!doctype html>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${title}</title>
   <meta name="description" content="Služba AlfaRes Bazoš pomáhá prodejcům připravovat, sledovat a spravovat inzeráty na Bazoš.cz v souladu s pravidly.">
-  <link rel="stylesheet" href="/ui/app.css?v=bazos-client-nav-20260626">
+  <link rel="stylesheet" href="/ui/app.css?v=catalog-bazos-flow-20260626">
 </head>
 <body>
 ${body}
@@ -174,11 +174,16 @@ export const renderAppPage = (mode: AppMode) => {
   const title = mode === 'admin' ? 'Administrace Bazoš' : 'Klientský panel Bazoš';
   const navLabel = mode === 'admin' ? 'Administrace' : 'Klientský panel';
   const detailsLabel = mode === 'admin' ? 'Fronta ke kontrole' : 'Moje inzeráty';
+  const clientTabs = mode === 'client'
+    ? `<button class="tab" data-view="publish" type="button">Publikovat</button>
+              <button class="tab" data-view="account" type="button">Účet Bazos.cz</button>`
+    : '';
   const sidebarNav = mode === 'admin'
     ? `<a class="active" href="/admin">${icon('admin')}Administrace</a>`
     : `<a class="active" href="/client">${icon('client')}${navLabel}</a>
           <a href="#overview" data-sidebar-view="overview">${icon('layout')}Přehled</a>
           <a href="#details" data-sidebar-view="details">${icon('catalog')}Moje inzeráty</a>
+          <a href="#catalog" data-sidebar-view="catalog">${icon('catalog')}Katalog</a>
           <a class="hidden" id="admin-link" href="/admin">${icon('admin')}Administrace</a>`;
   const authTitle = mode === 'admin' ? 'Přihlášení administrátora' : 'Přihlásit se nebo registrovat';
   const authCopy = mode === 'admin'
@@ -229,6 +234,8 @@ export const renderAppPage = (mode: AppMode) => {
             <div class="tabs" role="tablist">
               <button class="tab active" data-view="overview" type="button">Přehled</button>
               <button class="tab" data-view="details" type="button">${detailsLabel}</button>
+              ${clientTabs}
+              ${mode === 'client' ? '<button class="tab" data-view="catalog" type="button">Katalog</button>' : ''}
             </div>
             <button class="button button-secondary" id="refresh" type="button">${icon('refresh')}Obnovit</button>
           </div>
@@ -236,7 +243,7 @@ export const renderAppPage = (mode: AppMode) => {
         </section>
       </main>
     </div>
-    <script src="/ui/app.js?v=hosted-auth-client-nav-20260626"></script>`,
+    <script src="/ui/app.js?v=catalog-bazos-flow-20260626"></script>`,
   );
 };
 
@@ -597,6 +604,7 @@ button, input { font: inherit; }
 .icon-catalog { mask-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M4 4h7v7H4V4zm9 0h7v7h-7V4zM4 13h7v7H4v-7zm9 0h7v7h-7v-7z'/%3E%3C/svg%3E"); }
 .icon-activity { mask-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M3 13h4l3-8 4 14 3-6h4v2h-2.8l-4.6 9.2L9.8 10.8 8.4 15H3v-2z'/%3E%3C/svg%3E"); }
 .icon-team, .icon-admin, .icon-client { mask-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M12 12a4 4 0 100-8 4 4 0 000 8zm0 2c-4.4 0-8 2.2-8 5v1h16v-1c0-2.8-3.6-5-8-5z'/%3E%3C/svg%3E"); }
+.icon-settings { mask-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M19.4 13.5c.1-.5.1-1 .1-1.5s0-1-.1-1.5l2.1-1.6-2-3.5-2.5 1a7 7 0 00-2.6-1.5L14 2h-4l-.4 2.9A7 7 0 007 6.4l-2.5-1-2 3.5 2.1 1.6c-.1.5-.1 1-.1 1.5s0 1 .1 1.5l-2.1 1.6 2 3.5 2.5-1a7 7 0 002.6 1.5L10 22h4l.4-2.9a7 7 0 002.6-1.5l2.5 1 2-3.5-2.1-1.6zM12 15.5A3.5 3.5 0 1112 8a3.5 3.5 0 010 7.5z'/%3E%3C/svg%3E"); }
 .icon-refresh { mask-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M17.7 6.3A8 8 0 104.1 12H2l3.5 3.5L9 12H6.1a6 6 0 111.8 4.2l-1.4 1.4A8 8 0 1019.1 5L21 3h-6v6l2.7-2.7z'/%3E%3C/svg%3E"); }
 .icon-logout { mask-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M14 7l-1.4 1.4 2.6 2.6H7v2h8.2l-2.6 2.6L14 17l5-5-5-5zM5 5h7V3H5a2 2 0 00-2 2v14a2 2 0 002 2h7v-2H5V5z'/%3E%3C/svg%3E"); }
 .app-shell {
@@ -748,7 +756,7 @@ button, input { font: inherit; }
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
 }
-.stat-card, .data-panel {
+.stat-card, .data-panel, .form-panel {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #fff;
@@ -781,6 +789,42 @@ button, input { font: inherit; }
   text-transform: uppercase;
   letter-spacing: 0;
 }
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.form-grid label, .form-panel label {
+  display: grid;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 750;
+}
+.form-grid input, .form-grid select, .form-grid textarea, .form-panel input, .form-panel select, .form-panel textarea {
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+}
+.form-grid textarea { min-height: 120px; resize: vertical; }
+.form-grid .wide { grid-column: 1 / -1; }
+.check-row {
+  display: flex !important;
+  grid-column: 1 / -1;
+  align-items: flex-start;
+  gap: 10px !important;
+  color: var(--ink) !important;
+}
+.check-row input { width: auto !important; min-height: auto !important; margin-top: 3px; }
+.panel-stack { display: grid; gap: 16px; }
+.account-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 0.75fr); gap: 16px; }
+.gate-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
+.gate-item { padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+.gate-item strong { display: block; margin-bottom: 4px; }
 .row-actions {
   display: flex;
   flex-wrap: wrap;
@@ -808,6 +852,120 @@ button, input { font: inherit; }
   color: var(--muted);
   text-align: center;
 }
+
+.catalog-flow {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.85fr) minmax(360px, 1.15fr);
+  gap: 16px;
+  align-items: start;
+}
+.flow-column {
+  display: grid;
+  gap: 12px;
+}
+.search-row, .form-grid {
+  display: grid;
+  gap: 10px;
+}
+.search-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+.input, .select, .textarea {
+  width: 100%;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+}
+.textarea {
+  min-height: 112px;
+  padding-top: 10px;
+  resize: vertical;
+}
+.product-list {
+  display: grid;
+  gap: 8px;
+  max-height: 520px;
+  overflow: auto;
+}
+.product-option {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 10px;
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.product-option.active, .product-option:hover {
+  border-color: var(--red);
+  background: var(--panel-strong);
+}
+.product-thumb {
+  width: 42px;
+  height: 42px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #FF6600, #FFD9BF);
+  object-fit: cover;
+}
+.preview-card {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+.preview-title {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.2;
+}
+.preview-price {
+  color: var(--red-dark);
+  font-size: 24px;
+  font-weight: 820;
+}
+.preview-description {
+  white-space: pre-wrap;
+  color: var(--ink);
+  line-height: 1.5;
+}
+.flow-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.flow-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.flow-meta span {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 750;
+}
+.flow-meta strong {
+  color: var(--ink);
+  font-size: 14px;
+}
+@media (max-width: 960px) {
+  .catalog-flow, .search-row, .flow-meta { grid-template-columns: 1fr; }
+}
+
 @media (max-width: 960px) {
   .site-header {
     grid-template-columns: 1fr;
@@ -826,7 +984,7 @@ button, input { font: inherit; }
   }
   .hero-section { padding: 44px 20px; }
   .product-frame { min-width: 0; }
-  .preview-grid, .benefit-grid, .workflow, .summary-grid {
+  .preview-grid, .benefit-grid, .workflow, .summary-grid, .form-grid, .account-grid, .gate-grid {
     grid-template-columns: 1fr;
   }
   .benefit-band, .workflow-section { padding: 52px 20px; }
@@ -838,7 +996,7 @@ button, input { font: inherit; }
     border-right: 0;
     border-bottom: 1px solid var(--line);
   }
-  .app-nav { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .app-nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .app-main { padding: 18px; }
   .app-topbar, .toolbar { align-items: flex-start; flex-direction: column; }
   .data-table { display: block; overflow-x: auto; }
@@ -923,10 +1081,10 @@ export const appScript = `
   const signOut = document.getElementById('sign-out');
   const adminLink = document.getElementById('admin-link');
   const refresh = document.getElementById('refresh');
-  let activeView = 'overview';
+  let activeView = window.location.hash === '#bazos-settings' && mode === 'client' ? 'settings' : 'overview';
 
   const token = () => localStorage.getItem(tokenKey);
-  const setMessage = (text) => { if (message) message.textContent = text || ''; };
+  const setMessage = (value) => { if (message) message.textContent = value || ''; };
 
   function createState() {
     const bytes = new Uint8Array(16);
@@ -942,7 +1100,6 @@ export const appScript = `
     const returnPath = mode === 'admin' ? '/admin' : '/client';
     sessionStorage.setItem(authStateKey, state);
     sessionStorage.setItem(authReturnKey, returnPath);
-
     const url = new URL(action === 'register' ? '/register' : '/login', authBaseUrl);
     url.searchParams.set('client_id', authClientId);
     url.searchParams.set('return_url', authCallbackUrl);
@@ -957,16 +1114,14 @@ export const appScript = `
     if (response.status === 401) {
       localStorage.removeItem(tokenKey);
       localStorage.removeItem(refreshTokenKey);
-      if (mode === 'client') {
-        startHostedAuth('login');
-      } else {
-        showAuth();
-      }
+      if (mode === 'client') startHostedAuth('login');
+      else showAuth();
       throw new Error('Relace vypršela. Přihlaste se prosím znovu.');
     }
     if (!response.ok) {
       const body = await response.json().catch(() => ({}));
-      throw new Error(body.message || body.error?.message || 'Požadavek selhal');
+      const raw = body.message || body.error?.message || 'Požadavek selhal';
+      throw new Error(Array.isArray(raw) ? raw.join(', ') : raw);
     }
     return response.json();
   }
@@ -990,46 +1145,96 @@ export const appScript = `
     sessionLabel.textContent = user?.email || 'Přihlášeno';
   }
 
+  function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+  }
+
   function statusClass(value) {
     const text = String(value || '').toLowerCase();
-    if (text.includes('active') || text.includes('published') || text.includes('ok') || text.includes('ready')) return 'ok';
-    if (text.includes('blocked') || text.includes('failed') || text.includes('review') || text.includes('challenge')) return 'risk';
+    if (text.includes('verified') || text.includes('active') || text.includes('published') || text.includes('ok') || text.includes('ready') || text.includes('clear') || text.includes('queued')) return 'ok';
+    if (text.includes('blocked') || text.includes('banned') || text.includes('suspended') || text.includes('failed') || text.includes('review') || text.includes('challenge') || text.includes('missing') || text.includes('expired') || text.includes('required')) return 'risk';
     return 'wait';
   }
 
   function cell(value) {
     if (value === null || value === undefined || value === '') return 'Nenastaveno';
     if (typeof value === 'boolean') return value ? 'Ano' : 'Ne';
-    if (typeof value === 'object') return Object.values(value).filter(Boolean).slice(0, 2).join(', ') || 'Zaznamenáno';
-    return String(value);
+    if (typeof value === 'object') return Object.values(value).filter(Boolean).slice(0, 2).map(escapeHtml).join(', ') || 'Zaznamenáno';
+    return escapeHtml(value);
   }
 
   function statusLabel(value) {
     const text = String(value || '').toLowerCase();
+    if (text.includes('verified')) return 'Ověřeno';
     if (text.includes('active')) return 'Aktivní';
     if (text.includes('published')) return 'Publikováno';
     if (text.includes('ready')) return 'Připraveno';
+    if (text.includes('clear')) return 'Bez blokace';
     if (text.includes('blocked')) return 'Blokováno';
+    if (text.includes('banned')) return 'Zakázáno';
+    if (text.includes('suspended')) return 'Pozastaveno';
     if (text.includes('failed')) return 'Selhalo';
     if (text.includes('review')) return 'Ke kontrole';
     if (text.includes('challenge')) return 'Vyžaduje zásah';
+    if (text.includes('missing')) return 'Chybí';
     if (text.includes('draft')) return 'Koncept';
     if (text.includes('queued')) return 'Ve frontě';
     if (text.includes('expired')) return 'Expirováno';
+    if (text.includes('required')) return 'Vyžadováno';
     return cell(value);
   }
 
   function stat(label, value) {
-    return '<article class="stat-card"><span>' + label + '</span><strong>' + cell(value) + '</strong></article>';
+    return '<article class="stat-card"><span>' + escapeHtml(label) + '</span><strong>' + cell(value) + '</strong></article>';
   }
 
   function table(headers, rows, emptyText) {
-    if (!rows || rows.length === 0) return '<div class="data-panel empty-state">' + emptyText + '</div>';
+    if (!rows || rows.length === 0) return '<div class="data-panel empty-state">' + escapeHtml(emptyText) + '</div>';
     return '<div class="data-panel"><table class="data-table"><thead><tr>' +
-      headers.map((h) => '<th>' + h.label + '</th>').join('') +
+      headers.map((h) => '<th>' + escapeHtml(h.label) + '</th>').join('') +
       '</tr></thead><tbody>' +
       rows.map((row) => '<tr>' + headers.map((h) => '<td>' + h.render(row) + '</td>').join('') + '</tr>').join('') +
       '</tbody></table></div>';
+  }
+
+  const asArray = (value, keys) => Array.isArray(value) ? value : keys.reduce((items, key) => items.length ? items : (Array.isArray(value?.[key]) ? value[key] : []), []);
+  const isVerified = (identity) => String(identity?.status || '').toLowerCase() === 'verified';
+  const hasActiveSession = (identity) => String(identity?.sessionState || '').toLowerCase() === 'active';
+  const isReviewClear = (identity) => !identity?.reviewState || String(identity.reviewState).toLowerCase() === 'clear';
+  const isPublishableIdentity = (identity) => Boolean(identity?.accountId) && isVerified(identity) && hasActiveSession(identity) && isReviewClear(identity) && Number(identity?.activeAdCount || 0) < 50;
+
+  function manualEvidence() {
+    const checkedAt = new Date().toISOString();
+    return {
+      publicDuplicateCheck: { checkedAt, source: 'manual_review', likelyDuplicate: false, reason: 'Confirmed in Basus client before enqueue.' },
+      contentPolicy: { checkedAt, source: 'manual_review', passed: true, reason: 'Confirmed in Basus client before enqueue.' },
+    };
+  }
+
+  async function loadClientData() {
+    const [adsResult, identitiesResult, queueResult] = await Promise.all([
+      request('/api/bazos/ads').catch((error) => ({ error: error.message })),
+      request('/api/bazos/identities').catch((error) => ({ error: error.message })),
+      request('/api/bazos/publish-queue?limit=50').catch(() => []),
+    ]);
+    return {
+      ads: adsResult.error ? [] : asArray(adsResult, ['items', 'offers', 'ads']),
+      adsError: adsResult.error,
+      identities: identitiesResult.error ? [] : asArray(identitiesResult, ['items', 'identities']),
+      identitiesError: identitiesResult.error,
+      queue: asArray(queueResult, ['items', 'attempts', 'queue']),
+    };
+  }
+
+  function accountSummary(identities, ads, queue) {
+    const activeAds = ads.filter((ad) => ad.isActive !== false && String(ad.publishStatus || ad.status || '').toLowerCase().includes('published')).length;
+    const publishable = identities.filter(isPublishableIdentity);
+    const nextNotBefore = identities.map((identity) => identity.nextPublishNotBefore).filter(Boolean).sort()[0];
+    return { activeAds, publishable, nextNotBefore, queued: queue.filter((item) => String(item.status || '').toLowerCase().includes('queued')).length };
+  }
+
+  function renderIdentityOptions(identities) {
+    return identities.map((identity) => '<option value="' + cell(identity.id) + '">' + cell(identity.displayName || identity.contactName || identity.phoneNumber) + ' - ' + statusLabel(identity.status) + '</option>').join('');
   }
 
   async function renderAdmin() {
@@ -1037,19 +1242,19 @@ export const appScript = `
     const summary = await request('/api/bazos/monitoring/summary').catch((error) => ({ error: error.message }));
     const blocked = await request('/api/bazos/monitoring/blocked-attempts?limit=25').catch(() => []);
     if (summary.error) {
-      content.innerHTML = '<div class="data-panel empty-state">' + summary.error + '</div>';
+      content.innerHTML = '<div class="data-panel empty-state">' + escapeHtml(summary.error) + '</div>';
       return;
     }
     if (activeView === 'overview') {
       content.innerHTML =
         '<div class="summary-grid">' +
         stat('Pokusy o publikování', summary.publishAttempts || summary.totalPublishAttempts || 0) +
-        stat('Blokované pokusy', summary.blockedAttempts || blocked.length || 0) +
+        stat('Blokované pokusy', summary.blockedAttempts || asArray(blocked, ['items', 'blockedAttempts']).length || 0) +
         stat('Identity ke kontrole', summary.reviewIdentities || summary.identitiesNeedingReview || 0) +
         stat('Sledované aktivní inzeráty', summary.activeAds || summary.activeAdsTracked || 0) +
         '</div><div class="data-panel"><h2>Zaměření administrátora</h2><p class="card-note">Kontrolujte blokované pokusy a identity vyžadující ruční zásah. Kontroly publikování nadále vynucují backendová pravidla.</p></div>';
     } else {
-      const rows = Array.isArray(blocked) ? blocked : (blocked.items || blocked.blockedAttempts || []);
+      const rows = asArray(blocked, ['items', 'blockedAttempts']);
       content.innerHTML = table([
         { label: 'Pokus', render: (r) => cell(r.id || r.attemptId) },
         { label: 'Inzerát', render: (r) => cell(r.offerId || r.adId || r.productId) },
@@ -1063,50 +1268,174 @@ export const appScript = `
     content.innerHTML = '<div class="data-panel empty-state">Kontrolují se pravidla...</div>';
     try {
       const result = await request('/api/bazos/ads/' + encodeURIComponent(id) + '/evaluate-policy', { method: 'POST', body: '{}' });
-      content.innerHTML = '<div class="data-panel"><h2>Výsledek kontroly pravidel</h2><pre>' + JSON.stringify(result, null, 2) + '</pre></div>';
+      content.innerHTML = '<div class="data-panel"><h2>Výsledek kontroly pravidel</h2><pre>' + escapeHtml(JSON.stringify(result, null, 2)) + '</pre></div>';
     } catch (error) {
-      content.innerHTML = '<div class="data-panel empty-state">' + error.message + '</div>';
+      content.innerHTML = '<div class="data-panel empty-state">' + escapeHtml(error.message) + '</div>';
     }
   }
 
   async function enqueuePublish(id) {
+    const confirmed = window.confirm('Potvrďte, že jste ručně zkontrolovali duplicitu a obsah inzerátu. Žádost se odešle pouze do hlídané fronty a backend znovu vyhodnotí pravidla.');
+    if (!confirmed) return;
     content.innerHTML = '<div class="data-panel empty-state">Odesílá se žádost do hlídané publikační fronty...</div>';
     try {
-      const result = await request('/api/bazos/ads/' + encodeURIComponent(id) + '/publish', { method: 'POST', body: '{}' });
-      content.innerHTML = '<div class="data-panel"><h2>Výsledek fronty</h2><pre>' + JSON.stringify(result, null, 2) + '</pre></div>';
+      const result = await request('/api/bazos/ads/' + encodeURIComponent(id) + '/publish', { method: 'POST', body: JSON.stringify(manualEvidence()) });
+      content.innerHTML = '<div class="data-panel"><h2>Výsledek fronty</h2><pre>' + escapeHtml(JSON.stringify(result, null, 2)) + '</pre></div>';
     } catch (error) {
-      content.innerHTML = '<div class="data-panel empty-state">' + error.message + '</div>';
+      content.innerHTML = '<div class="data-panel empty-state">' + escapeHtml(error.message) + '</div>';
     }
   }
 
-  async function renderClient() {
-    content.innerHTML = '<div class="data-panel empty-state">Načítají se inzeráty...</div>';
-    const result = await request('/api/bazos/ads').catch((error) => ({ error: error.message }));
-    if (result.error) {
-      content.innerHTML = '<div class="data-panel empty-state">' + result.error + '</div>';
+  async function createDraft(event) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const data = Object.fromEntries(new FormData(form).entries());
+    const payload = {
+      identityId: data.identityId,
+      productId: data.productId || undefined,
+      title: data.title,
+      description: data.description || undefined,
+      price: Number(data.price || 0),
+      category: data.category || undefined,
+      location: data.location || undefined,
+      stockQuantity: data.stockQuantity ? Number(data.stockQuantity) : 0,
+    };
+    try {
+      const draft = await request('/api/bazos/ads', { method: 'POST', body: JSON.stringify(payload) });
+      if (data.enqueue === 'on') {
+        await request('/api/bazos/ads/' + encodeURIComponent(draft.id) + '/publish', { method: 'POST', body: JSON.stringify(manualEvidence()) });
+      }
+      activeView = 'details';
+      syncActiveTabs();
+      await renderClient();
+    } catch (error) {
+      content.querySelector('[data-form-message]').textContent = error.message;
+    }
+  }
+
+  async function createIdentity(event) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const data = Object.fromEntries(new FormData(form).entries());
+    const payload = {
+      phoneNumber: data.phoneNumber,
+      displayName: data.displayName,
+      contactName: data.contactName || undefined,
+      contactPhone: data.contactPhone || undefined,
+      defaultZip: data.defaultZip || undefined,
+      defaultLocation: data.defaultLocation || undefined,
+      accountId: data.accountId || undefined,
+      notes: data.notes || undefined,
+    };
+    try {
+      await request('/api/bazos/identities', { method: 'POST', body: JSON.stringify(payload) });
+      await renderClient();
+    } catch (error) {
+      content.querySelector('[data-form-message]').textContent = error.message;
+    }
+  }
+
+  function renderOverview(data) {
+    if (data.adsError || data.identitiesError) {
+      content.innerHTML = '<div class="data-panel empty-state">' + escapeHtml(data.adsError || data.identitiesError) + '</div>';
       return;
     }
-    const offers = Array.isArray(result) ? result : (result.items || result.offers || []);
-    if (activeView === 'overview') {
-      const active = offers.filter((offer) => String(offer.status || offer.bazosStatus || '').toLowerCase().includes('active')).length;
-      content.innerHTML =
-        '<div class="summary-grid">' +
-        stat('Celkem inzerátů', offers.length) +
-        stat('Aktivní na Bazoši', active) +
-        stat('Vyžaduje kontrolu', offers.filter((offer) => statusClass(offer.status || offer.bazosStatus) === 'risk').length) +
-        stat('Koncepty / ve frontě', Math.max(offers.length - active, 0)) +
-        '</div><div class="data-panel"><h2>Zákaznický pracovní prostor</h2><p class="card-note">Pomocí akcí u inzerátu ověřte pravidla před žádostí o hlídané publikování. Backend stále vynucuje každou kontrolu.</p></div>';
-    } else {
-      content.innerHTML = table([
-        { label: 'Inzerát', render: (r) => '<strong>' + cell(r.title || r.name || r.productName || r.id) + '</strong><small class="card-note">' + cell(r.productId || r.sku || '') + '</small>' },
-        { label: 'Stav na Bazoši', render: (r) => '<span class="status ' + statusClass(r.status || r.bazosStatus || r.publishStatus) + '">' + statusLabel(r.status || r.bazosStatus || r.publishStatus || 'draft') + '</span>' },
-        { label: 'Kategorie', render: (r) => cell(r.category || r.categoryName || r.bazosCategory) },
-        { label: 'Aktualizováno', render: (r) => cell(r.updatedAt || r.createdAt) },
-        { label: 'Akce', render: (r) => '<div class="row-actions"><button class="button button-secondary" data-policy="' + cell(r.id) + '" type="button">Pravidla</button><button class="button button-primary" data-publish="' + cell(r.id) + '" type="button">Publikovat</button></div>' },
-      ], offers, 'Pro tento účet nebyly vráceny žádné inzeráty.');
-      content.querySelectorAll('[data-policy]').forEach((button) => button.addEventListener('click', () => policyCheck(button.dataset.policy)));
-      content.querySelectorAll('[data-publish]').forEach((button) => button.addEventListener('click', () => enqueuePublish(button.dataset.publish)));
+    const summary = accountSummary(data.identities, data.ads, data.queue);
+    const active = data.ads.filter((offer) => String(offer.status || offer.bazosStatus || offer.publishStatus || '').toLowerCase().includes('active') || String(offer.publishStatus || '').toLowerCase().includes('published')).length;
+    content.innerHTML =
+      '<div class="summary-grid">' +
+      stat('Celkem inzerátů', data.ads.length) +
+      stat('Aktivní na Bazoši', active) +
+      stat('Publikovatelné účty', summary.publishable.length + ' / ' + data.identities.length) +
+      stat('Ve frontě', summary.queued) +
+      '</div><div class="account-grid"><div class="data-panel"><h2>Stav účtu Bazos.cz</h2><div class="gate-grid">' +
+      '<div class="gate-item"><strong>Telefon</strong><span class="status ' + (summary.publishable.length ? 'ok' : 'risk') + '">' + (summary.publishable.length ? 'Ověřený' : 'Není připraven') + '</span></div>' +
+      '<div class="gate-item"><strong>Publikování</strong><span class="status ' + (summary.publishable.length ? 'ok' : 'risk') + '">' + (summary.publishable.length ? 'Povoleno frontou' : 'Blokováno pravidly') + '</span></div>' +
+      '<div class="gate-item"><strong>Aktivní inzeráty</strong>' + cell(summary.activeAds) + ' / 50</div>' +
+      '<div class="gate-item"><strong>Další pokus nejdříve</strong>' + cell(summary.nextNotBefore) + '</div>' +
+      '</div></div><div class="data-panel"><h2>Bezpečné publikování</h2><p class="card-note">Nový inzerát se nejdříve uloží jako lokální koncept. Odeslání tlačítkem Publikovat pouze zařadí žádost do hlídané fronty; backend znovu kontroluje ověřený telefon, aktivní relaci, limity, duplicity, kategorii a obsah.</p></div></div>';
+  }
+
+  function renderDetails(data) {
+    content.innerHTML = table([
+      { label: 'Inzerát', render: (r) => '<strong>' + cell(r.title || r.name || r.productName || r.id) + '</strong><small class="card-note">' + cell(r.productId || r.sku || '') + '</small>' },
+      { label: 'Stav na Bazoši', render: (r) => '<span class="status ' + statusClass(r.status || r.bazosStatus || r.publishStatus) + '">' + statusLabel(r.status || r.bazosStatus || r.publishStatus || 'draft') + '</span>' },
+      { label: 'Kategorie', render: (r) => cell(r.category || r.categoryName || r.bazosCategory) },
+      { label: 'Aktualizováno', render: (r) => cell(r.updatedAt || r.createdAt) },
+      { label: 'Akce', render: (r) => '<div class="row-actions"><button class="button button-secondary" data-policy="' + cell(r.id) + '" type="button">Pravidla</button><button class="button button-primary" data-publish="' + cell(r.id) + '" type="button">Publikovat</button></div>' },
+    ], data.ads, 'Pro tento účet nebyly vráceny žádné inzeráty.');
+    content.querySelectorAll('[data-policy]').forEach((button) => button.addEventListener('click', () => policyCheck(button.dataset.policy)));
+    content.querySelectorAll('[data-publish]').forEach((button) => button.addEventListener('click', () => enqueuePublish(button.dataset.publish)));
+  }
+
+  function renderPublish(data) {
+    if (!data.identities.length) {
+      content.innerHTML = '<div class="data-panel empty-state">Nejdříve přidejte účet v sekci Nastavení Bazos.cz.</div>';
+      return;
     }
+    content.innerHTML = '<form class="form-panel panel-stack" id="draft-form"><div><h2>Nový inzerát pro Bazos.cz</h2><p class="card-note">Vyberte ověřenou identitu, vyplňte inzerát a případně ho zařaďte do hlídané publikační fronty.</p></div><div class="form-grid">' +
+      '<label>Účet / telefon<select name="identityId" required>' + renderIdentityOptions(data.identities) + '</select></label>' +
+      '<label>Cena CZK<input name="price" type="number" min="0" step="1" required></label>' +
+      '<label class="wide">Název<input name="title" maxlength="500" required></label>' +
+      '<label class="wide">Popis<textarea name="description"></textarea></label>' +
+      '<label>Kategorie Bazos.cz<input name="category" maxlength="200"></label>' +
+      '<label>Lokalita<input name="location" maxlength="200"></label>' +
+      '<label>Produkt ID<input name="productId" placeholder="volitelné UUID"></label>' +
+      '<label>Sklad<input name="stockQuantity" type="number" min="0" step="1" value="0"></label>' +
+      '<label class="check-row"><input name="enqueue" type="checkbox"><span>Po vytvoření rovnou odeslat do fronty. Potvrzuji ruční kontrolu duplicity a obsahu.</span></label>' +
+      '</div><p class="form-message" data-form-message></p><button class="button button-primary" type="submit">Vytvořit inzerát</button></form>';
+    document.getElementById('draft-form').addEventListener('submit', createDraft);
+  }
+
+  function renderAccount(data) {
+    const summary = accountSummary(data.identities, data.ads, data.queue);
+    content.innerHTML = '<div class="summary-grid">' +
+      stat('Bazos identity', data.identities.length) +
+      stat('Ověřené telefony', data.identities.filter(isVerified).length) +
+      stat('Aktivní relace', data.identities.filter(hasActiveSession).length) +
+      stat('Může publikovat', summary.publishable.length) +
+      '</div>' + table([
+        { label: 'Účet', render: (r) => '<strong>' + cell(r.displayName || r.phoneNumber) + '</strong><small class="card-note">Account ID: ' + cell(r.accountId) + '</small>' },
+        { label: 'Telefon', render: (r) => '<span class="status ' + (isVerified(r) ? 'ok' : 'risk') + '">' + statusLabel(r.status) + '</span><small class="card-note">' + cell(r.phoneNumber) + '</small>' },
+        { label: 'Relace', render: (r) => '<span class="status ' + statusClass(r.sessionState) + '">' + statusLabel(r.sessionState) + '</span>' },
+        { label: 'Publikování', render: (r) => '<span class="status ' + (isPublishableIdentity(r) ? 'ok' : 'risk') + '">' + (isPublishableIdentity(r) ? 'Může publikovat' : 'Nelze publikovat') + '</span><small class="card-note">Aktivní: ' + cell(r.activeAdCount || 0) + ' / 50</small>' },
+        { label: 'Kontrola', render: (r) => '<span class="status ' + statusClass(r.reviewState) + '">' + statusLabel(r.reviewState || 'clear') + '</span><small class="card-note">Platnost: ' + cell(r.verificationExpiresAt) + '</small>' },
+      ], data.identities, 'Pro účet nejsou nastavené žádné Bazos identity.');
+  }
+
+  function renderSettings(data) {
+    content.innerHTML = '<div class="account-grid"><form class="form-panel panel-stack" id="identity-form"><div><h2>Nastavení Bazos.cz</h2><p class="card-note">Přidejte vazbu na svůj Bazos účet a telefon. Ověření telefonu a relace se dokončuje ručně přes Bazos.cz; tato sekce pouze ukládá vazbu a stav.</p></div><div class="form-grid">' +
+      '<label>Telefon<input name="phoneNumber" minlength="9" maxlength="20" required></label>' +
+      '<label>Název účtu<input name="displayName" maxlength="200" required></label>' +
+      '<label>Kontaktní jméno<input name="contactName" maxlength="200"></label>' +
+      '<label>Kontaktní telefon<input name="contactPhone" maxlength="50"></label>' +
+      '<label>PSČ<input name="defaultZip" maxlength="20"></label>' +
+      '<label>Lokalita<input name="defaultLocation" maxlength="200"></label>' +
+      '<label class="wide">Bazos account ID<input name="accountId" placeholder="volitelné UUID účtu"></label>' +
+      '<label class="wide">Poznámky<textarea name="notes"></textarea></label>' +
+      '</div><p class="form-message" data-form-message></p><button class="button button-primary" type="submit">Uložit nastavení</button></form><div class="data-panel"><h2>Co musí být splněno</h2><div class="gate-grid"><div class="gate-item"><strong>Telefon</strong>status verified</div><div class="gate-item"><strong>Relace</strong>sessionState active</div><div class="gate-item"><strong>Kontrola</strong>reviewState clear</div><div class="gate-item"><strong>Limit</strong>méně než 50 aktivních inzerátů</div></div></div></div>' +
+      table([
+        { label: 'Identita', render: (r) => cell(r.displayName || r.phoneNumber) },
+        { label: 'Status', render: (r) => '<span class="status ' + statusClass(r.status) + '">' + statusLabel(r.status) + '</span>' },
+        { label: 'Relace', render: (r) => '<span class="status ' + statusClass(r.sessionState) + '">' + statusLabel(r.sessionState) + '</span>' },
+        { label: 'Může publikovat', render: (r) => '<span class="status ' + (isPublishableIdentity(r) ? 'ok' : 'risk') + '">' + (isPublishableIdentity(r) ? 'Ano' : 'Ne') + '</span>' },
+      ], data.identities, 'Zatím není uložené žádné nastavení Bazos.cz.');
+    document.getElementById('identity-form').addEventListener('submit', createIdentity);
+  }
+
+  async function renderClient() {
+    content.innerHTML = '<div class="data-panel empty-state">Načítají se data Bazos.cz...</div>';
+    const data = await loadClientData();
+    if (activeView === 'overview') return renderOverview(data);
+    if (activeView === 'details') return renderDetails(data);
+    if (activeView === 'publish') return renderPublish(data);
+    if (activeView === 'account') return renderAccount(data);
+    if (activeView === 'settings') return renderSettings(data);
+  }
+
+  function syncActiveTabs() {
+    document.querySelectorAll('.tab').forEach((item) => item.classList.toggle('active', item.dataset.view === activeView));
+    document.querySelectorAll('[data-nav-view]').forEach((item) => item.classList.toggle('active', item.dataset.navView === activeView));
   }
 
   async function render() {
@@ -1114,6 +1443,7 @@ export const appScript = `
     try {
       const me = await request('/ui/auth/me?mode=' + encodeURIComponent(mode));
       showWorkspace(me.user, me.access);
+      syncActiveTabs();
       if (mode === 'admin') await renderAdmin();
       else await renderClient();
     } catch (error) {
@@ -1133,6 +1463,16 @@ export const appScript = `
     button.addEventListener('click', () => startHostedAuth(button.dataset.authAction));
   });
 
+  document.querySelectorAll('[data-nav-view]').forEach((link) => {
+    link.addEventListener('click', (event) => {
+      event.preventDefault();
+      activeView = link.dataset.navView;
+      window.history.replaceState(null, document.title, '/client#bazos-settings');
+      syncActiveTabs();
+      render();
+    });
+  });
+
   const requestedAuthAction = new URLSearchParams(window.location.search).get('auth');
   if (mode === 'client' && !token()) {
     const action = requestedAuthAction === 'register' ? 'register' : 'login';
@@ -1142,18 +1482,11 @@ export const appScript = `
   }
 
   refresh.addEventListener('click', render);
-  document.querySelectorAll('[data-sidebar-view]').forEach((link) => {
-    link.addEventListener('click', (event) => {
-      event.preventDefault();
-      const targetTab = document.querySelector('.tab[data-view="' + link.dataset.sidebarView + '"]');
-      targetTab?.click();
-    });
-  });
   document.querySelectorAll('.tab').forEach((tab) => {
     tab.addEventListener('click', () => {
-      document.querySelectorAll('.tab').forEach((item) => item.classList.remove('active'));
-      tab.classList.add('active');
       activeView = tab.dataset.view;
+      if (window.location.hash) window.history.replaceState(null, document.title, mode === 'admin' ? '/admin' : '/client');
+      syncActiveTabs();
       render();
     });
   });
