@@ -246,17 +246,21 @@ export const renderAppPage = (mode: AppMode) => {
 export const appStyles = `
 :root {
   --bg: #ffffff;
-  --ink: #172026;
-  --muted: #5d6873;
-  --line: #d9e1e7;
-  --panel: #f7fafc;
-  --panel-strong: #eef4f7;
-  --red: #c9272d;
-  --red-dark: #9e1e24;
-  --teal: #0c7c75;
-  --green: #1b8a4b;
-  --amber: #9d6a00;
-  --shadow: 0 18px 55px rgba(23, 32, 38, 0.12);
+  --bg-soft: #FBF3E1;
+  --ink: #000000;
+  --muted: #5D5D5D;
+  --line: #dddddd;
+  --panel: #FBF3E1;
+  --panel-strong: #FFECBF;
+  --red: #FF6600;
+  --red-dark: #BF4C00;
+  --teal: #FFD9BF;
+  --green: #2f7d32;
+  --amber: #705000;
+  --highlight: #FFD9BF;
+  --highlight-line: #E4C2AB;
+  --hover-red: #CC3333;
+  --shadow: 0 18px 55px rgba(0, 0, 0, 0.10);
 }
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
@@ -307,7 +311,7 @@ button, input { font: inherit; }
   font-size: 14px;
   font-weight: 650;
 }
-.site-nav a:hover, .app-nav a:hover { color: var(--red); }
+.site-nav a:hover, .app-nav a:hover { color: var(--hover-red); }
 .button {
   display: inline-flex;
   align-items: center;
@@ -324,7 +328,7 @@ button, input { font: inherit; }
 .button-primary { background: var(--red); color: #fff; }
 .button-primary:hover { background: var(--red-dark); }
 .button-secondary { background: #fff; color: var(--ink); border-color: var(--line); }
-.button-secondary:hover { border-color: #b7c3cb; background: var(--panel); }
+.button-secondary:hover { border-color: #EBD9B0; background: var(--panel-strong); }
 .hero-section {
   display: grid;
   grid-template-columns: minmax(0, 0.95fr) minmax(460px, 1.05fr);
@@ -374,7 +378,7 @@ button, input { font: inherit; }
   width: 10px;
   height: 10px;
   border-radius: 99px;
-  background: #c8d2d9;
+  background: #E4C2AB;
 }
 .browser-bar strong {
   margin-left: 8px;
@@ -418,10 +422,10 @@ button, input { font: inherit; }
   width: 34px;
   height: 34px;
   border-radius: 8px;
-  background: linear-gradient(135deg, #c9272d, #f0a4a7);
+  background: linear-gradient(135deg, #FF6600, #FFD9BF);
 }
-.thumb.green { background: linear-gradient(135deg, #0c7c75, #8bd6c8); }
-.thumb.red { background: linear-gradient(135deg, #6b1d22, #e0676d); }
+.thumb.green { background: linear-gradient(135deg, #FFECBF, #FFD9BF); }
+.thumb.red { background: linear-gradient(135deg, #CC3333, #FFD9BF); }
 .status {
   display: inline-flex;
   align-items: center;
@@ -432,9 +436,9 @@ button, input { font: inherit; }
   font-size: 12px;
   font-weight: 800;
 }
-.status.ok { color: #0c5f36; background: #dcf4e7; }
-.status.wait { color: #705000; background: #fff2c9; }
-.status.risk { color: #8f1f25; background: #fde2e4; }
+.status.ok { color: #2f7d32; background: #FFECBF; }
+.status.wait { color: #705000; background: #FFD9BF; }
+.status.risk { color: #C00029; background: #FFD9BF; }
 .gate-list {
   display: grid;
   gap: 9px;
@@ -543,12 +547,12 @@ button, input { font: inherit; }
   display: grid;
   gap: 16px;
   padding: 22px;
-  border-left: 3px solid var(--red);
+  border-left: 3px solid var(--red-dark);
   background: #fff;
   border-radius: 8px;
 }
 .workflow-step strong {
-  color: var(--red);
+  color: var(--red-dark);
   font-size: 28px;
 }
 .portal-section {
@@ -633,7 +637,7 @@ button, input { font: inherit; }
 }
 .app-nav a.active {
   color: var(--red);
-  background: #fdebed;
+  background: #FFD9BF;
 }
 .app-main {
   padding: 28px;
