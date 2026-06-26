@@ -35,7 +35,7 @@ export const renderLandingPage = () =>
     <main>
       <section class="hero-section">
         <div class="hero-copy">
-          <h1>Publikujte inzeráty na Bazoši z jednoho bezpečného pracovního prostoru.</h1>
+          <h1>Spravujte inzeráty na Bazoši bezpečně a přehledně.</h1>
           <p class="hero-lede">Prodejci mohou připravovat inzeráty, sledovat stav na Bazoši a žádat o hlídané publikování přes AlfaRes, aniž by ztratili přehled o limitech Bazoš.cz.</p>
           <div class="hero-actions">
             <a class="button button-primary" href="/client">${icon('layout')}Otevřít klientský prostor</a>
@@ -340,10 +340,11 @@ button, input { font: inherit; }
 }
 .hero-copy h1 {
   margin: 0;
-  max-width: 760px;
-  font-size: clamp(44px, 5.1vw, 76px);
-  line-height: 0.98;
-  font-weight: 820;
+  max-width: 680px;
+  color: #171717;
+  font-size: clamp(36px, 3.9vw, 56px);
+  line-height: 1.08;
+  font-weight: 780;
 }
 .hero-lede {
   max-width: 660px;
@@ -830,7 +831,7 @@ button, input { font: inherit; }
   .data-table { display: block; overflow-x: auto; }
 }
 @media (max-width: 560px) {
-  .hero-copy h1 { font-size: 38px; }
+  .hero-copy h1 { font-size: 32px; }
   .hero-lede { font-size: 17px; }
   .button { width: 100%; }
   .app-nav { grid-template-columns: 1fr; }
