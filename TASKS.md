@@ -12,6 +12,7 @@
 
 ## Completed
 <!-- Coordinator-append-only -->
+- 2026-06-26 goal-17-bazos-order-forwarding: blocked invalid empty-item central Orders forwarding, added BazosAd.productId item mapping when ad-line identifiers are present, and documented [MISSING: Bazos order item ingestion contract] for true webhook ingestion.
 - 2026-04-05 documentation-standard-applied
 - 2026-06-12 compliance-model: BazosIdentity service/controller, PublishPolicyService (8 gates), BazosAdService draft/challenge, unit tests
 - 2026-06-12 goal-01-identity-session-compliance: completed IPS review and strengthened policy to fail closed on inactive sessions, missing/stale public duplicate evidence, missing/stale content-policy evidence, and all documented challenge states
