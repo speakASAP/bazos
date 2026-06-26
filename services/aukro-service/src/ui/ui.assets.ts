@@ -228,7 +228,7 @@ export const renderAppPage = (mode: AppMode) => {
         </section>
       </main>
     </div>
-    <script src="/ui/app.js"></script>`,
+    <script src="/ui/app.js?v=cs-20260626"></script>`,
   );
 };
 
