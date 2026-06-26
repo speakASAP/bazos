@@ -13,27 +13,27 @@ export class UiController {
 
   @Get('admin')
   admin(@Res() res: any) {
-    return res.type('html').send(renderAppPage('admin'));
+    return res.set('Cache-Control', 'no-store, max-age=0').type('html').send(renderAppPage('admin'));
   }
 
   @Get('client')
   client(@Res() res: any) {
-    return res.type('html').send(renderAppPage('client'));
+    return res.set('Cache-Control', 'no-store, max-age=0').type('html').send(renderAppPage('client'));
   }
 
   @Get('auth/callback')
   authCallback(@Res() res: any) {
-    return res.type('html').send(renderAuthCallbackPage());
+    return res.set('Cache-Control', 'no-store, max-age=0').type('html').send(renderAuthCallbackPage());
   }
 
   @Get('ui/app.css')
   styles(@Res() res: any) {
-    return res.type('text/css').send(appStyles);
+    return res.set('Cache-Control', 'no-store, max-age=0').type('text/css').send(appStyles);
   }
 
   @Get('ui/app.js')
   script(@Res() res: any) {
-    return res.type('application/javascript').send(appScript);
+    return res.set('Cache-Control', 'no-store, max-age=0').type('application/javascript').send(appScript);
   }
 
 
