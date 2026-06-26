@@ -35,6 +35,9 @@ Pass by scope. The change is read-only UI aggregation over existing guarded data
 - `npm --prefix shared run build`: pass.
 - `npm test`: pass, 5 suites and 83 tests.
 - `git diff --check`: pass.
+- Deploy: pass, `./scripts/deploy.sh` built and deployed image `localhost:5000/bazos-service:0cabc0c`, digest `sha256:53562aa9d4c5960195b8898b832b86993a6ca26791af7993c11363e8971a824c`.
+- Kubernetes: pass, deployment image `localhost:5000/bazos-service:0cabc0c`, ready replicas `1/1`, pod `bazos-service-5d94ff7cfb-xgrdg` Running with 0 restarts.
+- Production smoke: pass for `https://bazos.alfares.cz/health`, `/client` HTTP 200 with `client-overview-stats-20260626`, and `/ui/app.js` containing `Zbývá vložit`, `bazosAdUrl`, and `Moje inzeráty v přehledu` markers.
 
 ### Readiness Gate Evidence
 
@@ -58,8 +61,8 @@ Pass by scope. The change is read-only UI aggregation over existing guarded data
 
 ### Commit Or No-Commit Reason
 
-Documentation/report commit pending after final validation.
+Source UI patch deployed in image `localhost:5000/bazos-service:0cabc0c`; this report update is docs-only.
 
 ### Next Action
 
-Commit and deploy after validation remains green.
+No further action required unless live signed-in browser QA finds account-specific data issues.
