@@ -7,7 +7,7 @@ const pageShell = (title: string, body: string) => `<!doctype html>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${title}</title>
   <meta name="description" content="Služba AlfaRes Bazoš pomáhá prodejcům připravovat, sledovat a spravovat inzeráty na Bazoš.cz v souladu s pravidly.">
-  <link rel="stylesheet" href="/ui/app.css?v=bazos-hero-typography-20260626">
+  <link rel="stylesheet" href="/ui/app.css?v=bazos-client-nav-20260626">
 </head>
 <body>
 ${body}
@@ -29,7 +29,11 @@ export const renderLandingPage = () =>
         <a href="#service">Služba</a>
         <a href="#compliance">Soulad s pravidly</a>
       </nav>
-      <a class="button button-primary" href="/client">${icon('login')}Přihlásit se / registrovat</a>
+      <div class="site-actions" aria-label="Klientský přístup">
+        <a class="nav-client" href="/client">${icon('client')}Klientský panel</a>
+        <a class="button button-secondary" href="/client?auth=login">${icon('login')}Přihlásit se</a>
+        <a class="button button-primary" href="/client?auth=register">${icon('client')}Registrovat</a>
+      </div>
     </header>
 
     <main>
@@ -145,12 +149,6 @@ export const renderLandingPage = () =>
         </div>
       </section>
 
-      <section class="portal-section">
-        <a class="portal-card" href="/client">
-          <span>${icon('client')}Klientský panel</span>
-          <strong>Registrujte se nebo se přihlaste pro správu inzerátů, sledování stavu na Bazoši a žádosti o publikování přes hlídané postupy.</strong>
-        </a>
-      </section>
     </main>
 
     <footer class="site-footer">
@@ -236,7 +234,7 @@ export const renderAppPage = (mode: AppMode) => {
         </section>
       </main>
     </div>
-    <script src="/ui/app.js?v=hosted-auth-20260626"></script>`,
+    <script src="/ui/app.js?v=hosted-auth-client-nav-20260626"></script>`,
   );
 };
 
@@ -274,9 +272,9 @@ button, input { font: inherit; }
   position: sticky;
   top: 0;
   z-index: 10;
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
   gap: 24px;
   min-height: 72px;
   padding: 0 44px;
@@ -303,12 +301,30 @@ button, input { font: inherit; }
 }
 .site-nav {
   display: flex;
+  justify-content: center;
   gap: 22px;
   color: var(--muted);
   font-size: 14px;
   font-weight: 650;
 }
-.site-nav a:hover, .app-nav a:hover { color: var(--hover-red); }
+.site-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  min-width: 0;
+}
+.nav-client {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.site-nav a:hover, .nav-client:hover, .app-nav a:hover { color: var(--hover-red); }
 .button {
   display: inline-flex;
   align-items: center;
@@ -389,7 +405,7 @@ button, input { font: inherit; }
   gap: 14px;
   padding: 16px;
 }
-.preview-panel, .benefit-grid article, .portal-card, .auth-panel {
+.preview-panel, .benefit-grid article, .auth-panel {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #fff;
@@ -454,7 +470,7 @@ button, input { font: inherit; }
   font-weight: 820;
   line-height: 1;
 }
-.benefit-band, .workflow-section, .portal-section, .pricing-section {
+.benefit-band, .workflow-section, .pricing-section {
   max-width: 1220px;
   margin: 0 auto;
   padding: 74px 44px;
@@ -490,7 +506,7 @@ button, input { font: inherit; }
   margin: 18px 0 10px;
   font-size: 18px;
 }
-.benefit-grid p, .portal-card strong, .auth-panel p {
+.benefit-grid p, .auth-panel p {
   color: var(--muted);
   line-height: 1.55;
 }
@@ -552,28 +568,6 @@ button, input { font: inherit; }
 .workflow-step strong {
   color: var(--red-dark);
   font-size: 28px;
-}
-.portal-section {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-}
-.portal-card {
-  display: grid;
-  gap: 12px;
-  padding: 28px;
-}
-.portal-card span {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--red);
-  font-weight: 800;
-}
-.portal-card strong {
-  color: var(--ink);
-  font-size: 24px;
-  line-height: 1.25;
 }
 .site-footer {
   display: flex;
@@ -803,9 +797,19 @@ button, input { font: inherit; }
   text-align: center;
 }
 @media (max-width: 960px) {
-  .site-header { padding: 0 20px; }
+  .site-header {
+    grid-template-columns: 1fr;
+    align-items: start;
+    min-height: auto;
+    padding: 14px 20px;
+  }
   .site-nav { display: none; }
-  .hero-section, .section-heading, .portal-section, .auth-panel, .pricing-section {
+  .site-actions {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+  .hero-section, .section-heading, .auth-panel, .pricing-section {
     grid-template-columns: 1fr;
   }
   .hero-section { padding: 44px 20px; }
@@ -813,7 +817,7 @@ button, input { font: inherit; }
   .preview-grid, .benefit-grid, .workflow, .summary-grid {
     grid-template-columns: 1fr;
   }
-  .benefit-band, .workflow-section, .portal-section { padding: 52px 20px; }
+  .benefit-band, .workflow-section { padding: 52px 20px; }
   .site-footer { padding: 24px 20px; flex-direction: column; }
   .app-shell { grid-template-columns: 1fr; }
   .app-sidebar {
@@ -831,6 +835,9 @@ button, input { font: inherit; }
   .hero-copy h1 { font-size: 32px; }
   .hero-lede { font-size: 17px; }
   .button { width: 100%; }
+  .site-actions { display: grid; grid-template-columns: 1fr 1fr; }
+  .site-actions .nav-client { grid-column: 1 / -1; }
+  .site-actions .button { width: 100%; }
   .app-nav { grid-template-columns: 1fr; }
   .session-actions { width: 100%; align-items: stretch; flex-direction: column; }
 }
@@ -1107,6 +1114,13 @@ export const appScript = `
   document.querySelectorAll('[data-auth-action]').forEach((button) => {
     button.addEventListener('click', () => startHostedAuth(button.dataset.authAction));
   });
+
+  const requestedAuthAction = new URLSearchParams(window.location.search).get('auth');
+  if (mode === 'client' && !token() && (requestedAuthAction === 'login' || requestedAuthAction === 'register')) {
+    window.history.replaceState(null, document.title, '/client');
+    startHostedAuth(requestedAuthAction);
+    return;
+  }
 
   refresh.addEventListener('click', render);
   document.querySelectorAll('.tab').forEach((tab) => {
