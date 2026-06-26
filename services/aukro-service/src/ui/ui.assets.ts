@@ -31,7 +31,6 @@ export const renderLandingPage = () =>
       </nav>
       <div class="site-actions" aria-label="Klientský přístup">
         <a class="nav-client" href="/client">${icon('client')}Klientský panel</a>
-        <a class="button button-secondary" href="/client?auth=login">${icon('login')}Přihlásit se</a>
         <a class="button button-primary" href="/client?auth=register">${icon('client')}Registrovat</a>
       </div>
     </header>
