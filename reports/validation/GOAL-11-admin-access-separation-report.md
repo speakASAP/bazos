@@ -20,9 +20,9 @@ The change aligns the UI with the owner request: public visitors and regular use
 
 ### Not Implemented
 
-- No Auth role assignment was mutated.
-- `[MISSING: owner/test admin email if Auth roles do not already mark that user as admin]`.
-- No live credential smoke with a real/test admin user was run; production smoke was unauthenticated/static only.
+- Auth role assignment was updated after explicit owner approval: `test@example.com` now has `app:bazos-service:admin` in addition to existing `global:superadmin`.
+- Live logged-in admin smoke passed for `test@example.com`; no token values, refresh tokens, passwords, or secret values were printed.
+- No user password, contact data, Bazos session data, or production ad data was changed.
 
 ### Bazos Compliance Check
 
@@ -38,6 +38,8 @@ Pass by scope. No Bazos publishing, browser automation, identity verification, e
 - Deploy: pass, `./scripts/deploy.sh` deployed image `localhost:5000/bazos-service:2fdd564`, digest `sha256:5e7ea6839f7ae42cbd67b2ed7e49cb414b91c2e22648aaf9b33b1e2eb1ed8258`.
 - Kubernetes: pass, pod `bazos-service-5fdbb6bc-ppjfh` Ready 1/1, Running, 0 restarts.
 - Production smoke: pass for `/health`, `/`, `/client`, `/admin`, `/ui/app.js`, unauthenticated `/ui/auth/me?mode=admin` returning 401, no public landing `/admin` href, and live JS admin-gate markers.
+- Auth RBAC mutation: pass, idempotent SQL inserted one `user_roles` assignment for `test@example.com` -> `app:bazos-service:admin`; verification rows show `global:superadmin` and `app:bazos-service:admin`.
+- Logged-in admin smoke: pass, Auth `/auth/validate` returned roles `app:bazos-service:admin,global:superadmin`; live Basus `/ui/auth/me?mode=admin` returned HTTP 200 with `access.admin=true` for `test@example.com`.
 
 ### Readiness Gate Evidence
 
@@ -47,7 +49,7 @@ Pass by scope. No Bazos publishing, browser automation, identity verification, e
 
 ### Risks
 
-- If the test user has no Auth admin role and `BAZOS_ADMIN_EMAILS` remains empty, `/admin` will fail closed for that user until the runtime allowlist or Auth role assignment is configured.
+- Auth role assignment is now present for `test@example.com`; `BAZOS_ADMIN_EMAILS` can remain empty unless another fallback admin is needed.
 - The monitoring endpoints remain user-scoped behind existing backend guards; this change restricts the UI entry and UI session gate, not the underlying Auth role model in shared Bazos API controllers.
 
 ### Files Changed
@@ -67,4 +69,4 @@ Committed after validation in this session; commit SHA recorded in final respons
 
 ### Next Action
 
-Confirm the test/owner Auth account has `app:bazos-service:admin` or configure `BAZOS_ADMIN_EMAILS`; then run an approved logged-in admin smoke if needed.
+No further action required for `test@example.com`; add additional admin users through Auth RBAC when needed.
