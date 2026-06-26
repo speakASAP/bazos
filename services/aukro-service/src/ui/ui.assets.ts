@@ -1,12 +1,12 @@
 type AppMode = 'admin' | 'client';
 
 const pageShell = (title: string, body: string) => `<!doctype html>
-<html lang="en">
+<html lang="cs">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${title}</title>
-  <meta name="description" content="AlfaRes Bazos Service helps sellers prepare, monitor, and manage compliant Bazos.cz listings.">
+  <meta name="description" content="Služba AlfaRes Bazoš pomáhá prodejcům připravovat, sledovat a spravovat inzeráty na Bazoš.cz v souladu s pravidly.">
   <link rel="stylesheet" href="/ui/app.css">
 </head>
 <body>
@@ -18,32 +18,32 @@ const icon = (name: string) => `<span class="icon icon-${name}" aria-hidden="tru
 
 export const renderLandingPage = () =>
   pageShell(
-    'AlfaRes Bazos Service',
+    'AlfaRes Bazoš',
     `<header class="site-header">
-      <a class="brand" href="/" aria-label="AlfaRes Bazos Service">
+      <a class="brand" href="/" aria-label="AlfaRes Bazoš">
         <span class="brand-mark">B</span>
-        <span>Bazos Service</span>
+        <span>Služba Bazoš</span>
       </a>
-      <nav class="site-nav" aria-label="Main navigation">
-        <a href="#benefits">Benefits</a>
-        <a href="#pricing">Pricing</a>
-        <a href="#compliance">Compliance</a>
-        <a href="/client">Client login</a>
+      <nav class="site-nav" aria-label="Hlavní navigace">
+        <a href="#benefits">Výhody</a>
+        <a href="#pricing">Cena</a>
+        <a href="#compliance">Soulad s pravidly</a>
+        <a href="/client">Přihlášení klienta</a>
       </nav>
-      <a class="button button-primary" href="/client">${icon('login')}Sign in</a>
+      <a class="button button-primary" href="/client">${icon('login')}Přihlásit se</a>
     </header>
 
     <main>
       <section class="hero-section">
         <div class="hero-copy">
-          <h1>Publish your Bazos offers from one compliant workspace.</h1>
-          <p class="hero-lede">For 49 Kc per month, sellers can prepare offers, monitor Bazos status, and request guarded publishing through AlfaRes without losing visibility into Bazos.cz limits.</p>
+          <h1>Publikujte inzeráty na Bazoši z jednoho bezpečného pracovního prostoru.</h1>
+          <p class="hero-lede">Za 49 Kč měsíčně mohou prodejci připravovat inzeráty, sledovat stav na Bazoši a žádat o hlídané publikování přes AlfaRes, aniž by ztratili přehled o limitech Bazoš.cz.</p>
           <div class="hero-actions">
-            <a class="button button-primary" href="/client">${icon('layout')}Start for 49 Kc/month</a>
-            <a class="button button-secondary" href="#pricing">${icon('catalog')}See pricing</a>
+            <a class="button button-primary" href="/client">${icon('layout')}Začít za 49 Kč měsíčně</a>
+            <a class="button button-secondary" href="#pricing">${icon('catalog')}Zobrazit cenu</a>
           </div>
         </div>
-        <div class="product-frame" aria-label="Bazos service dashboard preview">
+        <div class="product-frame" aria-label="Náhled ovládacího panelu služby Bazoš">
           <div class="browser-bar">
             <span></span><span></span><span></span>
             <strong>bazos.alfares.cz</strong>
@@ -51,41 +51,41 @@ export const renderLandingPage = () =>
           <div class="preview-grid">
             <div class="preview-panel wide">
               <div class="panel-header">
-                <strong>Offer command center</strong>
-                <span class="status ok">Policy ready</span>
+                <strong>Centrum správy inzerátů</strong>
+                <span class="status ok">Pravidla splněna</span>
               </div>
               <div class="offer-row">
                 <span class="thumb"></span>
-                <div><strong>iPhone 13 128GB</strong><small>Draft from catalog</small></div>
+                <div><strong>iPhone 13 128GB</strong><small>Koncept z katalogu</small></div>
                 <span>Elektro</span>
-                <span class="status wait">Review</span>
+                <span class="status wait">Kontrola</span>
               </div>
               <div class="offer-row">
                 <span class="thumb green"></span>
-                <div><strong>Makita drill set</strong><small>Published on Bazos</small></div>
-                <span>Naradi</span>
-                <span class="status ok">Active</span>
+                <div><strong>Sada vrtaček Makita</strong><small>Publikováno na Bazoši</small></div>
+                <span>Nářadí</span>
+                <span class="status ok">Aktivní</span>
               </div>
               <div class="offer-row">
                 <span class="thumb red"></span>
-                <div><strong>Office chair</strong><small>Duplicate check required</small></div>
-                <span>Nabytek</span>
-                <span class="status risk">Blocked</span>
+                <div><strong>Kancelářská židle</strong><small>Vyžadována kontrola duplicity</small></div>
+                <span>Nábytek</span>
+                <span class="status risk">Blokováno</span>
               </div>
             </div>
             <div class="preview-panel">
-              <strong>Compliance gates</strong>
+              <strong>Kontroly pravidel</strong>
               <ol class="gate-list">
-                <li>${icon('check')}Verified identity</li>
-                <li>${icon('check')}Active ad cap</li>
-                <li>${icon('check')}Category cadence</li>
-                <li>${icon('check')}Duplicate evidence</li>
+                <li>${icon('check')}Ověřená identita</li>
+                <li>${icon('check')}Limit aktivních inzerátů</li>
+                <li>${icon('check')}Interval kategorie</li>
+                <li>${icon('check')}Důkaz bez duplicity</li>
               </ol>
             </div>
             <div class="preview-panel">
-              <strong>Admin review</strong>
+              <strong>Administrátorská kontrola</strong>
               <p class="metric">7</p>
-              <small>identities or attempts need human attention</small>
+              <small>identit nebo pokusů vyžaduje ruční kontrolu</small>
             </div>
           </div>
         </div>
@@ -93,108 +93,108 @@ export const renderLandingPage = () =>
 
       <section class="benefit-band" id="benefits">
         <div class="section-heading">
-          <h2>Why sellers use this instead of native Bazos alone</h2>
-          <p>Native Bazos is good for manual posting. AlfaRes adds catalog context, compliance visibility, team workflows, and lifecycle tracking around it.</p>
+          <h2>Proč prodejci používají tuto službu místo samotného Bazoše</h2>
+          <p>Samotný Bazoš je vhodný pro ruční vkládání. AlfaRes k němu přidává katalogový kontext, přehled o pravidlech, týmové postupy a sledování životního cyklu.</p>
         </div>
         <div class="benefit-grid">
           <article>
             ${icon('catalog')}
-            <h3>Catalog-to-offer preparation</h3>
-            <p>Create local drafts from product data and keep title, category, images, stock state, and seller defaults in one place.</p>
+            <h3>Příprava inzerátu z katalogu</h3>
+            <p>Vytvářejte lokální koncepty z produktových dat a mějte název, kategorii, obrázky, stav skladu i výchozí údaje prodejce na jednom místě.</p>
           </article>
           <article>
             ${icon('activity')}
-            <h3>Status that survives the session</h3>
-            <p>See which offers are drafts, queued, published, blocked, expired, or waiting for manual review without checking each listing manually.</p>
+            <h3>Stav uložený i po ukončení relace</h3>
+            <p>Sledujte, které inzeráty jsou koncepty, ve frontě, publikované, blokované, expirované nebo čekají na ruční kontrolu, bez ručního procházení každého inzerátu.</p>
           </article>
           <article>
             ${icon('guard')}
-            <h3>Built-in policy checks</h3>
-            <p>Surface active-ad caps, duplicate checks, category pacing, and content evidence before a risky publish action happens.</p>
+            <h3>Vestavěné kontroly pravidel</h3>
+            <p>Zobrazte limity aktivních inzerátů, kontrolu duplicit, intervaly kategorií a důkazy obsahu ještě před rizikovým publikováním.</p>
           </article>
           <article>
             ${icon('team')}
-            <h3>Admin oversight</h3>
-            <p>Review blocked attempts, identity states, and operational health from a dedicated administrator console.</p>
+            <h3>Administrátorský dohled</h3>
+            <p>Kontrolujte blokované pokusy, stavy identit a provozní stav z vyhrazené administrátorské konzole.</p>
           </article>
         </div>
       </section>
 
       <section class="pricing-section" id="pricing">
         <div class="pricing-copy">
-          <h2>Simple customer pricing</h2>
-          <p>Pay 49 Kc per month for access to the client dashboard, offer preparation, status tracking, and guarded publish requests for verified Bazos identities.</p>
+          <h2>Jednoduchá cena pro zákazníky</h2>
+          <p>Plaťte 49 Kč měsíčně za přístup do klientského panelu, přípravu inzerátů, sledování stavu a hlídané žádosti o publikování pro ověřené identity na Bazoši.</p>
         </div>
         <div class="pricing-card">
-          <span>Monthly service</span>
-          <strong>49 Kc</strong>
-          <small>per month</small>
-          <a class="button button-primary" href="/client">${icon('login')}Sign in or register</a>
+          <span>Měsíční služba</span>
+          <strong>49 Kč</strong>
+          <small>měsíčně</small>
+          <a class="button button-primary" href="/client">${icon('login')}Přihlásit se nebo registrovat</a>
         </div>
       </section>
 
       <section class="workflow-section" id="compliance">
         <div class="section-heading">
-          <h2>Compliant workflow first</h2>
-          <p>The service does not replace Bazos verification or bypass platform controls. It stops when Bazos requires human action.</p>
+          <h2>Nejdříve bezpečný pracovní postup</h2>
+          <p>Služba nenahrazuje ověření na Bazoši ani neobchází pravidla platformy. Zastaví se, když Bazoš vyžaduje zásah člověka.</p>
         </div>
         <div class="workflow">
-          <div class="workflow-step"><strong>1</strong><span>Manual Bazos identity verification</span></div>
-          <div class="workflow-step"><strong>2</strong><span>Local draft and duplicate evidence</span></div>
-          <div class="workflow-step"><strong>3</strong><span>Rate, category, and active-ad gates</span></div>
-          <div class="workflow-step"><strong>4</strong><span>Queue visibility and stop-on-challenge review</span></div>
+          <div class="workflow-step"><strong>1</strong><span>Ruční ověření identity na Bazoši</span></div>
+          <div class="workflow-step"><strong>2</strong><span>Lokální koncept a důkaz bez duplicity</span></div>
+          <div class="workflow-step"><strong>3</strong><span>Kontroly frekvence, kategorie a aktivních inzerátů</span></div>
+          <div class="workflow-step"><strong>4</strong><span>Přehled fronty a kontrola při výzvě k ručnímu zásahu</span></div>
         </div>
       </section>
 
       <section class="portal-section">
         <a class="portal-card" href="/client">
-          <span>${icon('client')}Client dashboard</span>
-          <strong>Register or sign in to manage offers, see Bazos status, and request publishing through guarded flows.</strong>
+          <span>${icon('client')}Klientský panel</span>
+          <strong>Registrujte se nebo se přihlaste pro správu inzerátů, sledování stavu na Bazoši a žádosti o publikování přes hlídané postupy.</strong>
         </a>
         <a class="portal-card" href="/admin">
-          <span>${icon('admin')}Admin dashboard</span>
-          <strong>Separate administrator page for blocked attempts, identity review, and service health.</strong>
+          <span>${icon('admin')}Administrátorský panel</span>
+          <strong>Samostatná administrátorská stránka pro blokované pokusy, kontrolu identit a stav služby.</strong>
         </a>
       </section>
     </main>
 
     <footer class="site-footer">
-      <span>AlfaRes Bazos Service</span>
-      <span>Compliant Bazos.cz operations for verified sellers.</span>
+      <span>AlfaRes Bazoš</span>
+      <span>Provoz na Bazoš.cz v souladu s pravidly pro ověřené prodejce.</span>
     </footer>`,
   );
 
 export const renderAppPage = (mode: AppMode) => {
-  const title = mode === 'admin' ? 'Bazos Admin Console' : 'Bazos Client Dashboard';
-  const navLabel = mode === 'admin' ? 'Admin dashboard' : 'Client dashboard';
-  const detailsLabel = mode === 'admin' ? 'Review queue' : 'My offers';
-  const authTitle = mode === 'admin' ? 'Admin sign in' : 'Sign in or register';
+  const title = mode === 'admin' ? 'Administrace Bazoš' : 'Klientský panel Bazoš';
+  const navLabel = mode === 'admin' ? 'Administrátorský panel' : 'Klientský panel';
+  const detailsLabel = mode === 'admin' ? 'Fronta ke kontrole' : 'Moje inzeráty';
+  const authTitle = mode === 'admin' ? 'Přihlášení administrátora' : 'Přihlásit se nebo registrovat';
   const authCopy = mode === 'admin'
-    ? 'Use your AlfaRes administrator account to access operational review tools.'
-    : 'Use your AlfaRes account, or create one with email and password to start the 49 Kc/month service.';
+    ? 'Použijte administrátorský účet AlfaRes pro přístup k nástrojům provozní kontroly.'
+    : 'Použijte účet AlfaRes nebo si vytvořte nový pomocí e-mailu a hesla a začněte službu za 49 Kč měsíčně.';
   return pageShell(
     title,
     `<div class="app-shell" data-mode="${mode}">
       <aside class="app-sidebar">
         <a class="brand" href="/">
           <span class="brand-mark">B</span>
-          <span>Bazos Service</span>
+          <span>Služba Bazoš</span>
         </a>
-        <nav class="app-nav" aria-label="Workspace navigation">
+        <nav class="app-nav" aria-label="Navigace pracovního prostoru">
           <a class="active" href="/${mode}">${icon(mode === 'admin' ? 'admin' : 'client')}${navLabel}</a>
-          <a href="/">${icon('layout')}Landing page</a>
-          <a href="/#compliance">${icon('shield')}Compliance</a>
+          <a href="/">${icon('layout')}Úvodní stránka</a>
+          <a href="/#compliance">${icon('shield')}Soulad s pravidly</a>
         </nav>
       </aside>
       <main class="app-main">
         <header class="app-topbar">
           <div>
             <h1>${title}</h1>
-            <p>${mode === 'admin' ? 'Operational visibility for Bazos identities, blocked attempts, and service health.' : 'Customer workspace for your offers, subscription access, policy checks, and guarded publish actions.'}</p>
+            <p>${mode === 'admin' ? 'Provozní přehled identit na Bazoši, blokovaných pokusů a stavu služby.' : 'Zákaznický pracovní prostor pro vaše inzeráty, předplatné, kontroly pravidel a hlídané publikování.'}</p>
           </div>
           <div class="session-actions">
-            <span id="session-label">Not signed in</span>
-            <button class="button button-secondary hidden" id="sign-out" type="button">${icon('logout')}Sign out</button>
+            <span id="session-label">Nejste přihlášeni</span>
+            <button class="button button-secondary hidden" id="sign-out" type="button">${icon('logout')}Odhlásit se</button>
           </div>
         </header>
 
@@ -202,18 +202,18 @@ export const renderAppPage = (mode: AppMode) => {
           <div class="auth-copy">
             <h2>${authTitle}</h2>
             <p>${authCopy}</p>
-            ${mode === 'client' ? '<div class="price-note"><strong>49 Kc/month</strong><span>Client service subscription</span></div>' : ''}
+            ${mode === 'client' ? '<div class="price-note"><strong>49 Kč měsíčně</strong><span>Předplatné klientské služby</span></div>' : ''}
           </div>
           <form id="login-form" class="login-form">
-            <div class="auth-switch" role="tablist" aria-label="Authentication mode">
-              <button class="auth-tab active" data-auth-tab="login" type="button">Sign in</button>
-              ${mode === 'client' ? '<button class="auth-tab" data-auth-tab="register" type="button">Register</button>' : ''}
+            <div class="auth-switch" role="tablist" aria-label="Režim ověření">
+              <button class="auth-tab active" data-auth-tab="login" type="button">Přihlásit se</button>
+              ${mode === 'client' ? '<button class="auth-tab" data-auth-tab="register" type="button">Registrovat</button>' : ''}
             </div>
-            <label class="register-only hidden">First name<input name="firstName" type="text" autocomplete="given-name"></label>
-            <label class="register-only hidden">Last name<input name="lastName" type="text" autocomplete="family-name"></label>
-            <label>Email<input name="email" type="email" autocomplete="email" required></label>
-            <label>Password<input name="password" type="password" autocomplete="current-password" required minlength="8"></label>
-            <button class="button button-primary" id="auth-submit" type="submit">${icon('login')}Sign in</button>
+            <label class="register-only hidden">Jméno<input name="firstName" type="text" autocomplete="given-name"></label>
+            <label class="register-only hidden">Příjmení<input name="lastName" type="text" autocomplete="family-name"></label>
+            <label>E-mail<input name="email" type="email" autocomplete="email" required></label>
+            <label>Heslo<input name="password" type="password" autocomplete="current-password" required minlength="8"></label>
+            <button class="button button-primary" id="auth-submit" type="submit">${icon('login')}Přihlásit se</button>
           </form>
           <p class="form-message" id="form-message" role="status"></p>
         </section>
@@ -221,10 +221,10 @@ export const renderAppPage = (mode: AppMode) => {
         <section class="workspace hidden" id="workspace">
           <div class="toolbar">
             <div class="tabs" role="tablist">
-              <button class="tab active" data-view="overview" type="button">Overview</button>
+              <button class="tab active" data-view="overview" type="button">Přehled</button>
               <button class="tab" data-view="details" type="button">${detailsLabel}</button>
             </div>
-            <button class="button button-secondary" id="refresh" type="button">${icon('refresh')}Refresh</button>
+            <button class="button button-secondary" id="refresh" type="button">${icon('refresh')}Obnovit</button>
           </div>
           <div id="workspace-content" class="workspace-content"></div>
         </section>
@@ -840,7 +840,7 @@ export const appScript = `
     authMode = nextMode;
     document.querySelectorAll('[data-auth-tab]').forEach((tab) => tab.classList.toggle('active', tab.dataset.authTab === authMode));
     document.querySelectorAll('.register-only').forEach((field) => field.classList.toggle('hidden', authMode !== 'register'));
-    if (authSubmit) authSubmit.innerHTML = authMode === 'register' ? '${icon('login')}Register' : '${icon('login')}Sign in';
+    if (authSubmit) authSubmit.innerHTML = authMode === 'register' ? '${icon('login')}Registrovat' : '${icon('login')}Přihlásit se';
     const password = form.querySelector('input[name="password"]');
     if (password) password.autocomplete = authMode === 'register' ? 'new-password' : 'current-password';
   }
@@ -851,11 +851,11 @@ export const appScript = `
     if (response.status === 401) {
       localStorage.removeItem(tokenKey);
       showAuth();
-      throw new Error('Session expired. Please sign in again.');
+      throw new Error('Relace vypršela. Přihlaste se prosím znovu.');
     }
     if (!response.ok) {
       const body = await response.json().catch(() => ({}));
-      throw new Error(body.message || body.error?.message || 'Request failed');
+      throw new Error(body.message || body.error?.message || 'Požadavek selhal');
     }
     return response.json();
   }
@@ -864,14 +864,14 @@ export const appScript = `
     authPanel.classList.remove('hidden');
     workspace.classList.add('hidden');
     signOut.classList.add('hidden');
-    sessionLabel.textContent = 'Not signed in';
+    sessionLabel.textContent = 'Nejste přihlášeni';
   }
 
   function showWorkspace(user) {
     authPanel.classList.add('hidden');
     workspace.classList.remove('hidden');
     signOut.classList.remove('hidden');
-    sessionLabel.textContent = user?.email || 'Signed in';
+    sessionLabel.textContent = user?.email || 'Přihlášeno';
   }
 
   function statusClass(value) {
@@ -882,10 +882,25 @@ export const appScript = `
   }
 
   function cell(value) {
-    if (value === null || value === undefined || value === '') return 'Not set';
-    if (typeof value === 'boolean') return value ? 'Yes' : 'No';
-    if (typeof value === 'object') return Object.values(value).filter(Boolean).slice(0, 2).join(', ') || 'Recorded';
+    if (value === null || value === undefined || value === '') return 'Nenastaveno';
+    if (typeof value === 'boolean') return value ? 'Ano' : 'Ne';
+    if (typeof value === 'object') return Object.values(value).filter(Boolean).slice(0, 2).join(', ') || 'Zaznamenáno';
     return String(value);
+  }
+
+  function statusLabel(value) {
+    const text = String(value || '').toLowerCase();
+    if (text.includes('active')) return 'Aktivní';
+    if (text.includes('published')) return 'Publikováno';
+    if (text.includes('ready')) return 'Připraveno';
+    if (text.includes('blocked')) return 'Blokováno';
+    if (text.includes('failed')) return 'Selhalo';
+    if (text.includes('review')) return 'Ke kontrole';
+    if (text.includes('challenge')) return 'Vyžaduje zásah';
+    if (text.includes('draft')) return 'Koncept';
+    if (text.includes('queued')) return 'Ve frontě';
+    if (text.includes('expired')) return 'Expirováno';
+    return cell(value);
   }
 
   function stat(label, value) {
@@ -902,7 +917,7 @@ export const appScript = `
   }
 
   async function renderAdmin() {
-    content.innerHTML = '<div class="data-panel empty-state">Loading admin data...</div>';
+    content.innerHTML = '<div class="data-panel empty-state">Načítají se administrátorská data...</div>';
     const summary = await request('/publishing-monitoring/summary').catch((error) => ({ error: error.message }));
     const blocked = await request('/publishing-monitoring/blocked?limit=25').catch(() => []);
     if (summary.error) {
@@ -912,44 +927,44 @@ export const appScript = `
     if (activeView === 'overview') {
       content.innerHTML =
         '<div class="summary-grid">' +
-        stat('Publish attempts', summary.publishAttempts || summary.totalPublishAttempts || 0) +
-        stat('Blocked attempts', summary.blockedAttempts || blocked.length || 0) +
-        stat('Review identities', summary.reviewIdentities || summary.identitiesNeedingReview || 0) +
-        stat('Tracked active ads', summary.activeAds || summary.activeAdsTracked || 0) +
-        '</div><div class="data-panel"><h2>Administrator focus</h2><p class="card-note">Review blocked attempts and identities needing manual action. Publishing controls remain enforced by the backend policy gates.</p></div>';
+        stat('Pokusy o publikování', summary.publishAttempts || summary.totalPublishAttempts || 0) +
+        stat('Blokované pokusy', summary.blockedAttempts || blocked.length || 0) +
+        stat('Identity ke kontrole', summary.reviewIdentities || summary.identitiesNeedingReview || 0) +
+        stat('Sledované aktivní inzeráty', summary.activeAds || summary.activeAdsTracked || 0) +
+        '</div><div class="data-panel"><h2>Zaměření administrátora</h2><p class="card-note">Kontrolujte blokované pokusy a identity vyžadující ruční zásah. Kontroly publikování nadále vynucují backendová pravidla.</p></div>';
     } else {
       const rows = Array.isArray(blocked) ? blocked : (blocked.items || blocked.blockedAttempts || []);
       content.innerHTML = table([
-        { label: 'Attempt', render: (r) => cell(r.id || r.attemptId) },
-        { label: 'Offer', render: (r) => cell(r.offerId || r.adId || r.productId) },
-        { label: 'Reason', render: (r) => '<span class="status ' + statusClass(r.reason || r.status) + '">' + cell(r.reason || r.status) + '</span>' },
-        { label: 'Created', render: (r) => cell(r.createdAt || r.updatedAt) },
-      ], rows, 'No blocked attempts returned by the monitoring endpoint.');
+        { label: 'Pokus', render: (r) => cell(r.id || r.attemptId) },
+        { label: 'Inzerát', render: (r) => cell(r.offerId || r.adId || r.productId) },
+        { label: 'Důvod', render: (r) => '<span class="status ' + statusClass(r.reason || r.status) + '">' + statusLabel(r.reason || r.status) + '</span>' },
+        { label: 'Vytvořeno', render: (r) => cell(r.createdAt || r.updatedAt) },
+      ], rows, 'Monitorovací endpoint nevrátil žádné blokované pokusy.');
     }
   }
 
   async function policyCheck(id) {
-    content.innerHTML = '<div class="data-panel empty-state">Checking policy...</div>';
+    content.innerHTML = '<div class="data-panel empty-state">Kontrolují se pravidla...</div>';
     try {
       const result = await request('/offers/' + encodeURIComponent(id) + '/policy-check', { method: 'POST', body: '{}' });
-      content.innerHTML = '<div class="data-panel"><h2>Policy result</h2><pre>' + JSON.stringify(result, null, 2) + '</pre></div>';
+      content.innerHTML = '<div class="data-panel"><h2>Výsledek kontroly pravidel</h2><pre>' + JSON.stringify(result, null, 2) + '</pre></div>';
     } catch (error) {
       content.innerHTML = '<div class="data-panel empty-state">' + error.message + '</div>';
     }
   }
 
   async function enqueuePublish(id) {
-    content.innerHTML = '<div class="data-panel empty-state">Requesting guarded publish queue...</div>';
+    content.innerHTML = '<div class="data-panel empty-state">Odesílá se žádost do hlídané publikační fronty...</div>';
     try {
       const result = await request('/offers/' + encodeURIComponent(id) + '/enqueue-publish', { method: 'POST', body: '{}' });
-      content.innerHTML = '<div class="data-panel"><h2>Queue result</h2><pre>' + JSON.stringify(result, null, 2) + '</pre></div>';
+      content.innerHTML = '<div class="data-panel"><h2>Výsledek fronty</h2><pre>' + JSON.stringify(result, null, 2) + '</pre></div>';
     } catch (error) {
       content.innerHTML = '<div class="data-panel empty-state">' + error.message + '</div>';
     }
   }
 
   async function renderClient() {
-    content.innerHTML = '<div class="data-panel empty-state">Loading offers...</div>';
+    content.innerHTML = '<div class="data-panel empty-state">Načítají se inzeráty...</div>';
     const result = await request('/offers').catch((error) => ({ error: error.message }));
     if (result.error) {
       content.innerHTML = '<div class="data-panel empty-state">' + result.error + '</div>';
@@ -960,19 +975,19 @@ export const appScript = `
       const active = offers.filter((offer) => String(offer.status || offer.bazosStatus || '').toLowerCase().includes('active')).length;
       content.innerHTML =
         '<div class="summary-grid">' +
-        stat('Total offers', offers.length) +
-        stat('Active on Bazos', active) +
-        stat('Need review', offers.filter((offer) => statusClass(offer.status || offer.bazosStatus) === 'risk').length) +
-        stat('Drafts / queued', Math.max(offers.length - active, 0)) +
-        '</div><div class="data-panel"><h2>Customer workspace</h2><p class="card-note">Use offer actions to evaluate policy before requesting guarded publishing. The backend still enforces every compliance gate.</p></div>';
+        stat('Celkem inzerátů', offers.length) +
+        stat('Aktivní na Bazoši', active) +
+        stat('Vyžaduje kontrolu', offers.filter((offer) => statusClass(offer.status || offer.bazosStatus) === 'risk').length) +
+        stat('Koncepty / ve frontě', Math.max(offers.length - active, 0)) +
+        '</div><div class="data-panel"><h2>Zákaznický pracovní prostor</h2><p class="card-note">Pomocí akcí u inzerátu ověřte pravidla před žádostí o hlídané publikování. Backend stále vynucuje každou kontrolu.</p></div>';
     } else {
       content.innerHTML = table([
-        { label: 'Offer', render: (r) => '<strong>' + cell(r.title || r.name || r.productName || r.id) + '</strong><small class="card-note">' + cell(r.productId || r.sku || '') + '</small>' },
-        { label: 'Bazos status', render: (r) => '<span class="status ' + statusClass(r.status || r.bazosStatus || r.publishStatus) + '">' + cell(r.status || r.bazosStatus || r.publishStatus || 'Draft') + '</span>' },
-        { label: 'Category', render: (r) => cell(r.category || r.categoryName || r.bazosCategory) },
-        { label: 'Updated', render: (r) => cell(r.updatedAt || r.createdAt) },
-        { label: 'Actions', render: (r) => '<div class="row-actions"><button class="button button-secondary" data-policy="' + cell(r.id) + '" type="button">Policy</button><button class="button button-primary" data-publish="' + cell(r.id) + '" type="button">Publish</button></div>' },
-      ], offers, 'No offers returned for this account.');
+        { label: 'Inzerát', render: (r) => '<strong>' + cell(r.title || r.name || r.productName || r.id) + '</strong><small class="card-note">' + cell(r.productId || r.sku || '') + '</small>' },
+        { label: 'Stav na Bazoši', render: (r) => '<span class="status ' + statusClass(r.status || r.bazosStatus || r.publishStatus) + '">' + statusLabel(r.status || r.bazosStatus || r.publishStatus || 'draft') + '</span>' },
+        { label: 'Kategorie', render: (r) => cell(r.category || r.categoryName || r.bazosCategory) },
+        { label: 'Aktualizováno', render: (r) => cell(r.updatedAt || r.createdAt) },
+        { label: 'Akce', render: (r) => '<div class="row-actions"><button class="button button-secondary" data-policy="' + cell(r.id) + '" type="button">Pravidla</button><button class="button button-primary" data-publish="' + cell(r.id) + '" type="button">Publikovat</button></div>' },
+      ], offers, 'Pro tento účet nebyly vráceny žádné inzeráty.');
       content.querySelectorAll('[data-policy]').forEach((button) => button.addEventListener('click', () => policyCheck(button.dataset.policy)));
       content.querySelectorAll('[data-publish]').forEach((button) => button.addEventListener('click', () => enqueuePublish(button.dataset.publish)));
     }
@@ -1006,7 +1021,7 @@ export const appScript = `
       });
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));
-        throw new Error(body.message || (authMode === 'register' ? 'Registration failed' : 'Sign in failed'));
+        throw new Error(body.message || (authMode === 'register' ? 'Registrace selhala' : 'Přihlášení selhalo'));
       }
       const body = await response.json();
       localStorage.setItem(tokenKey, body.accessToken);
