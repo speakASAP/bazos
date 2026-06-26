@@ -7,7 +7,7 @@ const pageShell = (title: string, body: string) => `<!doctype html>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${title}</title>
   <meta name="description" content="Služba AlfaRes Bazoš pomáhá prodejcům připravovat, sledovat a spravovat inzeráty na Bazoš.cz v souladu s pravidly.">
-  <link rel="stylesheet" href="/ui/app.css?v=bazos-colors-20260626">
+  <link rel="stylesheet" href="/ui/app.css?v=bazos-hero-typography-20260626">
 </head>
 <body>
 ${body}
