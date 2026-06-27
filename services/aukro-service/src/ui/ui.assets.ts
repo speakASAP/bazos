@@ -1467,12 +1467,12 @@ export const appScript = `
       '<form class="form-panel panel-stack" id="identity-wizard-form"><div class="connection-requirement"><strong>Požadavek na e-mail</strong>E-mail na Bazoši musí být stejný jako v Alfares Auth. Aktuální Alfares e-mail: ' + cell(email || 'není k dispozici') + '.</div><div class="form-grid">' +
       '<label class="wide">E-mail Alfares / Bazoš<input name="authEmail" value="' + cell(email) + '" readonly></label>' +
       '<label>Telefon Bazoš<input name="phoneNumber" minlength="9" maxlength="20" autocomplete="tel" required></label>' +
-      '<label>Název účtu<input name="displayName" maxlength="200" required></label>' +
+      '<input type="hidden" name="displayName" value="">' +
       '<label>Kontaktní jméno<input name="contactName" maxlength="200" autocomplete="name"></label>' +
       '<label>Kontaktní telefon<input name="contactPhone" maxlength="50" autocomplete="tel"></label>' +
       '<label>PSČ<input name="defaultZip" maxlength="20" autocomplete="postal-code"></label>' +
       '<label>Lokalita<input name="defaultLocation" maxlength="200" autocomplete="address-level2"></label>' +
-      '<label class="wide">Poznámky<textarea name="notes" placeholder="Doplňující informace k ručnímu ověření nebo propojení účtu"></textarea></label>' +
+      '<label class="wide">Popis účtu<textarea name="notes" placeholder="např. motodíly, knihy, sezónní zboží nebo hlavní prodejní účet"></textarea></label>' +
       '</div><p class="form-message" data-form-message></p><div class="flow-actions"><button class="button button-primary" type="submit">Uložit a připojit</button><button class="button button-secondary" data-close-identity-wizard type="button">Dokončit později</button></div></form></div></div>';
   }
 
@@ -1582,6 +1582,16 @@ export const appScript = `
     }
   }
 
+  function defaultIdentityDisplayName(data) {
+    const explicitName = String(data.displayName || '').trim();
+    if (explicitName) return explicitName;
+    const description = String(data.notes || '').trim();
+    const contactName = String(data.contactName || '').trim();
+    const phoneNumber = String(data.phoneNumber || '').trim();
+    const suffix = description || contactName || phoneNumber;
+    return suffix ? 'Bazoš účet - ' + suffix : 'Bazoš účet';
+  }
+
   async function createIdentity(event) {
     event.preventDefault();
     const form = event.currentTarget;
@@ -1590,7 +1600,7 @@ export const appScript = `
     const notes = [data.notes, authEmail ? 'E-mail v Alfares Auth se musí shodovat s e-mailem účtu na Bazoši: ' + authEmail : ''].filter(Boolean).join('\\n');
     const payload = {
       phoneNumber: data.phoneNumber,
-      displayName: data.displayName,
+      displayName: defaultIdentityDisplayName(data),
       contactName: data.contactName || undefined,
       contactPhone: data.contactPhone || undefined,
       defaultZip: data.defaultZip || undefined,
@@ -1704,12 +1714,12 @@ export const appScript = `
   function renderSettings(data) {
     content.innerHTML = '<div class="account-grid"><form class="form-panel panel-stack" id="identity-form"><div><h2>Nastavení Bazos.cz</h2><p class="card-note">Přidejte telefon a údaje prodejce. Interní ID Bazoš účtu není potřeba hledat ani vyplňovat; systém ho doplní při propojení účtu. Ověření telefonu a relace se dokončuje ručně přes Bazos.cz.</p></div><div class="form-grid">' +
       '<label>Telefon<input name="phoneNumber" minlength="9" maxlength="20" required></label>' +
-      '<label>Název účtu<input name="displayName" maxlength="200" required></label>' +
+      '<label>Název pro přehled<input name="displayName" maxlength="200" placeholder="např. Bazoš účet - motodíly" required></label>' +
       '<label>Kontaktní jméno<input name="contactName" maxlength="200"></label>' +
       '<label>Kontaktní telefon<input name="contactPhone" maxlength="50"></label>' +
       '<label>PSČ<input name="defaultZip" maxlength="20"></label>' +
       '<label>Lokalita<input name="defaultLocation" maxlength="200"></label>' +
-      '<label class="wide">Poznámky<textarea name="notes" placeholder="např. informace pro správce k propojení účtu"></textarea></label>' +
+      '<label class="wide">Popis účtu<textarea name="notes" placeholder="např. prodej motodílů, knih nebo sezónního zboží"></textarea></label>' +
       '</div><p class="form-message" data-form-message></p><button class="button button-primary" type="submit">Uložit nastavení</button></form><div class="data-panel"><h2>Co musí být splněno</h2><div class="gate-grid"><div class="gate-item"><strong>Telefon</strong>ověřený</div><div class="gate-item"><strong>Relace</strong>aktivní</div><div class="gate-item"><strong>Kontrola</strong>bez blokace</div><div class="gate-item"><strong>Účet</strong>propojený systémem</div><div class="gate-item"><strong>Limit</strong>méně než 50 aktivních inzerátů</div></div></div></div>' +
       table([
         { label: 'Identita', render: (r) => cell(r.displayName || r.phoneNumber) },
