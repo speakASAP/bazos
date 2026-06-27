@@ -1453,6 +1453,19 @@ export const appScript = `
     return 'https://www.bazos.cz/inzerat/' + encodeURIComponent(String(ad.bazosAdId)) + '/';
   }
 
+  function draftOptions(ad) {
+    const options = ad?.lastPolicyCheck?.draftOptions || ad?.lastPolicyCheck?.submissionOptions || {};
+    return {
+      rubric: options.rubric || inferRubricForCategory(ad?.category),
+      priceOption: options.priceOption || 'fixed_price',
+      media: Array.isArray(options.media) ? options.media : [],
+    };
+  }
+
+  function canEditAd(ad) {
+    return publishStatus(ad) === 'draft';
+  }
+
   function manualEvidence() {
     const checkedAt = new Date().toISOString();
     return {
@@ -1880,15 +1893,73 @@ export const appScript = `
 
   function renderDetails(data) {
     content.innerHTML = table([
-      { label: 'Inzerát', render: (r) => '<strong>' + cell(r.title || r.name || r.productName || r.id) + '</strong><small class="card-note">' + cell(r.productId || r.sku || '') + '</small>' },
+      { label: 'Inzerát', render: (r) => '<button class="link-button" data-open-ad="' + cell(r.id) + '" type="button"><strong>' + cell(r.title || r.name || r.productName || r.id) + '</strong></button><small class="card-note">' + cell(r.productId || r.sku || '') + '</small>' },
       { label: 'Stav na Bazoši', render: (r) => '<span class="status ' + statusClass(r.status || r.bazosStatus || r.publishStatus) + '">' + statusLabel(r.status || r.bazosStatus || r.publishStatus || 'draft') + '</span>' },
       { label: 'Kategorie', render: (r) => cell(r.category || r.categoryName || r.bazosCategory) },
       { label: 'Odkaz', render: (r) => bazosAdUrl(r) ? '<a class="table-link" href="' + escapeHtml(bazosAdUrl(r)) + '" target="_blank" rel="noopener">Zobrazit</a>' : cell('Zatím bez Bazoš ID') },
       { label: 'Aktualizováno', render: (r) => cell(r.updatedAt || r.createdAt) },
-      { label: 'Akce', render: (r) => '<div class="row-actions"><button class="button button-secondary" data-policy="' + cell(r.id) + '" type="button">Pravidla</button><button class="button button-primary" data-publish="' + cell(r.id) + '" type="button">Publikovat</button></div>' },
+      { label: 'Akce', render: (r) => '<div class="row-actions">' + (canEditAd(r) ? '<button class="button button-secondary" data-edit-ad="' + cell(r.id) + '" type="button">Upravit</button>' : '<button class="button button-secondary" data-open-ad="' + cell(r.id) + '" type="button">Detail</button>') + '<button class="button button-secondary" data-policy="' + cell(r.id) + '" type="button">Pravidla</button><button class="button button-primary" data-publish="' + cell(r.id) + '" type="button">Publikovat</button></div>' },
     ], data.ads, 'Pro tento účet nebyly vráceny žádné inzeráty.');
+    content.querySelectorAll('[data-open-ad], [data-edit-ad]').forEach((button) => button.addEventListener('click', () => openDraftDetails(button.dataset.openAd || button.dataset.editAd)));
     content.querySelectorAll('[data-policy]').forEach((button) => button.addEventListener('click', () => policyCheck(button.dataset.policy)));
     content.querySelectorAll('[data-publish]').forEach((button) => button.addEventListener('click', () => enqueuePublish(button.dataset.publish)));
+  }
+
+  function renderDraftEditor(ad) {
+    const options = draftOptions(ad);
+    const editable = canEditAd(ad);
+    const rubric = options.rubric || inferRubricForCategory(ad.category);
+    content.innerHTML = '<form class="form-panel panel-stack" id="edit-draft-form"><div><h2>' + (editable ? 'Upravit inzerát' : 'Detail inzerátu') + '</h2><p class="card-note">Aktuální stav: <span class="status ' + statusClass(ad.publishStatus || ad.status || ad.bazosStatus) + '">' + statusLabel(ad.publishStatus || ad.status || ad.bazosStatus || 'draft') + '</span></p></div><div class="form-grid">' +
+      '<label>Cena v Kč<input name="price" type="number" min="0" step="1" value="' + escapeHtml(ad.price ?? 0) + '"' + (editable ? '' : ' disabled') + '></label>' +
+      '<label>Volba ceny<select name="priceOption"' + (editable ? '' : ' disabled') + '>' + priceOptionOptions(options.priceOption) + '</select></label>' +
+      '<label>Rubrika<select name="rubric" data-bazos-rubric required' + (editable ? '' : ' disabled') + '>' + rubricOptions(rubric) + '</select></label>' +
+      '<label>Kategorie Bazos.cz<select name="category" data-bazos-category required' + (editable ? '' : ' disabled') + '>' + categoryOptions(rubric, ad.category || '') + '</select></label>' +
+      '<div class="category-suggestions wide" data-category-suggestions></div>' +
+      '<label class="wide">Název<input name="title" maxlength="500" required value="' + escapeHtml(ad.title || '') + '"' + (editable ? '' : ' disabled') + '></label>' +
+      '<label class="wide">Popis<textarea name="description"' + (editable ? '' : ' disabled') + '>' + escapeHtml(ad.description || '') + '</textarea></label>' +
+      '<label>Lokalita<input name="location" maxlength="200" value="' + escapeHtml(ad.location || '') + '"' + (editable ? '' : ' disabled') + '></label>' +
+      '<label>Sklad<input name="stockQuantity" type="number" min="0" step="1" value="' + escapeHtml(ad.stockQuantity ?? 0) + '"' + (editable ? '' : ' disabled') + '></label>' +
+      '</div><p class="form-message" data-form-message>' + (editable ? '' : 'Publikované nebo rozpracované mimo koncept nelze upravovat.') + '</p><div class="row-actions"><button class="button button-secondary" data-back-details type="button">Zpět na moje inzeráty</button>' + (editable ? '<button class="button button-primary" type="submit">Uložit změny</button>' : '') + '</div></form>';
+    const form = document.getElementById('edit-draft-form');
+    bindBazosCategoryControls(form);
+    content.querySelector('[data-back-details]')?.addEventListener('click', () => renderClient());
+    if (editable) form.addEventListener('submit', (event) => saveDraftEdits(event, ad, options));
+  }
+
+  async function openDraftDetails(id) {
+    content.innerHTML = '<div class="data-panel empty-state">Načítá se inzerát...</div>';
+    try {
+      const ad = await request('/api/bazos/ads/' + encodeURIComponent(id));
+      renderDraftEditor(ad);
+    } catch (error) {
+      content.innerHTML = '<div class="data-panel empty-state">' + settingsErrorMarkup(error.message) + '</div>';
+    }
+  }
+
+  async function saveDraftEdits(event, originalAd, originalOptions) {
+    event.preventDefault();
+    const values = Object.fromEntries(new FormData(event.currentTarget).entries());
+    const payload = {
+      title: values.title,
+      description: values.description || undefined,
+      price: Number(values.price || 0),
+      priceOption: values.priceOption || 'fixed_price',
+      rubric: values.rubric || inferRubricForCategory(values.category),
+      category: values.category || undefined,
+      location: values.location || undefined,
+      stockQuantity: values.stockQuantity ? Number(values.stockQuantity) : 0,
+      media: originalOptions.media || [],
+    };
+    const formMessage = content.querySelector('[data-form-message]');
+    if (formMessage) formMessage.textContent = 'Ukládají se změny...';
+    try {
+      const updated = await request('/api/bazos/ads/' + encodeURIComponent(originalAd.id), { method: 'PATCH', body: JSON.stringify(payload) });
+      renderDraftEditor(updated);
+      const savedMessage = content.querySelector('[data-form-message]');
+      if (savedMessage) savedMessage.textContent = 'Změny byly uloženy.';
+    } catch (error) {
+      if (formMessage) formMessage.innerHTML = settingsErrorMarkup(error.message);
+    }
   }
 
   function renderPublish(data) {
