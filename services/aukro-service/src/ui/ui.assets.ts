@@ -979,6 +979,49 @@ button, input { font: inherit; }
   flex-wrap: wrap;
   gap: 8px;
 }
+.policy-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: 420px;
+}
+.policy-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 0 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
+.policy-chip::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: currentColor;
+}
+.policy-chip.ok {
+  border-color: #b7dfb9;
+  background: #effaf0;
+  color: var(--green);
+}
+.policy-chip.wait {
+  border-color: #ecd37f;
+  background: #fff8dd;
+  color: var(--amber);
+}
+.policy-chip.risk {
+  border-color: #f3b7b0;
+  background: var(--danger-bg);
+  color: var(--danger-text);
+}
 .tab {
   min-height: 38px;
   padding: 0 14px;
@@ -1474,6 +1517,56 @@ export const appScript = `
     };
   }
 
+  function policyGateLabel(gate) {
+    const labels = {
+      identity_not_verified: 'Telefon neověřen',
+      identity_review_blocked: 'Identita blokována',
+      identity_verification_expired: 'Ověření expirovalo',
+      identity_session_not_active: 'Relace není aktivní',
+      active_ad_cap_reached: 'Limit 50 inzerátů',
+      pacing_too_soon: 'Příliš brzy',
+      category_cooldown: 'Pauza v kategorii',
+      local_duplicate: 'Lokální duplicita',
+      public_duplicate_check_missing: 'Duplicita neověřena',
+      public_duplicate: 'Možná duplicita',
+      category_missing_or_blocked: 'Kategorie chybí/blokována',
+      content_policy_not_validated: 'Obsah neověřen',
+      content_policy_fail: 'Obsah neprošel',
+    };
+    return labels[String(gate || '').toLowerCase()] || statusLabel(gate || 'Kontrola');
+  }
+
+  function policyFailureTone(failure) {
+    const gate = String(failure?.gate || '').toLowerCase();
+    if (gate.includes('missing') || gate.includes('not_validated') || gate.includes('cooldown') || gate.includes('pacing')) return 'wait';
+    return 'risk';
+  }
+
+  function policyChip(label, tone, title) {
+    return '<span class="policy-chip ' + escapeHtml(tone || 'wait') + '" title="' + cell(title || label) + '">' + escapeHtml(label) + '</span>';
+  }
+
+  function policySummaryChips(ad) {
+    const check = ad?.lastPolicyCheck || {};
+    const failures = Array.isArray(check.failures) ? check.failures : [];
+    const chips = [];
+    if (check.allowed === true) {
+      chips.push(policyChip('Pravidla prošla', 'ok', 'Poslední uložená kontrola pravidel povolila publikování.'));
+    } else if (failures.length) {
+      failures.slice(0, 5).forEach((failure) => chips.push(policyChip(policyGateLabel(failure.gate), policyFailureTone(failure), failure.message || failure.gate)));
+      if (failures.length > 5) chips.push(policyChip('+' + (failures.length - 5) + ' další', 'risk', failures.slice(5).map((failure) => failure.message || failure.gate).join('; ')));
+    } else {
+      chips.push(policyChip('Pravidla nevyhodnocena', 'wait', 'U tohoto inzerátu zatím není uložený výsledek kontroly pravidel.'));
+    }
+    if (!ad?.category && !ad?.categoryName && !ad?.bazosCategory) {
+      chips.push(policyChip('Kategorie chybí', 'risk', 'Bez Bazoš kategorie nelze inzerát vyhodnotit ani publikovat.'));
+    }
+    if (ad?.challengeState) {
+      chips.push(policyChip(statusLabel(ad.challengeState), 'risk', 'Bazoš vyžaduje ruční zásah: ' + ad.challengeState));
+    }
+    return '<div class="policy-chip-list">' + chips.join('') + '</div>';
+  }
+
   async function loadClientData() {
     const [adsResult, identitiesResult, queueResult] = await Promise.all([
       request('/api/bazos/ads').catch((error) => ({ error: error.message })),
@@ -1898,10 +1991,10 @@ export const appScript = `
       { label: 'Kategorie', render: (r) => cell(r.category || r.categoryName || r.bazosCategory) },
       { label: 'Odkaz', render: (r) => bazosAdUrl(r) ? '<a class="table-link" href="' + escapeHtml(bazosAdUrl(r)) + '" target="_blank" rel="noopener">Zobrazit</a>' : cell('Zatím bez Bazoš ID') },
       { label: 'Aktualizováno', render: (r) => cell(r.updatedAt || r.createdAt) },
-      { label: 'Akce', render: (r) => '<div class="row-actions">' + (canEditAd(r) ? '<button class="button button-secondary" data-edit-ad="' + cell(r.id) + '" type="button">Upravit</button>' : '<button class="button button-secondary" data-open-ad="' + cell(r.id) + '" type="button">Detail</button>') + '<button class="button button-secondary" data-policy="' + cell(r.id) + '" type="button">Pravidla</button><button class="button button-primary" data-publish="' + cell(r.id) + '" type="button">Publikovat</button></div>' },
+      { label: 'Kontroly', render: (r) => policySummaryChips(r) },
+      { label: 'Akce', render: (r) => '<div class="row-actions">' + (canEditAd(r) ? '<button class="button button-secondary" data-edit-ad="' + cell(r.id) + '" type="button">Upravit</button>' : '<button class="button button-secondary" data-open-ad="' + cell(r.id) + '" type="button">Detail</button>') + '<button class="button button-primary" data-publish="' + cell(r.id) + '" type="button">Publikovat</button></div>' },
     ], data.ads, 'Pro tento účet nebyly vráceny žádné inzeráty.');
     content.querySelectorAll('[data-open-ad], [data-edit-ad]').forEach((button) => button.addEventListener('click', () => openDraftDetails(button.dataset.openAd || button.dataset.editAd)));
-    content.querySelectorAll('[data-policy]').forEach((button) => button.addEventListener('click', () => policyCheck(button.dataset.policy)));
     content.querySelectorAll('[data-publish]').forEach((button) => button.addEventListener('click', () => enqueuePublish(button.dataset.publish)));
   }
 
