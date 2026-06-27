@@ -24,6 +24,7 @@ RUN npm install
 # Output path in schema is ../shared/node_modules/.prisma/client (relative to /app/prisma/) = /app/shared/node_modules/.prisma/client
 WORKDIR /app
 RUN mkdir -p /app/shared/node_modules/.prisma/client
+RUN npm install --no-save @prisma/client@5.22.0 prisma@5.22.0 --silent
 RUN npm install --prefix /app/shared --save-dev prisma@5.22.0 --silent
 RUN DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy" \
   ./shared/node_modules/.bin/prisma generate --schema=prisma/schema.prisma
