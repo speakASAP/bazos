@@ -1,5 +1,7 @@
-import { IsString, IsNotEmpty, IsOptional, IsNumber, IsUUID, Length, Min } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsNumber, IsUUID, Length, Min, IsIn } from 'class-validator';
 import { Type } from 'class-transformer';
+
+const PRICE_OPTIONS = ['fixed_price', 'dohodou', 'nabidnete', 'nerozhoduje', 'v_textu', 'zdarma'] as const;
 
 export class CreateBazosAdDraftDto {
   @IsUUID()
@@ -22,6 +24,15 @@ export class CreateBazosAdDraftDto {
   @Min(0)
   @Type(() => Number)
   price: number;
+
+  @IsOptional()
+  @IsString()
+  @Length(0, 100)
+  rubric?: string;
+
+  @IsOptional()
+  @IsIn(PRICE_OPTIONS)
+  priceOption?: typeof PRICE_OPTIONS[number];
 
   @IsOptional()
   @IsString()
@@ -60,6 +71,15 @@ export class CreateBazosAdDraftFromCatalogDto {
   @Type(() => Number)
   price: number;
 
+  @IsOptional()
+  @IsString()
+  @Length(0, 100)
+  rubric?: string;
+
+  @IsOptional()
+  @IsIn(PRICE_OPTIONS)
+  priceOption?: typeof PRICE_OPTIONS[number];
+
   @IsString()
   @IsNotEmpty()
   @Length(1, 200)
@@ -92,6 +112,15 @@ export class UpdateBazosAdDraftDto {
   @Min(0)
   @Type(() => Number)
   price?: number;
+
+  @IsOptional()
+  @IsString()
+  @Length(0, 100)
+  rubric?: string;
+
+  @IsOptional()
+  @IsIn(PRICE_OPTIONS)
+  priceOption?: typeof PRICE_OPTIONS[number];
 
   @IsOptional()
   @IsString()

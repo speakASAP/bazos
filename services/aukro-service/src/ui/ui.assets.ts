@@ -935,6 +935,32 @@ button, input { font: inherit; }
 }
 .form-grid textarea { min-height: 120px; resize: vertical; }
 .form-grid .wide { grid-column: 1 / -1; }
+.category-suggestions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff7ed;
+}
+.category-chip {
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 750;
+  cursor: pointer;
+}
+.category-chip.active {
+  border-color: var(--red);
+  background: var(--red);
+  color: #fff;
+}
 .check-row {
   display: flex !important;
   grid-column: 1 / -1;
@@ -1208,6 +1234,15 @@ export const appScript = `
   const refresh = document.getElementById('refresh');
   let activeView = initialView();
   let currentUser = null;
+  const BAZOS_RUBRICS = [{"slug":"auto","label":"Auto","categories":[{"name":"Alfa Romeo"},{"name":"Audi"},{"name":"BMW"},{"name":"Citroën"},{"name":"Dacia"},{"name":"Fiat"},{"name":"Ford"},{"name":"Honda"},{"name":"Hyundai"},{"name":"Chevrolet"},{"name":"Kia"},{"name":"Mazda"},{"name":"Mercedes-Benz"},{"name":"Mitsubishi"},{"name":"Nissan"},{"name":"Opel"},{"name":"Peugeot"},{"name":"Renault"},{"name":"Seat"},{"name":"Suzuki"},{"name":"Škoda"},{"name":"Toyota"},{"name":"Volkswagen"},{"name":"Volvo"},{"name":"Ostatní značky"},{"name":"Autorádia"},{"name":"GPS navigace"},{"name":"Havarovaná auta"},{"name":"Náhradní díly"},{"name":"Pneumatiky, kola"},{"name":"Příslušenství"},{"name":"Tuning"},{"name":"Veteráni"},{"name":"Autobusy"},{"name":"Dodávky"},{"name":"Mikrobusy"},{"name":"Karavany, obytná auta"},{"name":"Nákladní auta"},{"name":"Pick-up"},{"name":"Vozíky, přívěsy"},{"name":"Stroje"},{"name":"Ostatní"},{"name":"Havarovaná"},{"name":"Náhradní díly"},{"name":"Motorky, Skútry"}]},{"slug":"deti","label":"Děti","categories":[{"name":"Autosedačky"},{"name":"Baby monitory, chůvičky"},{"name":"Dětská literatura"},{"name":"Hračky"},{"name":"Hlídání dětí"},{"name":"Chodítka a hopsadla"},{"name":"Kočárky"},{"name":"Kojenecké potřeby"},{"name":"Kola"},{"name":"Lego"},{"name":"Nábytek pro děti"},{"name":"Nosítka"},{"name":"Odrážedla"},{"name":"Sedačky na kolo"},{"name":"Sportovní potřeby"},{"name":"Školní potřeby"},{"name":"Ostatní"},{"name":"Body, dupačky a overaly"},{"name":"Bundy a kabátky"},{"name":"Čepice a kloboučky"},{"name":"Kalhoty, kraťasy a tepláky"},{"name":"Kombinézy"},{"name":"Komplety"},{"name":"Mikiny a svetry"},{"name":"Obuv"},{"name":"Plavky"},{"name":"Ponožky a punčocháče"},{"name":"Pyžámka a župánky"},{"name":"Rukavice a šály"},{"name":"Spodní prádlo"},{"name":"Sukýnky a šatičky"},{"name":"Těhotenské oblečení"},{"name":"Trička a košile"},{"name":"Ostatní oblečení"}]},{"slug":"dum","label":"Dům a zahrada","categories":[{"name":"Bazény"},{"name":"Čerpadla"},{"name":"Dveře, vrata"},{"name":"Klimatizace"},{"name":"Kotle, Kamna, Bojlery"},{"name":"Malotraktory, Kultivátory"},{"name":"Míchačky"},{"name":"Nářadí"},{"name":"Okna"},{"name":"Pily"},{"name":"Radiátory"},{"name":"Rostliny"},{"name":"Sekačky"},{"name":"Sněžná technika"},{"name":"Stavební materiál"},{"name":"Vybavení dílen"},{"name":"Vysavače/Foukače"},{"name":"Zahradní grily"},{"name":"Zahradní nábytek"},{"name":"Zahradní technika"},{"name":"Ostatní"}]},{"slug":"elektro","label":"Elektro","categories":[{"name":"Digestoře"},{"name":"Ledničky"},{"name":"Mikrovlnné trouby"},{"name":"Mrazáky"},{"name":"Myčky"},{"name":"Pračky"},{"name":"Sporáky"},{"name":"Sušičky"},{"name":"Ostatní - bílá"},{"name":"Autorádia"},{"name":"Domácí kina"},{"name":"Fotoaparáty"},{"name":"GPS navigace"},{"name":"Hifi systémy, Rádia"},{"name":"Hudební nástroje"},{"name":"Projektory"},{"name":"Repro soustavy"},{"name":"Sluchátka"},{"name":"Televizory"},{"name":"Video, DVD přehrávače"},{"name":"Videokamery"},{"name":"Zesilovače"},{"name":"Ostatní audio video"},{"name":"Epilátory, Depilátory"},{"name":"Fény, Kulmy"},{"name":"Holící strojky"},{"name":"Kávovary"},{"name":"Nabíječky baterií"},{"name":"Ruční šlehače, Mixéry"},{"name":"Svítidla, Lampy"},{"name":"Šicí stroje"},{"name":"Vysavače"},{"name":"Vysílačky"},{"name":"Zvlhčovače vzduchu"},{"name":"Žehličky"},{"name":"Ostatní drobné"}]},{"slug":"foto","label":"Foto","categories":[{"name":"Analogové fotoaparáty"},{"name":"Digitální fotoaparáty"},{"name":"Drony"},{"name":"Videokamery"},{"name":"Zrcadlovky"},{"name":"Baterie"},{"name":"Blesky a osvětlení"},{"name":"Brašny a pouzdra"},{"name":"Datové kabely"},{"name":"Filtry"},{"name":"Nabíječky baterií"},{"name":"Objektivy"},{"name":"Paměťové karty"},{"name":"Stativy"},{"name":"Ostatní"}]},{"slug":"hudba","label":"Hudba","categories":[{"name":"Bicí nástroje"},{"name":"Dechové nástroje"},{"name":"Klávesové nástroje"},{"name":"Smyčcové nástroje"},{"name":"Strunné nástroje"},{"name":"Ostatní nástroje"},{"name":"DVD, CD, MC, LP"},{"name":"Hudebníci a skupiny"},{"name":"Koncerty"},{"name":"Noty, texty"},{"name":"Světelná technika"},{"name":"Vstupenky"},{"name":"Výuka hudby"},{"name":"Zkušebny"},{"name":"Zvuková technika"},{"name":"Ostatní"}]},{"slug":"knihy","label":"Knihy","categories":[{"name":"Beletrie"},{"name":"Detektivky, thrillery"},{"name":"Historické romány"},{"name":"Humor"},{"name":"Knihy pro ženy"},{"name":"Komiksy"},{"name":"Poezie"},{"name":"Sci-fi, Fantasy"},{"name":"Životopisy"},{"name":"Pro nejmenší"},{"name":"Pro děti"},{"name":"Pro mládež"},{"name":"Cestování, mapy"},{"name":"Dítě, rodina a vztahy"},{"name":"Encyklopedie"},{"name":"Esoterika"},{"name":"Hobby, odborné knihy"},{"name":"Kuchařky"},{"name":"Počítačová literatura"},{"name":"Rozvoj osobnosti"},{"name":"Učebnice, skripta - ZŠ"},{"name":"Učebnice, skripta - SŠ"},{"name":"Učebnice, skripta - VŠ"},{"name":"Učebnice, skripta - Jazykové"},{"name":"Zdravý životní styl"},{"name":"Cizojazyčná literatura"},{"name":"Časopisy"},{"name":"Ostatní"}]},{"slug":"mobil","label":"Mobily","categories":[{"name":"Apple"},{"name":"Google"},{"name":"Huawei, Honor"},{"name":"Motorola, Lenovo"},{"name":"Nokia, Microsoft"},{"name":"Realme"},{"name":"Samsung"},{"name":"Sony"},{"name":"Xiaomi"},{"name":"Ostatní značky"},{"name":"Baterie"},{"name":"Bezdrátové telefony"},{"name":"Datové kabely"},{"name":"Faxy"},{"name":"GPS navigace"},{"name":"Headsety"},{"name":"HF Sady do auta"},{"name":"Chytré hodinky"},{"name":"Kryty"},{"name":"Nabíječky"},{"name":"Paměťové karty"},{"name":"Stolní telefony"},{"name":"Ostatní"}]},{"slug":"motorky","label":"Motorky","categories":[{"name":"Cestovní motocykly"},{"name":"Čtyřkolky"},{"name":"Chopper"},{"name":"Enduro"},{"name":"Minibike"},{"name":"Mopedy"},{"name":"Silniční motocykly"},{"name":"Skútry"},{"name":"Skútry vodní"},{"name":"Skútry sněžné"},{"name":"Tříkolky"},{"name":"Veteráni"},{"name":"Náhradní díly"},{"name":"Oblečení, obuv, helmy"},{"name":"Ostatní"}]},{"slug":"nabytek","label":"Nábytek","categories":[{"name":"Dětský nábytek"},{"name":"Dveře, vrata"},{"name":"Jídelní kouty"},{"name":"Knihovny"},{"name":"Koberce a podlah. krytina"},{"name":"Koupelny"},{"name":"Křesla a gauče"},{"name":"Kuchyně"},{"name":"Lampy, osvětlení"},{"name":"Ložnice"},{"name":"Matrace"},{"name":"Obývací stěny"},{"name":"Postele"},{"name":"Sedací soupravy"},{"name":"Skříně"},{"name":"Stoly"},{"name":"Zahradní nábytek"},{"name":"Židle"},{"name":"Doplňky"},{"name":"Ostatní nábytek"}]},{"slug":"obleceni","label":"Oblečení","categories":[{"name":"Bundy a Kabáty"},{"name":"Čepice a Šátky"},{"name":"Džíny"},{"name":"Halenky"},{"name":"Kalhoty"},{"name":"Košile"},{"name":"Kožené oděvy"},{"name":"Mikiny"},{"name":"Obleky a Saka"},{"name":"Plavky"},{"name":"Rukavice a Šály"},{"name":"Spodní prádlo"},{"name":"Sportovní oblečení"},{"name":"Sukně"},{"name":"Svatební šaty"},{"name":"Svetry"},{"name":"Šaty, Kostýmky"},{"name":"Šortky"},{"name":"Těhotenské oblečení"},{"name":"Termo prádlo"},{"name":"Trička, Tílka"},{"name":"Batohy, Kufry"},{"name":"Boty"},{"name":"Doplňky"},{"name":"Hodinky"},{"name":"Kabelky"},{"name":"Šperky"},{"name":"Ostatní"}]},{"slug":"pc","label":"PC","categories":[{"name":"DVD, Blu-ray mechaniky"},{"name":"Fotoaparáty"},{"name":"GPS navigace"},{"name":"Grafické karty"},{"name":"Hard disky, SSD"},{"name":"Herní konzole"},{"name":"Herní zařízení"},{"name":"Hry"},{"name":"Chladiče"},{"name":"Klávesnice"},{"name":"Kopírovací stroje"},{"name":"LCD monitory"},{"name":"Mobilní telefony"},{"name":"Modemy"},{"name":"Myši"},{"name":"Notebooky"},{"name":"Paměti"},{"name":"PC, Počítače"},{"name":"Procesory"},{"name":"Síťové prvky"},{"name":"Scanery"},{"name":"Skříně, zdroje"},{"name":"Software"},{"name":"Spotřební materiál"},{"name":"Tablety, E-čtečky"},{"name":"Tiskárny"},{"name":"Wireless, WiFi"},{"name":"Základní desky"},{"name":"Záložní zdroje"},{"name":"Zvukové karty"},{"name":"Ostatní"}]},{"slug":"prace","label":"Práce","categories":[{"name":"Administrativa"},{"name":"Chemie a potravinářství"},{"name":"Doprava a logistika"},{"name":"Finance a ekonomika"},{"name":"IT a telekomunikace"},{"name":"Marketing a reklama"},{"name":"Management"},{"name":"Obchod a prodej"},{"name":"Obrana a bezpečnost"},{"name":"Pohostinství a ubytování"},{"name":"Práce v domácnosti"},{"name":"Právo, legislativa"},{"name":"Průmysl a výroba"},{"name":"Řemeslné práce"},{"name":"Servis a služby"},{"name":"Stavebnictví"},{"name":"Technika a energetika"},{"name":"Tisk a polygrafie"},{"name":"Výzkum a vývoj"},{"name":"Vzdělávání a personalistika"},{"name":"Zdravotnictví"},{"name":"Zemědělství"},{"name":"Brigády"},{"name":"Ostatní"}]},{"slug":"reality","label":"Reality","categories":[{"name":"Prodej"},{"name":"Byty"},{"name":"Domy"},{"name":"Nové projekty"},{"name":"Garáže"},{"name":"Hotely, penziony, restaurace"},{"name":"Chalupy, Chaty"},{"name":"Kanceláře"},{"name":"Obchodní prostory"},{"name":"Pozemky"},{"name":"Sklady"},{"name":"Zahrady"},{"name":"Ostatní"},{"name":"Pronájem"},{"name":"Byty"},{"name":"Domy"},{"name":"Nové projekty"},{"name":"Podnájem, spolubydlící"},{"name":"Garáže"},{"name":"Hotely, penziony, restaurace"},{"name":"Ubytování"},{"name":"Kanceláře"},{"name":"Obchodní prostory"},{"name":"Pozemky"},{"name":"Sklady"},{"name":"Zahrady"},{"name":"Ostatní"}]},{"slug":"sluzby","label":"Služby","categories":[{"name":"Auto Moto"},{"name":"Cestování"},{"name":"Domácí práce"},{"name":"Esoterika"},{"name":"Hlídání dětí"},{"name":"IT, webdesign"},{"name":"Koně - služby"},{"name":"Kurzy a školení"},{"name":"Opravy, servis"},{"name":"Pořádání akcí"},{"name":"Právo a bezpečnost"},{"name":"Překladatelství"},{"name":"Přeprava a Stěhování"},{"name":"Půjčovny"},{"name":"Realitní služby"},{"name":"Reklama na auto"},{"name":"Reklamní plochy ostatní"},{"name":"Řemeslné a stavební práce"},{"name":"Služby pro zvířata"},{"name":"Tvůrčí služby"},{"name":"Ubytování"},{"name":"Účetnictví, poradenství"},{"name":"Úklid"},{"name":"Výroba"},{"name":"Výuka, doučování"},{"name":"Výuka hudby"},{"name":"Zdraví a krása"},{"name":"Zprostředkovatelské služby"},{"name":"Ostatní"}]},{"slug":"sport","label":"Sport","categories":[{"name":"Fitness, jogging"},{"name":"Golf"},{"name":"Fotbal"},{"name":"In-lines, Skateboarding"},{"name":"Kempink"},{"name":"Letectví"},{"name":"Míčové hry"},{"name":"Myslivost, lov"},{"name":"Paintball"},{"name":"Rybaření"},{"name":"Společenské hry"},{"name":"Tenis, squash, badminton"},{"name":"Turistika, horolezectví"},{"name":"Vodní sporty, potápění"},{"name":"Vše ostatní"},{"name":"Dětská kola"},{"name":"Koloběžky"},{"name":"Horská kola"},{"name":"Elektrokola"},{"name":"Silniční kola"},{"name":"Součástky a díly"},{"name":"Ostatní cyklistika"},{"name":"Běžkování"},{"name":"Lyžování"},{"name":"Skialpy"},{"name":"Snowboarding"},{"name":"Hokej, bruslení"},{"name":"Ostatní zimní"}]},{"slug":"stroje","label":"Stroje","categories":[{"name":"Čerpadla"},{"name":"Čistící stroje"},{"name":"Dřevoobráběcí stroje"},{"name":"Generátory"},{"name":"Historické stroje"},{"name":"Komunální technika"},{"name":"Kovoobráběcí stroje"},{"name":"Lesní technika"},{"name":"Motory"},{"name":"Potravinářské stroje"},{"name":"Skladová technika"},{"name":"Stavební stroje"},{"name":"Textilní stroje"},{"name":"Tiskařské stroje"},{"name":"Vybavení provozoven"},{"name":"Výrobní linky"},{"name":"Zemědělská technika"},{"name":"Náhradní díly"},{"name":"Ostatní"}]},{"slug":"vstupenky","label":"Vstupenky","categories":[{"name":"Dálniční známky"},{"name":"Dárkové poukazy"},{"name":"Jízdenky"},{"name":"Letenky"},{"name":"Permanentky"},{"name":"Divadlo"},{"name":"Festivaly"},{"name":"Hudba, Koncerty"},{"name":"Pro děti"},{"name":"Společenské akce"},{"name":"Sport"},{"name":"Výstavy"},{"name":"Ostatní"}]},{"slug":"zvirata","label":"Zvířata","categories":[{"name":"Akvarijní ryby"},{"name":"Drobní savci"},{"name":"Kočky"},{"name":"Koně"},{"name":"Koně - potřeby"},{"name":"Koně - služby"},{"name":"Psi"},{"name":"Ptactvo"},{"name":"Terarijní zvířata"},{"name":"Ostatní domácí"},{"name":"Krytí"},{"name":"Ztraceni a nalezeni"},{"name":"Chovatelské potřeby"},{"name":"Služby pro zvířata"},{"name":"Drůbež"},{"name":"Králíci"},{"name":"Ovce a kozy"},{"name":"Prasata"},{"name":"Skot"},{"name":"Ostatní hospodářská"}]},{"slug":"ostatni","label":"Ostatní","categories":[{"name":"Mince, bankovky"},{"name":"Modelářství"},{"name":"Potraviny"},{"name":"Sběratelství"},{"name":"Sklo, keramika"},{"name":"Starožitnosti"},{"name":"Šperky, hodinky"},{"name":"Umělecké předměty"},{"name":"Zdraví a krása"},{"name":"Známky, pohlednice"},{"name":"Ostatní"}]}];
+  const BAZOS_PRICE_OPTIONS = [
+    { value: 'fixed_price', label: 'Zadat cenu' },
+    { value: 'dohodou', label: 'Dohodou' },
+    { value: 'nabidnete', label: 'Nabídněte' },
+    { value: 'nerozhoduje', label: 'Nerozhoduje' },
+    { value: 'v_textu', label: 'V textu' },
+    { value: 'zdarma', label: 'Zdarma' },
+  ];
 
   function initialView() {
     if (mode !== 'client') return 'overview';
@@ -1644,6 +1679,8 @@ export const appScript = `
       title: data.title,
       description: data.description || undefined,
       price: Number(data.price || 0),
+      priceOption: data.priceOption || 'fixed_price',
+      rubric: data.rubric || undefined,
       category: data.category || undefined,
       location: data.location || undefined,
       stockQuantity: data.stockQuantity ? Number(data.stockQuantity) : 0,
@@ -1660,6 +1697,73 @@ export const appScript = `
       const formMessage = content.querySelector('[data-form-message]');
       if (formMessage) formMessage.innerHTML = settingsErrorMarkup(error.message);
     }
+  }
+
+
+  function selectedAttr(value, selected) {
+    return String(value || '') === String(selected || '') ? ' selected' : '';
+  }
+
+  function rubricOptions(selected) {
+    const value = selected || BAZOS_RUBRICS[0]?.slug || '';
+    return BAZOS_RUBRICS.map((rubric) => '<option value="' + cell(rubric.slug) + '"' + selectedAttr(rubric.slug, value) + '>' + cell(rubric.label) + '</option>').join('');
+  }
+
+  function categoriesForRubric(slug) {
+    return (BAZOS_RUBRICS.find((rubric) => rubric.slug === slug) || BAZOS_RUBRICS[0] || { categories: [] }).categories || [];
+  }
+
+  function categoryOptions(rubricSlug, selected) {
+    const categories = categoriesForRubric(rubricSlug);
+    return '<option value="">Vyberte kategorii</option>' + categories.map((category) => '<option value="' + cell(category.name) + '"' + selectedAttr(category.name, selected) + '>' + cell(category.name) + '</option>').join('');
+  }
+
+  function categorySuggestionButtons(rubricSlug, selected) {
+    return categoriesForRubric(rubricSlug).map((category) => '<button class="category-chip' + (String(category.name) === String(selected || '') ? ' active' : '') + '" type="button" data-category-value="' + cell(category.name) + '">' + cell(category.name) + '</button>').join('');
+  }
+
+  function priceOptionOptions(selected) {
+    const value = selected || 'fixed_price';
+    return BAZOS_PRICE_OPTIONS.map((option) => '<option value="' + cell(option.value) + '"' + selectedAttr(option.value, value) + '>' + cell(option.label) + '</option>').join('');
+  }
+
+  function priceOptionLabel(value) {
+    return (BAZOS_PRICE_OPTIONS.find((option) => option.value === value) || BAZOS_PRICE_OPTIONS[0]).label;
+  }
+
+  function inferRubricForCategory(categoryName) {
+    const category = String(categoryName || '');
+    const match = BAZOS_RUBRICS.find((rubric) => rubric.categories.some((item) => item.name === category));
+    return match?.slug || BAZOS_RUBRICS[0]?.slug || 'auto';
+  }
+
+  function bindBazosCategoryControls(form) {
+    if (!form) return;
+    const rubricSelect = form.querySelector('[data-bazos-rubric]');
+    const categorySelect = form.querySelector('[data-bazos-category]');
+    const suggestions = form.querySelector('[data-category-suggestions]');
+    if (!rubricSelect || !categorySelect || !suggestions) return;
+    const draw = () => {
+      const rubric = rubricSelect.value || BAZOS_RUBRICS[0]?.slug || '';
+      const current = categorySelect.value;
+      categorySelect.innerHTML = categoryOptions(rubric, current);
+      if (current && !categoriesForRubric(rubric).some((category) => category.name === current)) categorySelect.value = '';
+      suggestions.innerHTML = categorySuggestionButtons(rubric, categorySelect.value);
+    };
+    if (form.dataset.bazosCategoryBound === 'true') {
+      draw();
+      return;
+    }
+    form.dataset.bazosCategoryBound = 'true';
+    rubricSelect.addEventListener('change', draw);
+    categorySelect.addEventListener('change', draw);
+    suggestions.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-category-value]');
+      if (!button) return;
+      categorySelect.value = button.dataset.categoryValue || '';
+      draw();
+    });
+    draw();
   }
 
   function defaultIdentityDisplayName(data) {
@@ -1764,14 +1868,18 @@ export const appScript = `
     content.innerHTML = '<form class="form-panel panel-stack" id="draft-form"><div><h2>Nový inzerát pro Bazos.cz</h2><p class="card-note">Vyberte ověřenou identitu, vyplňte inzerát a případně ho zařaďte do hlídané publikační fronty.</p></div><div class="form-grid">' +
       '<label>Účet / telefon<select name="identityId" required>' + renderIdentityOptions(data.identities) + '</select></label>' +
       '<label>Cena v Kč<input name="price" type="number" min="0" step="1" required></label>' +
+      '<label>Volba ceny<select name="priceOption">' + priceOptionOptions('fixed_price') + '</select></label>' +
+      '<label>Rubrika<select name="rubric" data-bazos-rubric required>' + rubricOptions('auto') + '</select></label>' +
+      '<label>Kategorie Bazos.cz<select name="category" data-bazos-category required>' + categoryOptions('auto', '') + '</select></label>' +
+      '<div class="category-suggestions wide" data-category-suggestions></div>' +
       '<label class="wide">Název<input name="title" maxlength="500" required></label>' +
       '<label class="wide">Popis<textarea name="description"></textarea></label>' +
-      '<label>Kategorie Bazos.cz<input name="category" maxlength="200"></label>' +
       '<label>Lokalita<input name="location" maxlength="200"></label>' +
       '<label>Produkt ID<input name="productId" placeholder="volitelné UUID"></label>' +
       '<label>Sklad<input name="stockQuantity" type="number" min="0" step="1" value="0"></label>' +
       '<label class="check-row"><input name="enqueue" type="checkbox"><span>Po vytvoření rovnou odeslat do fronty. Potvrzuji ruční kontrolu duplicity a obsahu.</span></label>' +
       '</div><p class="form-message" data-form-message></p><button class="button button-primary" type="submit">Vytvořit inzerát</button></form>';
+    bindBazosCategoryControls(document.getElementById('draft-form'));
     document.getElementById('draft-form').addEventListener('submit', createDraft);
   }
 
@@ -1849,9 +1957,10 @@ export const appScript = `
       return '<div class="preview-card">' +
         '<div class="panel-header"><h2>Náhled pro Bazoš</h2><span class="status ' + (allowed ? 'ok' : 'risk') + '">' + (allowed ? 'Pravidla splněna' : 'Vyžaduje kontrolu') + '</span></div>' +
         '<h3 class="preview-title">' + cell(draft.title) + '</h3>' +
-        '<div class="preview-price">' + cell(draft.price) + ' Kč</div>' +
+        '<div class="preview-price">' + cell(draft.price) + ' Kč / ' + cell(priceOptionLabel(draft.priceOption || 'fixed_price')) + '</div>' +
         '<div class="preview-description">' + cell(document.getElementById('catalog-draft-form')?.elements.description?.value || selected?.description || '') + '</div>' +
         '<div class="flow-meta">' +
+          '<span>Rubrika<strong>' + cell(draft.rubric || '') + '</strong></span>' +
           '<span>Kategorie<strong>' + cell(draft.category) + '</strong></span>' +
           '<span>Mapování<strong>' + (prepared.categoryMapping?.mapped ? 'Nalezeno' : 'Chybí / ke kontrole') + '</strong></span>' +
           '<span>Aktivní inzeráty identity<strong>' + cell(prepared.identity?.activeAdCount) + '</strong></span>' +
@@ -1867,8 +1976,12 @@ export const appScript = `
       if (!form || !product) return;
       form.elements.title.value = productTitle(product);
       form.elements.description.value = productDescription(product);
+      const category = productCategory(product);
       form.elements.price.value = productPrice(product);
-      form.elements.category.value = productCategory(product);
+      form.elements.rubric.value = inferRubricForCategory(category);
+      bindBazosCategoryControls(form);
+      form.elements.category.value = category;
+      bindBazosCategoryControls(form);
       form.elements.location.value = '';
     }
 
@@ -1876,7 +1989,7 @@ export const appScript = `
       const options = data.identities.length ? renderIdentityOptions(data.identities) : '';
       content.innerHTML = '<div class="catalog-flow"><div class="data-panel flow-column"><h2>Katalog</h2><div class="search-row"><input class="input" id="catalog-search" value="' + cell(searchValue || '') + '" placeholder="Hledat produkt podle názvu, SKU nebo značky"><button class="button button-secondary" id="catalog-search-button" type="button">Hledat</button></div><div class="product-list">' +
         products.map((product, index) => '<button class="product-option' + (product === selected ? ' active' : '') + '" type="button" data-product-index="' + index + '"><span class="product-thumb"></span><span><strong>' + cell(productTitle(product)) + '</strong><small class="card-note">' + cell(product.sku || product.id) + '</small></span></button>').join('') +
-        '</div></div><div class="flow-column"><form class="form-panel panel-stack" id="catalog-draft-form"><div><h2>Publikovat z katalogu</h2><p class="card-note">Produkt se nejdříve převede do Basus konceptu. Teprve po náhledu a schválení se odešle do hlídané publikační fronty.</p></div><div class="form-grid"><label>Účet / telefon<select name="identityId" required>' + options + '</select></label><label>Cena v Kč<input name="price" type="number" min="0" step="1" required></label><label class="wide">Název<input name="title" maxlength="500" required></label><label class="wide">Popis<textarea name="description"></textarea></label><label>Kategorie Bazos.cz<input name="category" maxlength="200" required></label><label>Lokalita<input name="location" maxlength="200"></label></div><p class="form-message" data-form-message></p><button class="button button-primary" type="submit">Sformovat inzerát</button></form>' + renderPreview() + '</div></div>';
+        '</div></div><div class="flow-column"><form class="form-panel panel-stack" id="catalog-draft-form"><div><h2>Publikovat z katalogu</h2><p class="card-note">Produkt se nejdříve převede do Basus konceptu. Teprve po náhledu a schválení se odešle do hlídané publikační fronty.</p></div><div class="form-grid"><label>Účet / telefon<select name="identityId" required>' + options + '</select></label><label>Cena v Kč<input name="price" type="number" min="0" step="1" required></label><label>Volba ceny<select name="priceOption">' + priceOptionOptions('fixed_price') + '</select></label><label>Rubrika<select name="rubric" data-bazos-rubric required>' + rubricOptions('auto') + '</select></label><label>Kategorie Bazos.cz<select name="category" data-bazos-category required>' + categoryOptions('auto', '') + '</select></label><div class="category-suggestions wide" data-category-suggestions></div><label class="wide">Název<input name="title" maxlength="500" required></label><label class="wide">Popis<textarea name="description"></textarea></label><label>Lokalita<input name="location" maxlength="200"></label></div><p class="form-message" data-form-message></p><button class="button button-primary" type="submit">Sformovat inzerát</button></form>' + renderPreview() + '</div></div>';
       fillForm(selected);
       document.getElementById('catalog-search-button')?.addEventListener('click', async () => {
         prepared = null;
@@ -1888,6 +2001,7 @@ export const appScript = `
         prepared = null;
         draw(document.getElementById('catalog-search')?.value || '');
       }));
+      bindBazosCategoryControls(document.getElementById('catalog-draft-form'));
       document.getElementById('catalog-draft-form')?.addEventListener('submit', prepare);
       document.getElementById('catalog-confirm')?.addEventListener('click', confirm);
       content.querySelector('[data-policy]')?.addEventListener('click', () => policyCheck(prepared?.draft?.id));
@@ -1906,6 +2020,8 @@ export const appScript = `
             title: values.title,
             description: values.description || undefined,
             price: Number(values.price || 0),
+            priceOption: values.priceOption || 'fixed_price',
+            rubric: values.rubric || inferRubricForCategory(values.category),
             category: values.category,
             location: values.location || undefined,
             stockQuantity: Number(selected.stockQuantity || selected.stock || 0),

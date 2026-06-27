@@ -1,6 +1,8 @@
 import { Type } from 'class-transformer';
-import { IsBoolean, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID, Length, Min } from 'class-validator';
+import { IsBoolean, IsIn, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID, Length, Min } from 'class-validator';
 import { EnqueueBazosPublishDto } from '../publisher/bazos-publisher-queue.dto';
+
+const PRICE_OPTIONS = ['fixed_price', 'dohodou', 'nabidnete', 'nerozhoduje', 'v_textu', 'zdarma'] as const;
 
 export class PrepareCatalogSellActionDto {
   @IsUUID()
@@ -19,6 +21,15 @@ export class PrepareCatalogSellActionDto {
   @Min(0)
   @Type(() => Number)
   price: number;
+
+  @IsOptional()
+  @IsString()
+  @Length(0, 100)
+  rubric?: string;
+
+  @IsOptional()
+  @IsIn(PRICE_OPTIONS)
+  priceOption?: typeof PRICE_OPTIONS[number];
 
   @IsString()
   @IsNotEmpty()

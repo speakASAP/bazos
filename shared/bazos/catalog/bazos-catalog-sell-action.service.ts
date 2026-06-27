@@ -117,6 +117,8 @@ export class BazosCatalogSellActionService {
       title: dto.title,
       description: dto.description,
       price: dto.price,
+      rubric: dto.rubric,
+      priceOption: dto.priceOption,
       category: dto.category,
       location: dto.location,
       stockQuantity: dto.stockQuantity ?? 0,
@@ -192,6 +194,8 @@ export class BazosCatalogSellActionService {
       identityId: draft.identityId,
       title: draft.title,
       price: draft.price,
+      rubric: this.draftOptions(draft).rubric,
+      priceOption: this.draftOptions(draft).priceOption,
       category: draft.category,
       location: draft.location,
       publishStatus: draft.publishStatus,
@@ -202,6 +206,15 @@ export class BazosCatalogSellActionService {
       activeOnBasus: Boolean(draft.isActive && ACTIVE_PUBLISHED_STATUSES.includes(draft.publishStatus)),
       listingUrl: this.buildBazosListingUrl(draft.bazosAdId),
       lastPolicyCheck: draft.lastPolicyCheck,
+    };
+  }
+
+
+  private draftOptions(draft: any) {
+    const options = draft?.lastPolicyCheck?.draftOptions || draft?.lastPolicyCheck?.submissionOptions || {};
+    return {
+      rubric: options.rubric || null,
+      priceOption: options.priceOption || 'fixed_price',
     };
   }
 

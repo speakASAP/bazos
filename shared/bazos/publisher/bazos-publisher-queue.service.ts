@@ -39,7 +39,7 @@ export class BazosPublisherQueueService {
       return { queued: true, idempotent: true, attempt: existing };
     }
 
-    const policyResult = await this.evaluateAdPolicy(ad, dto);
+    const policyResult = this.withSubmissionOptions(await this.evaluateAdPolicy(ad, dto), ad, dto.priceOption);
     await this.prisma.bazosAd.update({
       where: { id: ad.id },
       data: { lastPolicyCheck: policyResult as any },
@@ -133,7 +133,7 @@ export class BazosPublisherQueueService {
       });
       if (activeForIdentity) continue;
 
-      const policyResult = await this.evaluateAdPolicy(attempt.ad, dto);
+      const policyResult = this.withSubmissionOptions(await this.evaluateAdPolicy(attempt.ad, dto), attempt.ad, dto.priceOption || this.submissionOptions(attempt).priceOption);
       if (!policyResult.allowed) {
         await this.prisma.bazosPublishAttempt.update({
           where: { id: attempt.id },
@@ -383,6 +383,29 @@ export class BazosPublisherQueueService {
         price: ad.price,
         category: ad.category,
         location: ad.location || identity.defaultLocation,
+        rubric: this.submissionOptions(attempt).rubric,
+        priceOption: this.submissionOptions(attempt).priceOption,
+      },
+    };
+  }
+
+
+  private submissionOptions(attempt: any) {
+    const policyOptions = attempt?.policyResult?.submissionOptions || {};
+    const draftOptions = attempt?.ad?.lastPolicyCheck?.draftOptions || attempt?.ad?.lastPolicyCheck?.submissionOptions || {};
+    return {
+      rubric: policyOptions.rubric || draftOptions.rubric || null,
+      priceOption: policyOptions.priceOption || draftOptions.priceOption || 'fixed_price',
+    };
+  }
+
+  private withSubmissionOptions(policyResult: any, ad: any, priceOption?: string) {
+    const draftOptions = ad?.lastPolicyCheck?.draftOptions || ad?.lastPolicyCheck?.submissionOptions || {};
+    return {
+      ...policyResult,
+      submissionOptions: {
+        rubric: draftOptions.rubric || null,
+        priceOption: priceOption || draftOptions.priceOption || 'fixed_price',
       },
     };
   }

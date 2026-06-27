@@ -38,6 +38,7 @@ export class BazosAdService {
         price: dto.price,
         category: dto.category || null,
         location: dto.location || null,
+        lastPolicyCheck: this.buildDraftOptions(dto.rubric, dto.priceOption) as any,
         stockQuantity: dto.stockQuantity ?? 0,
         publishStatus: 'draft',
       },
@@ -54,6 +55,8 @@ export class BazosAdService {
       title: dto.title,
       description: dto.description,
       price: dto.price,
+      rubric: dto.rubric,
+      priceOption: dto.priceOption,
       category: dto.category,
       location: dto.location,
       stockQuantity: dto.stockQuantity ?? 0,
@@ -78,6 +81,7 @@ export class BazosAdService {
         category: dto.category,
         location: dto.location,
         stockQuantity: dto.stockQuantity,
+        ...(dto.rubric || dto.priceOption ? { lastPolicyCheck: this.buildDraftOptions(dto.rubric, dto.priceOption) as any } : {}),
       },
     });
   }
@@ -168,6 +172,16 @@ export class BazosAdService {
 
   async findById(id: string, userId: string) {
     return this.findByIdForUser(id, userId);
+  }
+
+
+  private buildDraftOptions(rubric?: string, priceOption?: string) {
+    return {
+      draftOptions: {
+        rubric: rubric || null,
+        priceOption: priceOption || 'fixed_price',
+      },
+    };
   }
 
   private async findByIdForUser(id: string, userId: string) {

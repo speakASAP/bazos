@@ -4,6 +4,7 @@ import { REVIEW_STATE } from '../identity/bazos-identity.types';
 
 const CHALLENGE_STATES = Object.values(REVIEW_STATE).filter((state) => state !== REVIEW_STATE.CLEAR);
 const EVIDENCE_SOURCES = ['manual_review', 'trusted_backend'] as const;
+const PRICE_OPTIONS = ['fixed_price', 'dohodou', 'nabidnete', 'nerozhoduje', 'v_textu', 'zdarma'] as const;
 
 export class PublicDuplicateEvidenceDto {
   @IsDateString()
@@ -43,9 +44,17 @@ export class PublishEvidenceDto {
   contentPolicy: ContentPolicyEvidenceDto;
 }
 
-export class EnqueueBazosPublishDto extends PublishEvidenceDto {}
+export class EnqueueBazosPublishDto extends PublishEvidenceDto {
+  @IsOptional()
+  @IsIn(PRICE_OPTIONS)
+  priceOption?: typeof PRICE_OPTIONS[number];
+}
 
 export class ClaimBazosPublishDto extends PublishEvidenceDto {
+  @IsOptional()
+  @IsIn(PRICE_OPTIONS)
+  priceOption?: typeof PRICE_OPTIONS[number];
+
   @IsOptional()
   @IsInt()
   @Min(1)
@@ -65,7 +74,6 @@ export class ListBazosPublishQueueDto {
   @IsOptional()
   @IsUUID()
   adId?: string;
-
   @IsOptional()
   @IsInt()
   @Min(1)
