@@ -27,6 +27,7 @@ const draft = {
   identityId: identity.id,
   title: 'Telefon test',
   price: 1000,
+  description: 'Puvodni katalogovy popis',
   category: 'elektro',
   location: 'Praha',
   publishStatus: 'draft',
@@ -76,6 +77,7 @@ function makePrisma(overrides: Record<string, any> = {}) {
         }
         return mock.mockResolvedValue(overrides.draft ?? draft);
       })(),
+      update: jest.fn().mockResolvedValue(overrides.updatedDraft ?? overrides.draft ?? draft),
     },
     bazosPublishAttempt: {
       findFirst: jest.fn().mockResolvedValue(overrides.latestAttempt ?? null),
@@ -121,21 +123,41 @@ describe('BazosCatalogSellActionService', () => {
     expect((result.identity as any).encryptedSession).toBeUndefined();
     expect(result.categoryMapping.mapped).toBe(true);
     expect(result.nextAction).toBe('resolve_policy_failures');
+    expect(result.canQueueAfterConfirmation).toBe(true);
   });
 
-  it('reuses an existing active draft for the same product and identity', async () => {
-    const prisma = makePrisma({ existingDraft: draft });
+  it('updates an existing active draft for the same product and identity with channel-specific fields', async () => {
+    const updatedDraft = {
+      ...draft,
+      title: 'Bazos title',
+      description: 'Bazos-only description',
+      price: 1500,
+      lastPolicyCheck: { draftOptions: { rubric: 'auto', priceOption: 'fixed_price' } },
+    };
+    const prisma = makePrisma({ existingDraft: draft, updatedDraft });
     const { service, ads } = makeService(prisma);
 
     const result = await service.prepare('user-1', draft.productId, {
       identityId: identity.id,
-      title: draft.title,
-      price: 1000,
+      title: 'Bazos title',
+      description: 'Bazos-only description',
+      price: 1500,
       category: 'elektro',
     });
 
     expect(ads.createDraftFromCatalog).not.toHaveBeenCalled();
+    expect(prisma.bazosAd.update).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: draft.id },
+      data: expect.objectContaining({
+        title: 'Bazos title',
+        description: 'Bazos-only description',
+        price: 1500,
+        publishStatus: 'draft',
+      }),
+    }));
     expect(result.draft.id).toBe(draft.id);
+    expect(result.draft.title).toBe('Bazos title');
+    expect(result.draft.description).toBe('Bazos-only description');
   });
 
   it('requires explicit confirmation before queueing publish', async () => {

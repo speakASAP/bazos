@@ -3,6 +3,7 @@ import { PrismaService } from '../../database/prisma.service';
 import { LoggerService } from '../../logger/logger.service';
 import { BazosAdService } from '../ad/bazos-ad.service';
 import { BazosPublisherQueueService } from '../publisher/bazos-publisher-queue.service';
+import { POLICY_GATE } from '../policy/publish-policy.types';
 import {
   CatalogSellActionStatusQueryDto,
   ConfirmCatalogSellActionDto,
@@ -12,6 +13,10 @@ import {
 const REUSABLE_DRAFT_STATUSES = ['draft', 'blocked_policy', 'failed', 'challenge'];
 const HUMAN_ACTION_ATTEMPT_STATUSES = ['policy_blocked', 'challenge_required', 'failed'];
 const ACTIVE_PUBLISHED_STATUSES = ['published', 'publishing', 'queued'];
+const MANUAL_CONFIRMATION_GATES = new Set<string>([
+  POLICY_GATE.PUBLIC_DUPLICATE_CHECK_MISSING,
+  POLICY_GATE.CONTENT_POLICY_NOT_VALIDATED,
+]);
 
 @Injectable()
 export class BazosCatalogSellActionService {
@@ -109,7 +114,24 @@ export class BazosCatalogSellActionService {
       include: { identity: true },
       orderBy: { createdAt: 'desc' },
     });
-    if (existing) return existing;
+    if (existing) {
+      return this.prisma.bazosAd.update({
+        where: { id: existing.id },
+        data: {
+          title: dto.title,
+          description: dto.description || null,
+          price: dto.price,
+          category: dto.category,
+          location: dto.location || null,
+          stockQuantity: dto.stockQuantity ?? 0,
+          publishStatus: 'draft',
+          challengeState: null,
+          bazosAdId: null,
+          lastPolicyCheck: this.buildDraftOptions(dto.rubric, dto.priceOption) as any,
+        },
+        include: { identity: true },
+      });
+    }
 
     return this.ads.createDraftFromCatalog(userId, {
       identityId: dto.identityId,
@@ -180,7 +202,7 @@ export class BazosCatalogSellActionService {
       categoryMapping: this.describeCategoryMapping(input.draft.category, input.categoryMapping),
       policyStatus: input.policyStatus,
       requiresConfirmation: !input.queueResult,
-      canQueueAfterConfirmation: Boolean(input.policyStatus?.allowed),
+      canQueueAfterConfirmation: this.canQueueAfterConfirmation(input.policyStatus),
       queue: input.queueResult,
       requiresHumanAction: this.requiresHumanAction(input.draft, input.queueResult?.attempt),
       nextAction: this.nextAction(input.policyStatus, input.queueResult),
@@ -193,6 +215,7 @@ export class BazosCatalogSellActionService {
       productId: draft.productId,
       identityId: draft.identityId,
       title: draft.title,
+      description: draft.description,
       price: draft.price,
       rubric: this.draftOptions(draft).rubric,
       priceOption: this.draftOptions(draft).priceOption,
@@ -209,6 +232,22 @@ export class BazosCatalogSellActionService {
     };
   }
 
+
+  private buildDraftOptions(rubric?: string, priceOption?: string) {
+    return {
+      draftOptions: {
+        rubric: rubric || null,
+        priceOption: priceOption || 'fixed_price',
+      },
+    };
+  }
+
+  private canQueueAfterConfirmation(policyStatus: any) {
+    if (policyStatus?.allowed) return true;
+    const failures = Array.isArray(policyStatus?.failures) ? policyStatus.failures : [];
+    if (!failures.length) return false;
+    return failures.every((failure) => MANUAL_CONFIRMATION_GATES.has(String(failure?.gate || '')));
+  }
 
   private draftOptions(draft: any) {
     const options = draft?.lastPolicyCheck?.draftOptions || draft?.lastPolicyCheck?.submissionOptions || {};

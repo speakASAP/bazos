@@ -1956,12 +1956,12 @@ export const appScript = `
     function renderPreview() {
       if (!prepared?.draft) return '';
       const draft = prepared.draft;
-      const allowed = Boolean(prepared.policyStatus?.allowed);
+      const allowed = Boolean(prepared.canQueueAfterConfirmation);
       return '<div class="preview-card">' +
-        '<div class="panel-header"><h2>Náhled pro Bazoš</h2><span class="status ' + (allowed ? 'ok' : 'risk') + '">' + (allowed ? 'Pravidla splněna' : 'Vyžaduje kontrolu') + '</span></div>' +
+        '<div class="panel-header"><h2>Náhled pro Bazoš</h2><span class="status ' + (allowed ? 'ok' : 'risk') + '">' + (allowed ? 'Připraveno ke schválení' : 'Vyžaduje kontrolu') + '</span></div>' +
         '<h3 class="preview-title">' + cell(draft.title) + '</h3>' +
         '<div class="preview-price">' + cell(draft.price) + ' Kč / ' + cell(priceOptionLabel(draft.priceOption || 'fixed_price')) + '</div>' +
-        '<div class="preview-description">' + cell(document.getElementById('catalog-draft-form')?.elements.description?.value || selected?.description || '') + '</div>' +
+        '<div class="preview-description">' + cell(draft.description || '') + '</div>' +
         '<div class="flow-meta">' +
           '<span>Rubrika<strong>' + cell(draft.rubric || '') + '</strong></span>' +
           '<span>Kategorie<strong>' + cell(draft.category) + '</strong></span>' +
@@ -1977,15 +1977,16 @@ export const appScript = `
     function fillForm(product) {
       const form = document.getElementById('catalog-draft-form');
       if (!form || !product) return;
-      form.elements.title.value = productTitle(product);
-      form.elements.description.value = productDescription(product);
-      const category = productCategory(product);
-      form.elements.price.value = productPrice(product);
-      form.elements.rubric.value = inferRubricForCategory(category);
+      const draft = prepared?.draft || {};
+      form.elements.title.value = draft.title || productTitle(product);
+      form.elements.description.value = draft.description || productDescription(product);
+      const category = draft.category || productCategory(product);
+      form.elements.price.value = draft.price ?? productPrice(product);
+      form.elements.rubric.value = draft.rubric || inferRubricForCategory(category);
       bindBazosCategoryControls(form);
       form.elements.category.value = category;
       bindBazosCategoryControls(form);
-      form.elements.location.value = '';
+      form.elements.location.value = draft.location || '';
     }
 
     function draw(searchValue) {
@@ -2042,7 +2043,7 @@ export const appScript = `
       try {
         prepared = await request('/api/bazos/catalog/products/' + encodeURIComponent(selected.id) + '/sell-action/confirm', {
           method: 'POST',
-          body: JSON.stringify(Object.assign({ adId: prepared.draft.id, confirmed: true }, manualEvidence())),
+          body: JSON.stringify(Object.assign({ adId: prepared.draft.id, confirmed: true, priceOption: prepared.draft.priceOption || 'fixed_price' }, manualEvidence())),
         });
         draw(document.getElementById('catalog-search')?.value || '');
       } catch (error) {
