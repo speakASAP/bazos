@@ -23,7 +23,7 @@ The `services/aukro-service/src/aukro/publishing/*` stack is removed from source
 
 ## System
 
-Basus / bazos-service on `alfares:/home/ssf/Documents/Github/bazos-service`.
+Bazoš / bazos-service on `alfares:/home/ssf/Documents/Github/bazos-service`.
 
 ## Feature
 

@@ -4,13 +4,13 @@ Date: 2026-06-26
 
 ## Goal
 
-Migrate Basus `/client` login and registration to hosted Alfares Auth.
+Migrate Bazoš `/client` login and registration to hosted Alfares Auth.
 
 ## Readiness Gate
 
-- Vision: Basus participates in the centralized Alfares identity ecosystem.
-- Goal Impact: remove Basus-local credential collection and preserve Auth-owned credential handling.
-- System: Basus Nest UI plus Auth Microservice hosted UI contract.
+- Vision: Bazoš participates in the centralized Alfares identity ecosystem.
+- Goal Impact: remove Bazoš-local credential collection and preserve Auth-owned credential handling.
+- System: Bazoš Nest UI plus Auth Microservice hosted UI contract.
 - Feature: hosted login/register redirect and callback token handoff.
 - Task: replace local form/proxy flow, add `/auth/callback`, retain `/ui/auth/me` token validation.
 - Execution Plan: source-only UI/controller patch, build/test/static validation, then deploy only after readiness evidence.

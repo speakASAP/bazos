@@ -8,7 +8,7 @@ Make `/admin` a business-owner administration surface, not a general customer da
 
 - Owner request on 2026-06-26: `/admin` must be available only to the owner's/test administrator user and must not be linked from the public landing page.
 - Auth `docs/UNIFIED_AUTH_CONTRACT.md`: Auth owns RBAC role claims and `POST /auth/validate` returns current user roles.
-- Basus remote-only workflow: changes are made only in `alfares:/home/ssf/Documents/Github/bazos-service`.
+- Bazoš remote-only workflow: changes are made only in `alfares:/home/ssf/Documents/Github/bazos-service`.
 - Bazos compliance invariants: no publishing, verification, duplicate, rate, category, session, or challenge controls are weakened.
 
 ## Goal Impact

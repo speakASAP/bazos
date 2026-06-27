@@ -1,6 +1,6 @@
 /**
  * JWT Auth Guard
- * Validates tokens with auth-microservice so Basus accepts the hosted Auth JWT
+ * Validates tokens with auth-microservice so Bazoš accepts the hosted Auth JWT
  * contract used by the browser client.
  */
 

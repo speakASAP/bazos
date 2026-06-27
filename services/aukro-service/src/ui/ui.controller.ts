@@ -4,8 +4,8 @@ import { appScript, appStyles, renderAppPage, renderAuthCallbackPage, renderLand
 
 const ADMIN_ROLE_NAMES = new Set(['admin', 'administrator', 'owner']);
 const ADMIN_GLOBAL_ROLES = new Set(['global:admin', 'global:superadmin', 'global:platform_admin']);
-const ADMIN_PERMISSION_CLAIMS = new Set(['admin', 'administrator', 'owner', 'bazos:admin', 'basus:admin', 'bazos-service:admin']);
-const ADMIN_APPLICATION_IDS = new Set(['bazos-service', 'bazos', 'basus']);
+const ADMIN_PERMISSION_CLAIMS = new Set(['admin', 'administrator', 'owner', 'bazos:admin', 'bazos-service:admin']);
+const ADMIN_APPLICATION_IDS = new Set(['bazos-service', 'bazos']);
 
 @Controller()
 export class UiController {

@@ -59,7 +59,7 @@ Validation for `67097bf`:
 The first `67097bf` rollout was not completed because Kubernetes pod creation became blocked before container startup:
 
 - `bazos-service-5c86656c8c-*`: `ContainerCreating`, no pod IP, `PodReadyToStartContainers=False`.
-- Other unrelated pods on the same node were also stuck in `ContainerCreating` (`domain-research-migrate-*`, `warehouse-reservation-expiry-*`), so the evidence points to node/runtime pod sandbox creation, not the Basus application image.
+- Other unrelated pods on the same node were also stuck in `ContainerCreating` (`domain-research-migrate-*`, `warehouse-reservation-expiry-*`), so the evidence points to node/runtime pod sandbox creation, not the Bazoš application image.
 - Node conditions reported `Ready=True`, `MemoryPressure=False`, `DiskPressure=False`, `PIDPressure=False`; the image was present in the local registry.
 
 To keep production stable during the temporary runtime issue, the Kubernetes deployment was rolled back to the last ready image `f7a60e6`. After pod creation recovered, current `main` commit `dbef1a9` was deployed successfully and includes the auth guard fix.

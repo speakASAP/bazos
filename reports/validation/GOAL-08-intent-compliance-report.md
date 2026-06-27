@@ -2,11 +2,11 @@
 
 ## Goal
 
-Migrate Basus client/admin login entry to centralized hosted Alfares Auth.
+Migrate Bazoš client/admin login entry to centralized hosted Alfares Auth.
 
 ## Goal Impact
 
-Basus no longer collects registration/login passwords in its own UI. Users are sent to Auth-hosted `/login` or `/register`, return through `/auth/callback`, and Basus validates Auth-issued tokens with existing server-side AuthService validation.
+Bazoš no longer collects registration/login passwords in its own UI. Users are sent to Auth-hosted `/login` or `/register`, return through `/auth/callback`, and Bazoš validates Auth-issued tokens with existing server-side AuthService validation.
 
 ## Implemented
 

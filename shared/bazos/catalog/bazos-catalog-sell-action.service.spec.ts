@@ -203,9 +203,9 @@ describe('BazosCatalogSellActionService', () => {
     expect(prisma.bazosAd.findFirst).toHaveBeenCalledWith(expect.objectContaining({
       where: expect.objectContaining({ productId: draft.productId, isActive: true, identity: { userId: 'user-1' } }),
     }));
-    expect(result.publishedOnBasus).toBe(true);
+    expect(result.publishedOnBazos).toBe(true);
     expect(result.listingUrl).toBe('https://www.bazos.cz/inzerat/123456789/');
-    expect(result.draft.publishedOnBasus).toBe(true);
+    expect(result.draft.publishedOnBazos).toBe(true);
     expect(result.draft.listingUrl).toBe('https://www.bazos.cz/inzerat/123456789/');
   });
 

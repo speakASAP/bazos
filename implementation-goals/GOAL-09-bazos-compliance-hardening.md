@@ -27,7 +27,7 @@ The service now treats Bazos publishing as a gated operator-browser handoff by d
 
 ## System
 
-Basus / bazos-service remote repository on `alfares:/home/ssf/Documents/Github/bazos-service`.
+Bazoš / bazos-service remote repository on `alfares:/home/ssf/Documents/Github/bazos-service`.
 
 ## Feature
 

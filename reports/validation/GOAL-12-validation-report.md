@@ -13,7 +13,7 @@ Client catalog-to-Bazoš publishing user flow for `/client`.
 
 ## Notes
 
-- Publish confirmation uses existing guarded Basus queue endpoints and supplies manual-review duplicate/content evidence.
+- Publish confirmation uses existing guarded Bazoš queue endpoints and supplies manual-review duplicate/content evidence.
 - Catalog product access is read-only through `/ui/catalog/products`.
 - Direct posting to Bazoš from the browser was not introduced.
 

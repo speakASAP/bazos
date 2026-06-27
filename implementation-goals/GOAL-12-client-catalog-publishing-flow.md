@@ -10,21 +10,21 @@ Source: owner request on 2026-06-26 for `https://bazos.alfares.cz/client`.
 
 ## Goal Impact
 
-Client users can prepare Bazoš ads from Catalog Microservice products without bypassing Basus policy, identity, duplicate, content, category, active-ad, or challenge gates.
+Client users can prepare Bazoš ads from Catalog Microservice products without bypassing Bazoš policy, identity, duplicate, content, category, active-ad, or challenge gates.
 
 ## System
 
-- Basus UI remains hosted by `bazos-service`.
+- Bazoš UI remains hosted by `bazos-service`.
 - Product search is proxied through authenticated `/ui/catalog/products`.
 - Draft creation and approval use existing guarded endpoints under `/api/bazos/catalog/products/:productId/sell-action`.
-- Actual publishing is still delegated to the Basus guarded publish queue.
+- Actual publishing is still delegated to the Bazoš guarded publish queue.
 
 ## Feature
 
 - New `/client` catalog tab and sidebar entry.
 - Product search and product selection from Catalog Microservice data.
 - Identity selection and editable title, description, price, category, and location.
-- `Sformovat inzerát` action that creates/reuses a Basus draft and evaluates policy.
+- `Sformovat inzerát` action that creates/reuses a Bazoš draft and evaluates policy.
 - Preview card showing Bazoš-facing title, price, description, category mapping, identity active-ad count, next action, and human-action state.
 - Explicit approve/post action that sends manual-review evidence to the guarded queue.
 
@@ -37,13 +37,13 @@ Implement only the client-side user flow and read-only catalog proxy. Do not add
 1. Add authenticated UI catalog product proxy.
 2. Extend `/client` navigation and tab layout with a Catalog flow.
 3. Search and select catalog products.
-4. Generate a Basus draft/preview through the existing sell-action endpoint.
+4. Generate a Bazoš draft/preview through the existing sell-action endpoint.
 5. Confirm only with explicit user approval and required manual-review evidence.
 6. Validate build, JS parse, Jest, whitespace, deploy, and live smoke.
 
 ## Coding Prompt
 
-Add the requested catalog-to-Basus publishing flow inside the Basus client UI while preserving backend publishing guardrails and traceability.
+Add the requested catalog-to-Bazoš publishing flow inside the Bazoš client UI while preserving backend publishing guardrails and traceability.
 
 ## Code
 

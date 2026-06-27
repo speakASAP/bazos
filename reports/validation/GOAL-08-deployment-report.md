@@ -4,9 +4,9 @@ Date: 2026-06-26
 
 ## Deployment
 
-- First deployment commit: `43a2f7d Use hosted Auth for Basus UI login`.
+- First deployment commit: `43a2f7d Use hosted Auth for Bazoš UI login`.
 - First deployed image: `localhost:5000/bazos-service:43a2f7d`, digest `sha256:ce3822a9e80fbe7799ea7d9c75a89e542604ec362a2af0e653bb353eca0698d0`.
-- Follow-up cache fix commit: `468a42f Bust Basus UI auth script cache`.
+- Follow-up cache fix commit: `468a42f Bust Bazoš UI auth script cache`.
 - Final deployed image: `localhost:5000/bazos-service:468a42f`, digest `sha256:90311f93d048fc41ac50e83786b611fb24842bbbc398a15094eccce929fd36dc`.
 - Deploy command: `./scripts/deploy.sh`.
 - Final rollout: deployment `bazos-service` successfully rolled out.

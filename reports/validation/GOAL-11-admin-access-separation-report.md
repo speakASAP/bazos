@@ -4,7 +4,7 @@
 
 ### Goal
 
-Separate Basus customer and business-owner administration access so `/client` is the normal user section and `/admin` is restricted to administrator users.
+Separate Bazoš customer and business-owner administration access so `/client` is the normal user section and `/admin` is restricted to administrator users.
 
 ### Goal Impact
 
@@ -39,7 +39,7 @@ Pass by scope. No Bazos publishing, browser automation, identity verification, e
 - Kubernetes: pass, pod `bazos-service-5fdbb6bc-ppjfh` Ready 1/1, Running, 0 restarts.
 - Production smoke: pass for `/health`, `/`, `/client`, `/admin`, `/ui/app.js`, unauthenticated `/ui/auth/me?mode=admin` returning 401, no public landing `/admin` href, and live JS admin-gate markers.
 - Auth RBAC mutation: pass, idempotent SQL inserted one `user_roles` assignment for `test@example.com` -> `app:bazos-service:admin`; verification rows show `global:superadmin` and `app:bazos-service:admin`.
-- Logged-in admin smoke: pass, Auth `/auth/validate` returned roles `app:bazos-service:admin,global:superadmin`; live Basus `/ui/auth/me?mode=admin` returned HTTP 200 with `access.admin=true` for `test@example.com`.
+- Logged-in admin smoke: pass, Auth `/auth/validate` returned roles `app:bazos-service:admin,global:superadmin`; live Bazoš `/ui/auth/me?mode=admin` returned HTTP 200 with `access.admin=true` for `test@example.com`.
 
 ### Readiness Gate Evidence
 

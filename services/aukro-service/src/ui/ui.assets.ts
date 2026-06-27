@@ -1424,8 +1424,8 @@ export const appScript = `
   function manualEvidence() {
     const checkedAt = new Date().toISOString();
     return {
-      publicDuplicateCheck: { checkedAt, source: 'manual_review', likelyDuplicate: false, reason: 'Potvrzeno v klientském panelu Basus před odesláním do fronty.' },
-      contentPolicy: { checkedAt, source: 'manual_review', passed: true, reason: 'Potvrzeno v klientském panelu Basus před odesláním do fronty.' },
+      publicDuplicateCheck: { checkedAt, source: 'manual_review', likelyDuplicate: false, reason: 'Potvrzeno v klientském panelu Bazoš před odesláním do fronty.' },
+      contentPolicy: { checkedAt, source: 'manual_review', passed: true, reason: 'Potvrzeno v klientském panelu Bazoš před odesláním do fronty.' },
     };
   }
 
@@ -1502,7 +1502,7 @@ export const appScript = `
       return '<span class="status ok">Připraveno</span>';
     }
     if (session) {
-      return '<div class="row-actions"><button class="button button-primary" data-complete-verification="' + cell(identity.id) + '" data-session-id="' + cell(session.id) + '" type="button">Dokončit ruční ověření</button><button class="button button-secondary" data-open-bazos="' + cell(session.verificationUrl || 'https://www.bazos.cz/pridat-inzerat.php') + '" type="button">Otevřít Bazoš</button><button class="button button-secondary" data-challenge-verification="' + cell(identity.id) + '" data-session-id="' + cell(session.id) + '" type="button">Nahlásit výzvu</button></div><small class="card-note">SMS kód zadávejte pouze na Bazoš.cz, ne do Basus.</small>';
+      return '<div class="row-actions"><button class="button button-primary" data-complete-verification="' + cell(identity.id) + '" data-session-id="' + cell(session.id) + '" type="button">Dokončit ruční ověření</button><button class="button button-secondary" data-open-bazos="' + cell(session.verificationUrl || 'https://www.bazos.cz/pridat-inzerat.php') + '" type="button">Otevřít Bazoš</button><button class="button button-secondary" data-challenge-verification="' + cell(identity.id) + '" data-session-id="' + cell(session.id) + '" type="button">Nahlásit výzvu</button></div><small class="card-note">SMS kód zadávejte pouze na Bazoš.cz, ne do Bazoš.</small>';
     }
     return '<div class="row-actions"><button class="button button-primary" data-start-verification="' + cell(identity.id) + '" type="button">Zahájit ověření</button></div><small class="card-note">Chybí: ' + cell(identityGateSummary(identity)) + '</small>';
   }
@@ -1513,7 +1513,7 @@ export const appScript = `
         method: 'POST',
         body: JSON.stringify({
           verificationUrl: 'https://www.bazos.cz/pridat-inzerat.php',
-          notes: 'Manual seller verification started from Basus client UI. SMS and login stay on Bazos.cz.',
+          notes: 'Manual seller verification started from Bazoš client UI. SMS and login stay on Bazos.cz.',
         }),
       });
       window.open(session.verificationUrl || 'https://www.bazos.cz/pridat-inzerat.php', '_blank', 'noopener');
@@ -1524,7 +1524,7 @@ export const appScript = `
   }
 
   async function completeManualVerification(identityId, sessionId) {
-    const confirmed = window.confirm('Potvrďte pouze tehdy, když jste na Bazoš.cz ručně dokončili přihlášení, SMS ověření nebo požadovanou kontrolu. SMS kód se do Basus neukládá.');
+    const confirmed = window.confirm('Potvrďte pouze tehdy, když jste na Bazoš.cz ručně dokončili přihlášení, SMS ověření nebo požadovanou kontrolu. SMS kód se do Bazoš neukládá.');
     if (!confirmed) return;
     try {
       await request('/api/bazos/identities/' + encodeURIComponent(identityId) + '/verification-sessions/' + encodeURIComponent(sessionId) + '/complete-manual', {
@@ -1989,7 +1989,7 @@ export const appScript = `
       const options = data.identities.length ? renderIdentityOptions(data.identities) : '';
       content.innerHTML = '<div class="catalog-flow"><div class="data-panel flow-column"><h2>Katalog</h2><div class="search-row"><input class="input" id="catalog-search" value="' + cell(searchValue || '') + '" placeholder="Hledat produkt podle názvu, SKU nebo značky"><button class="button button-secondary" id="catalog-search-button" type="button">Hledat</button></div><div class="product-list">' +
         products.map((product, index) => '<button class="product-option' + (product === selected ? ' active' : '') + '" type="button" data-product-index="' + index + '"><span class="product-thumb"></span><span><strong>' + cell(productTitle(product)) + '</strong><small class="card-note">' + cell(product.sku || product.id) + '</small></span></button>').join('') +
-        '</div></div><div class="flow-column"><form class="form-panel panel-stack" id="catalog-draft-form"><div><h2>Publikovat z katalogu</h2><p class="card-note">Produkt se nejdříve převede do Basus konceptu. Teprve po náhledu a schválení se odešle do hlídané publikační fronty.</p></div><div class="form-grid"><label>Účet / telefon<select name="identityId" required>' + options + '</select></label><label>Cena v Kč<input name="price" type="number" min="0" step="1" required></label><label>Volba ceny<select name="priceOption">' + priceOptionOptions('fixed_price') + '</select></label><label>Rubrika<select name="rubric" data-bazos-rubric required>' + rubricOptions('auto') + '</select></label><label>Kategorie Bazos.cz<select name="category" data-bazos-category required>' + categoryOptions('auto', '') + '</select></label><div class="category-suggestions wide" data-category-suggestions></div><label class="wide">Název<input name="title" maxlength="500" required></label><label class="wide">Popis<textarea name="description"></textarea></label><label>Lokalita<input name="location" maxlength="200"></label></div><p class="form-message" data-form-message></p><button class="button button-primary" type="submit">Sformovat inzerát</button></form>' + renderPreview() + '</div></div>';
+        '</div></div><div class="flow-column"><form class="form-panel panel-stack" id="catalog-draft-form"><div><h2>Publikovat z katalogu</h2><p class="card-note">Produkt se nejdříve převede do Bazoš konceptu. Teprve po náhledu a schválení se odešle do hlídané publikační fronty.</p></div><div class="form-grid"><label>Účet / telefon<select name="identityId" required>' + options + '</select></label><label>Cena v Kč<input name="price" type="number" min="0" step="1" required></label><label>Volba ceny<select name="priceOption">' + priceOptionOptions('fixed_price') + '</select></label><label>Rubrika<select name="rubric" data-bazos-rubric required>' + rubricOptions('auto') + '</select></label><label>Kategorie Bazos.cz<select name="category" data-bazos-category required>' + categoryOptions('auto', '') + '</select></label><div class="category-suggestions wide" data-category-suggestions></div><label class="wide">Název<input name="title" maxlength="500" required></label><label class="wide">Popis<textarea name="description"></textarea></label><label>Lokalita<input name="location" maxlength="200"></label></div><p class="form-message" data-form-message></p><button class="button button-primary" type="submit">Sformovat inzerát</button></form>' + renderPreview() + '</div></div>';
       fillForm(selected);
       document.getElementById('catalog-search-button')?.addEventListener('click', async () => {
         prepared = null;

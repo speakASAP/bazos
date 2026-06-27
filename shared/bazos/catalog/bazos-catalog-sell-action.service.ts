@@ -82,7 +82,7 @@ export class BazosCatalogSellActionService {
     const categoryMapping = await this.findCategoryMapping(draft.category);
 
     const listingUrl = this.buildBazosListingUrl(draft.bazosAdId);
-    const publishedOnBasus = Boolean(draft.isActive && draft.bazosAdId && draft.publishStatus === 'published');
+    const publishedOnBazos = Boolean(draft.isActive && draft.bazosAdId && draft.publishStatus === 'published');
 
     return {
       action: 'sell_on_bazos',
@@ -91,7 +91,7 @@ export class BazosCatalogSellActionService {
       identity: this.describeIdentity(draft.identity),
       categoryMapping: this.describeCategoryMapping(draft.category, categoryMapping),
       latestAttempt: latestAttempt ? this.describeAttempt(latestAttempt) : null,
-      publishedOnBasus,
+      publishedOnBazos,
       listingUrl,
       requiresConfirmation: draft.publishStatus === 'draft',
       requiresHumanAction: this.requiresHumanAction(draft, latestAttempt),
@@ -202,8 +202,8 @@ export class BazosCatalogSellActionService {
       challengeState: draft.challengeState,
       bazosAdId: draft.bazosAdId,
       isActive: draft.isActive,
-      publishedOnBasus: Boolean(draft.isActive && draft.bazosAdId && draft.publishStatus === 'published'),
-      activeOnBasus: Boolean(draft.isActive && ACTIVE_PUBLISHED_STATUSES.includes(draft.publishStatus)),
+      publishedOnBazos: Boolean(draft.isActive && draft.bazosAdId && draft.publishStatus === 'published'),
+      activeOnBazos: Boolean(draft.isActive && ACTIVE_PUBLISHED_STATUSES.includes(draft.publishStatus)),
       listingUrl: this.buildBazosListingUrl(draft.bazosAdId),
       lastPolicyCheck: draft.lastPolicyCheck,
     };
