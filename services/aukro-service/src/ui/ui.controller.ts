@@ -29,6 +29,14 @@ export class UiController {
     return res.set('Cache-Control', 'no-store, max-age=0').type('html').send(renderAppPage('client'));
   }
 
+  @Get('publish')
+  publish(@Query('productId') productId: string | undefined, @Res() res: any) {
+    const target = productId
+      ? `/client?productId=${encodeURIComponent(productId)}#catalog`
+      : '/client#catalog';
+    return res.redirect(302, target);
+  }
+
   @Get('auth/callback')
   authCallback(@Res() res: any) {
     return res.set('Cache-Control', 'no-store, max-age=0').type('html').send(renderAuthCallbackPage());
@@ -52,7 +60,14 @@ export class UiController {
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('activeOnly') activeOnly?: string,
+    @Query('productId') productId?: string,
   ) {
+    const cleanProductId = productId?.trim();
+    if (cleanProductId) {
+      const product = await this.catalogClient.getProductById(cleanProductId);
+      return { items: product ? [product] : [], total: product ? 1 : 0, page: 1, limit: 1 };
+    }
+
     const parsedPage = Number(page || 1);
     const parsedLimit = Math.min(Math.max(Number(limit || 20), 1), 50);
     return this.catalogClient.searchProducts({
