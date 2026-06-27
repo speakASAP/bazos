@@ -42,6 +42,10 @@ function makePrisma(overrides: Partial<{
     bazosIdentityCategoryCadence: {
       upsert: jest.fn().mockResolvedValue({}),
     },
+    bazosAccount: {
+      findFirst: jest.fn().mockResolvedValue({ id: 'acc-1' }),
+      create: jest.fn().mockResolvedValue({ id: 'acc-created' }),
+    },
     bazosVerificationSession: {
       create: jest.fn().mockResolvedValue({ id: 'session-1' }),
       findFirst: jest.fn().mockResolvedValue(session),
@@ -72,14 +76,27 @@ describe('BazosIdentityService', () => {
       await expect(svc.create('user-1', createDto)).rejects.toBeInstanceOf(ConflictException);
     });
 
-    it('creates identity with draft status and clear reviewState', async () => {
+    it('creates identity with draft status, clear reviewState, and linked account when email is known', async () => {
       const prisma = makePrisma({ existing: null });
       const svc = new BazosIdentityService(prisma, makeLogger());
-      await svc.create('user-1', createDto);
+      await svc.create('user-1', createDto, 'Seller@Example.cz');
       const createCall = prisma.bazosIdentity.create.mock.calls[0][0];
+      expect(prisma.bazosAccount.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { email: 'seller@example.cz' } }));
+      expect(createCall.data.accountId).toBe('acc-1');
       expect(createCall.data.status).toBe(IDENTITY_STATUS.DRAFT);
       expect(createCall.data.reviewState).toBe(REVIEW_STATE.CLEAR);
       expect(createCall.data.sessionState).toBe(SESSION_STATE.MISSING);
+    });
+
+    it('creates account when no account exists for the Alfares email', async () => {
+      const prisma = makePrisma({ existing: null });
+      prisma.bazosAccount.findFirst.mockResolvedValue(null);
+      const svc = new BazosIdentityService(prisma, makeLogger());
+      await svc.create('user-1', createDto, 'seller@example.cz');
+      expect(prisma.bazosAccount.create).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ email: 'seller@example.cz', password: null, isActive: true }),
+      }));
+      expect(prisma.bazosIdentity.create.mock.calls[0][0].data.accountId).toBe('acc-created');
     });
 
     it('does not log the raw phone number', async () => {
@@ -167,6 +184,29 @@ describe('BazosIdentityService', () => {
           encryptedSession,
         }),
       ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('completes manual browser verification without storing SMS codes or raw sessions', async () => {
+      const prisma = makePrisma({ found: { id: 'id-1', accountId: null, displayName: 'Seller' } });
+      prisma.bazosIdentity.findUnique = jest.fn().mockResolvedValue({ id: 'id-1', accountId: null, displayName: 'Seller' });
+      const svc = new BazosIdentityService(prisma, makeLogger());
+      await svc.completeManualVerificationSession('id-1', 'session-1', 'user-1', 'seller@example.cz', {
+        humanConfirmed: true,
+        notes: 'Completed by seller in Bazos browser',
+      });
+
+      const sessionUpdate = prisma.bazosVerificationSession.update.mock.calls[0][0];
+      expect(sessionUpdate.data.state).toBe(VERIFICATION_SESSION_STATE.COMPLETED);
+      expect(sessionUpdate.data.evidence.manualBrowserVerification).toBe(true);
+      expect(sessionUpdate.data.evidence.phoneVerificationHandledBy).toBe('bazos.cz');
+      expect(JSON.stringify(sessionUpdate.data.evidence).toLowerCase()).not.toContain('smscode');
+
+      const identityUpdate = prisma.bazosIdentity.update.mock.calls[0][0];
+      expect(identityUpdate.data.accountId).toBe('acc-1');
+      expect(identityUpdate.data.status).toBe(IDENTITY_STATUS.VERIFIED);
+      expect(identityUpdate.data.reviewState).toBe(REVIEW_STATE.CLEAR);
+      expect(identityUpdate.data.sessionState).toBe(SESSION_STATE.ACTIVE);
+      expect(identityUpdate.data.encryptedSession).toBeUndefined();
     });
 
     it('records verification challenge and moves identity to manual review', async () => {

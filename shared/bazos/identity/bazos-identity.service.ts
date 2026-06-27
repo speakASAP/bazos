@@ -7,6 +7,7 @@ import {
 import { PrismaService } from '../../database/prisma.service';
 import { LoggerService } from '../../logger/logger.service';
 import {
+  CompleteManualVerificationSessionDto,
   CompleteVerificationSessionDto,
   CreateBazosIdentityDto,
   ExpireVerificationSessionDto,
@@ -49,7 +50,7 @@ export class BazosIdentityService {
     private readonly logger: LoggerService,
   ) {}
 
-  async create(userId: string, dto: CreateBazosIdentityDto) {
+  async create(userId: string, dto: CreateBazosIdentityDto, userEmail?: string) {
     const existing = await this.prisma.bazosIdentity.findUnique({
       where: { phoneNumber: dto.phoneNumber },
     });
@@ -57,10 +58,12 @@ export class BazosIdentityService {
       throw new ConflictException(`Phone number ${dto.phoneNumber} is already registered as a Bazos identity`);
     }
 
+    const accountId = dto.accountId || await this.ensureAccountForUser(dto.displayName, userEmail);
+
     const identity = await this.prisma.bazosIdentity.create({
       data: {
         userId,
-        accountId: dto.accountId || null,
+        accountId,
         phoneNumber: dto.phoneNumber,
         displayName: dto.displayName,
         contactName: dto.contactName || null,
@@ -81,6 +84,12 @@ export class BazosIdentityService {
   async findAllForUser(userId: string) {
     return this.prisma.bazosIdentity.findMany({
       where: { userId },
+      include: {
+        verificationSessions: {
+          orderBy: { createdAt: 'desc' },
+          take: 3,
+        },
+      },
       orderBy: { createdAt: 'desc' },
     });
   }
@@ -197,6 +206,60 @@ export class BazosIdentityService {
     });
 
     this.logger.log('Bazos verification session completed by human', { identityId: id, sessionId, userId });
+    return updatedSession;
+  }
+
+  async completeManualVerificationSession(
+    id: string,
+    sessionId: string,
+    userId: string,
+    userEmail: string | undefined,
+    dto: CompleteManualVerificationSessionDto,
+  ) {
+    await this.findById(id, userId);
+    const session = await this.getAwaitingVerificationSession(id, sessionId);
+
+    if (session.expiresAt && session.expiresAt <= new Date()) {
+      await this.expireVerificationSession(id, sessionId, userId, { notes: 'Verification session expired before manual completion' });
+      throw new BadRequestException('Verification session has expired');
+    }
+    if (dto.humanConfirmed !== true) {
+      throw new BadRequestException('Human confirmation is required before marking Bazos verification complete');
+    }
+
+    const verificationExpiresAt = this.toDate(dto.verificationExpiresAt);
+    const accountId = await this.ensureAccountForIdentity(id, userEmail);
+
+    const updatedSession = await this.prisma.bazosVerificationSession.update({
+      where: { id: sessionId },
+      data: {
+        state: VERIFICATION_SESSION_STATE.COMPLETED,
+        humanConfirmed: true,
+        evidence: {
+          manualBrowserVerification: true,
+          verificationUrl: session.verificationUrl,
+          phoneVerificationHandledBy: 'bazos.cz',
+          serverSideBazosRequestsAllowed: false,
+          capturedAt: new Date().toISOString(),
+        },
+        completedAt: new Date(),
+        notes: dto.notes || session.notes,
+      },
+    });
+
+    await this.prisma.bazosIdentity.update({
+      where: { id },
+      data: {
+        accountId,
+        status: IDENTITY_STATUS.VERIFIED,
+        reviewState: REVIEW_STATE.CLEAR,
+        sessionState: SESSION_STATE.ACTIVE,
+        verificationExpiresAt: verificationExpiresAt || null,
+        notes: dto.notes,
+      },
+    });
+
+    this.logger.log('Bazos identity manually verified after human browser verification', { identityId: id, sessionId, userId });
     return updatedSession;
   }
 
@@ -356,6 +419,33 @@ export class BazosIdentityService {
       update: { lastPublishedAt: new Date() },
     });
     this.logger.log('Category cadence recorded', { identityId, bazosCategory });
+  }
+
+  private async ensureAccountForIdentity(identityId: string, userEmail?: string): Promise<string | null> {
+    const identity = await this.prisma.bazosIdentity.findUnique({ where: { id: identityId } });
+    if (identity?.accountId) return identity.accountId;
+    return this.ensureAccountForUser(identity?.displayName, userEmail);
+  }
+
+  private async ensureAccountForUser(displayName?: string | null, userEmail?: string): Promise<string | null> {
+    const email = String(userEmail || '').trim().toLowerCase();
+    if (!email) return null;
+
+    const existing = await this.prisma.bazosAccount.findFirst({
+      where: { email },
+      orderBy: { createdAt: 'asc' },
+    });
+    if (existing) return existing.id;
+
+    const account = await this.prisma.bazosAccount.create({
+      data: {
+        name: displayName || email,
+        email,
+        password: null,
+        isActive: true,
+      },
+    });
+    return account.id;
   }
 
   private async getAwaitingVerificationSession(identityId: string, sessionId: string) {

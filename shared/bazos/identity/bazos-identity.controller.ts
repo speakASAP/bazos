@@ -11,6 +11,7 @@ import {
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { BazosIdentityService } from './bazos-identity.service';
 import {
+  CompleteManualVerificationSessionDto,
   CompleteVerificationSessionDto,
   CreateBazosIdentityDto,
   ExpireVerificationSessionDto,
@@ -28,7 +29,7 @@ export class BazosIdentityController {
 
   @Post()
   create(@Request() req, @Body() dto: CreateBazosIdentityDto) {
-    return this.identityService.create(req.user.id, dto);
+    return this.identityService.create(req.user.id, dto, req.user.email);
   }
 
   @Get()
@@ -63,6 +64,16 @@ export class BazosIdentityController {
     @Body() dto: CompleteVerificationSessionDto,
   ) {
     return this.identityService.completeVerificationSession(id, sessionId, req.user.id, dto);
+  }
+
+  @Post(':id/verification-sessions/:sessionId/complete-manual')
+  completeManualVerificationSession(
+    @Param('id') id: string,
+    @Param('sessionId') sessionId: string,
+    @Request() req,
+    @Body() dto: CompleteManualVerificationSessionDto,
+  ) {
+    return this.identityService.completeManualVerificationSession(id, sessionId, req.user.id, req.user.email, dto);
   }
 
   @Post(':id/verification-sessions/:sessionId/challenge')

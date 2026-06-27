@@ -1447,6 +1447,86 @@ export const appScript = `
   function settingsErrorMarkup(message) {
     return escapeHtml(message) + '<br>' + settingsLink('Otevřít Nastavení Bazos.cz');
   }
+  function awaitingVerificationSession(identity) {
+    return (identity?.verificationSessions || []).find((session) => String(session.state || '').toLowerCase() === 'awaiting_human') || null;
+  }
+
+  function identityGateSummary(identity) {
+    const missing = [];
+    if (!hasLinkedAccount(identity)) missing.push('propojení účtu');
+    if (!isVerified(identity)) missing.push('ověřený telefon');
+    if (!hasActiveSession(identity)) missing.push('aktivní relace');
+    if (!isReviewClear(identity)) missing.push('kontrola bez blokace');
+    if (Number(identity?.activeAdCount || 0) >= 50) missing.push('volná kapacita');
+    return missing.length ? missing.join(', ') : 'připraveno';
+  }
+
+  function verificationActions(identity) {
+    const session = awaitingVerificationSession(identity);
+    if (isPublishableIdentity(identity)) {
+      return '<span class="status ok">Připraveno</span>';
+    }
+    if (session) {
+      return '<div class="row-actions"><button class="button button-primary" data-complete-verification="' + cell(identity.id) + '" data-session-id="' + cell(session.id) + '" type="button">Dokončit ruční ověření</button><button class="button button-secondary" data-open-bazos="' + cell(session.verificationUrl || 'https://www.bazos.cz/pridat-inzerat.php') + '" type="button">Otevřít Bazoš</button><button class="button button-secondary" data-challenge-verification="' + cell(identity.id) + '" data-session-id="' + cell(session.id) + '" type="button">Nahlásit výzvu</button></div><small class="card-note">SMS kód zadávejte pouze na Bazoš.cz, ne do Basus.</small>';
+    }
+    return '<div class="row-actions"><button class="button button-primary" data-start-verification="' + cell(identity.id) + '" type="button">Zahájit ověření</button></div><small class="card-note">Chybí: ' + cell(identityGateSummary(identity)) + '</small>';
+  }
+
+  async function startIdentityVerification(identityId) {
+    try {
+      const session = await request('/api/bazos/identities/' + encodeURIComponent(identityId) + '/verification-sessions', {
+        method: 'POST',
+        body: JSON.stringify({
+          verificationUrl: 'https://www.bazos.cz/pridat-inzerat.php',
+          notes: 'Manual seller verification started from Basus client UI. SMS and login stay on Bazos.cz.',
+        }),
+      });
+      window.open(session.verificationUrl || 'https://www.bazos.cz/pridat-inzerat.php', '_blank', 'noopener');
+      await renderClient();
+    } catch (error) {
+      content.innerHTML = '<div class="data-panel empty-state">' + settingsErrorMarkup(error.message) + '</div>';
+    }
+  }
+
+  async function completeManualVerification(identityId, sessionId) {
+    const confirmed = window.confirm('Potvrďte pouze tehdy, když jste na Bazoš.cz ručně dokončili přihlášení, SMS ověření nebo požadovanou kontrolu. SMS kód se do Basus neukládá.');
+    if (!confirmed) return;
+    try {
+      await request('/api/bazos/identities/' + encodeURIComponent(identityId) + '/verification-sessions/' + encodeURIComponent(sessionId) + '/complete-manual', {
+        method: 'POST',
+        body: JSON.stringify({
+          humanConfirmed: true,
+          notes: 'Seller confirmed manual Bazos browser verification. SMS/login was completed on Bazos.cz.',
+        }),
+      });
+      await renderClient();
+    } catch (error) {
+      content.innerHTML = '<div class="data-panel empty-state">' + settingsErrorMarkup(error.message) + '</div>';
+    }
+  }
+
+  async function markVerificationChallenge(identityId, sessionId) {
+    try {
+      await request('/api/bazos/identities/' + encodeURIComponent(identityId) + '/verification-sessions/' + encodeURIComponent(sessionId) + '/challenge', {
+        method: 'POST',
+        body: JSON.stringify({
+          challengeState: 'captcha_or_human_check_required',
+          notes: 'Seller reported Bazos challenge during manual verification.',
+        }),
+      });
+      await renderClient();
+    } catch (error) {
+      content.innerHTML = '<div class="data-panel empty-state">' + settingsErrorMarkup(error.message) + '</div>';
+    }
+  }
+
+  function bindVerificationButtons() {
+    content.querySelectorAll('[data-start-verification]').forEach((button) => button.addEventListener('click', () => startIdentityVerification(button.dataset.startVerification)));
+    content.querySelectorAll('[data-complete-verification]').forEach((button) => button.addEventListener('click', () => completeManualVerification(button.dataset.completeVerification, button.dataset.sessionId)));
+    content.querySelectorAll('[data-challenge-verification]').forEach((button) => button.addEventListener('click', () => markVerificationChallenge(button.dataset.challengeVerification, button.dataset.sessionId)));
+    content.querySelectorAll('[data-open-bazos]').forEach((button) => button.addEventListener('click', () => window.open(button.dataset.openBazos || 'https://www.bazos.cz/pridat-inzerat.php', '_blank', 'noopener')));
+  }
+
 
   function renderConnectionBanner(data) {
     if (mode !== 'client' || !identityBanner) return;
@@ -1708,7 +1788,9 @@ export const appScript = `
         { label: 'Relace', render: (r) => '<span class="status ' + statusClass(r.sessionState) + '">' + statusLabel(r.sessionState) + '</span>' },
         { label: 'Publikování', render: (r) => '<span class="status ' + (isPublishableIdentity(r) ? 'ok' : 'risk') + '">' + (isPublishableIdentity(r) ? 'Může publikovat' : 'Nelze publikovat') + '</span><small class="card-note">Aktivní: ' + cell(r.activeAdCount || 0) + ' / 50</small>' },
         { label: 'Kontrola', render: (r) => '<span class="status ' + statusClass(r.reviewState) + '">' + statusLabel(r.reviewState || 'clear') + '</span><small class="card-note">Platnost: ' + cell(r.verificationExpiresAt) + '</small>' },
+        { label: 'Ověření', render: (r) => verificationActions(r) },
       ], data.identities, 'Pro účet nejsou nastavené žádné Bazos identity.', settingsLink('Nastavit'));
+    bindVerificationButtons();
   }
 
   function renderSettings(data) {
@@ -1726,8 +1808,10 @@ export const appScript = `
         { label: 'Stav', render: (r) => '<span class="status ' + statusClass(r.status) + '">' + statusLabel(r.status) + '</span>' },
         { label: 'Relace', render: (r) => '<span class="status ' + statusClass(r.sessionState) + '">' + statusLabel(r.sessionState) + '</span>' },
         { label: 'Může publikovat', render: (r) => '<span class="status ' + (isPublishableIdentity(r) ? 'ok' : 'risk') + '">' + (isPublishableIdentity(r) ? 'Ano' : 'Ne') + '</span><small class="card-note">' + (hasLinkedAccount(r) ? 'Účet je propojený' : 'Čeká na propojení účtu') + '</small>' },
+        { label: 'Ověření', render: (r) => verificationActions(r) },
       ], data.identities, 'Zatím není uložené žádné nastavení Bazos.cz.', settingsLink('Přidat nastavení'));
     document.getElementById('identity-form').addEventListener('submit', createIdentity);
+    bindVerificationButtons();
   }
 
 

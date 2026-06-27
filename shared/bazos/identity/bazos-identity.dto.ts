@@ -91,6 +91,18 @@ export class StartVerificationSessionDto {
   notes?: string;
 }
 
+export class CompleteManualVerificationSessionDto {
+  @IsBoolean()
+  humanConfirmed: boolean;
+
+  @IsOptional()
+  verificationExpiresAt?: Date | string;
+
+  @IsOptional()
+  @IsString()
+  notes?: string;
+}
+
 export class CompleteVerificationSessionDto {
   @IsBoolean()
   humanConfirmed: boolean;
