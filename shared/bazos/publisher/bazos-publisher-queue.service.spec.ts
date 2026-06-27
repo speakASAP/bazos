@@ -34,6 +34,11 @@ const ad = {
   bazosAdId: null,
   publishStatus: 'draft',
   isActive: true,
+  lastPolicyCheck: {
+    draftOptions: {
+      media: [{ id: 'media-1', url: 'https://cdn.example.test/product.jpg', thumbnailUrl: 'https://cdn.example.test/product-thumb.jpg', altText: 'Product photo', title: 'Front view', position: 1 }],
+    },
+  },
   identity,
 };
 
@@ -168,6 +173,7 @@ describe('BazosPublisherQueueService', () => {
     expect(result.submission.requiresVerifiedHumanSession).toBe(true);
     expect((result.submission.identity as any).encryptedSession).toBeUndefined();
     expect(result.submission.prohibitedAutomation).toContain('captcha_solving');
+    expect(result.submission.ad.media).toEqual([{ id: 'media-1', url: 'https://cdn.example.test/product.jpg', thumbnailUrl: 'https://cdn.example.test/product-thumb.jpg', altText: 'Product photo', title: 'Front view', position: 1 }]);
   });
 
   it('records successful publish metadata, active count, and category cadence', async () => {

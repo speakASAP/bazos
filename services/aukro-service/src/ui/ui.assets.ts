@@ -1086,6 +1086,36 @@ button, input { font: inherit; }
   color: var(--ink);
   line-height: 1.5;
 }
+.media-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+}
+.media-choice {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+}
+.media-choice label {
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  font-size: 13px;
+}
+.media-choice img,
+.preview-media img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  display: block;
+}
+.preview-media {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
 .flow-actions {
   display: flex;
   flex-wrap: wrap;
@@ -1941,6 +1971,9 @@ export const appScript = `
     };
     const productDescription = (product) => product?.description || product?.shortDescription || '';
     const productTitle = (product) => product?.name || product?.title || product?.sku || product?.id || '';
+    const productMedia = (product) => asArray(product, ['media']).filter((item) => String(item?.type || 'image').toLowerCase() === 'image' && item?.url).sort((a, b) => Number(Boolean(b.isPrimary)) - Number(Boolean(a.isPrimary)) || Number(a.position || 0) - Number(b.position || 0));
+    const normalizeMedia = (items) => asArray({ items }, ['items']).filter((item) => item?.url).slice(0, 20).map((item, index) => ({ id: item.id || item.url, url: item.url, thumbnailUrl: item.thumbnailUrl || item.url, altText: item.altText || item.title || '', title: item.title || item.altText || '', position: Number(item.position ?? index) }));
+    const selectedMedia = () => Array.from(document.querySelectorAll('[data-media-choice]:checked')).map((input) => { try { return JSON.parse(input.value); } catch (_) { return null; } }).filter(Boolean);
     const selectedIdentityId = () => document.getElementById('catalog-draft-form')?.elements.identityId?.value || data.identities[0]?.id || '';
 
     async function loadProducts(search) {
@@ -1962,6 +1995,7 @@ export const appScript = `
         '<h3 class="preview-title">' + cell(draft.title) + '</h3>' +
         '<div class="preview-price">' + cell(draft.price) + ' Kč / ' + cell(priceOptionLabel(draft.priceOption || 'fixed_price')) + '</div>' +
         '<div class="preview-description">' + cell(draft.description || '') + '</div>' +
+        (draft.media?.length ? '<div class="preview-media">' + draft.media.map((item) => '<img src="' + escapeHtml(item.thumbnailUrl || item.url) + '" alt="' + escapeHtml(item.altText || item.title || 'Foto') + '">').join('') + '</div>' : '') +
         '<div class="flow-meta">' +
           '<span>Rubrika<strong>' + cell(draft.rubric || '') + '</strong></span>' +
           '<span>Kategorie<strong>' + cell(draft.category) + '</strong></span>' +
@@ -1991,9 +2025,11 @@ export const appScript = `
 
     function draw(searchValue) {
       const options = data.identities.length ? renderIdentityOptions(data.identities) : '';
+      const media = normalizeMedia(prepared?.draft?.media?.length ? prepared.draft.media : productMedia(selected));
+      const mediaPicker = media.length ? '<div class="wide"><label>Fotky pro Bazoš</label><div class="media-picker">' + media.map((item, index) => '<div class="media-choice"><label><input data-media-choice type="checkbox" value="' + escapeHtml(JSON.stringify(item)) + '"' + (prepared?.draft?.media?.length || index < 5 ? ' checked' : '') + '><img src="' + escapeHtml(item.thumbnailUrl || item.url) + '" alt="' + escapeHtml(item.altText || item.title || 'Foto') + '"><span>' + cell(item.title || item.altText || ('Foto ' + (index + 1))) + '</span></label></div>').join('') + '</div></div>' : '<p class="form-message wide">Katalog nevrátil žádné produktové fotky pro tento produkt.</p>';
       content.innerHTML = '<div class="catalog-flow"><div class="data-panel flow-column"><h2>Katalog</h2><div class="search-row"><input class="input" id="catalog-search" value="' + cell(searchValue || '') + '" placeholder="Hledat produkt podle názvu, SKU nebo značky"><button class="button button-secondary" id="catalog-search-button" type="button">Hledat</button></div><div class="product-list">' +
         products.map((product, index) => '<button class="product-option' + (product === selected ? ' active' : '') + '" type="button" data-product-index="' + index + '"><span class="product-thumb"></span><span><strong>' + cell(productTitle(product)) + '</strong><small class="card-note">' + cell(product.sku || product.id) + '</small></span></button>').join('') +
-        '</div></div><div class="flow-column"><form class="form-panel panel-stack" id="catalog-draft-form"><div><h2>Publikovat z katalogu</h2><p class="card-note">Produkt se nejdříve převede do Bazoš konceptu. Teprve po náhledu a schválení se odešle do hlídané publikační fronty.</p></div><div class="form-grid"><label>Účet / telefon<select name="identityId" required>' + options + '</select></label><label>Cena v Kč<input name="price" type="number" min="0" step="1" required></label><label>Volba ceny<select name="priceOption">' + priceOptionOptions('fixed_price') + '</select></label><label>Rubrika<select name="rubric" data-bazos-rubric required>' + rubricOptions('auto') + '</select></label><label>Kategorie Bazos.cz<select name="category" data-bazos-category required>' + categoryOptions('auto', '') + '</select></label><div class="category-suggestions wide" data-category-suggestions></div><label class="wide">Název<input name="title" maxlength="500" required></label><label class="wide">Popis<textarea name="description"></textarea></label><label>Lokalita<input name="location" maxlength="200"></label></div><p class="form-message" data-form-message></p><button class="button button-primary" type="submit">Sformovat inzerát</button></form>' + renderPreview() + '</div></div>';
+        '</div></div><div class="flow-column"><form class="form-panel panel-stack" id="catalog-draft-form"><div><h2>Publikovat z katalogu</h2><p class="card-note">Produkt se nejdříve převede do Bazoš konceptu. Teprve po náhledu a schválení se odešle do hlídané publikační fronty.</p></div><div class="form-grid"><label>Účet / telefon<select name="identityId" required>' + options + '</select></label><label>Cena v Kč<input name="price" type="number" min="0" step="1" required></label><label>Volba ceny<select name="priceOption">' + priceOptionOptions('fixed_price') + '</select></label><label>Rubrika<select name="rubric" data-bazos-rubric required>' + rubricOptions('auto') + '</select></label><label>Kategorie Bazos.cz<select name="category" data-bazos-category required>' + categoryOptions('auto', '') + '</select></label><div class="category-suggestions wide" data-category-suggestions></div><label class="wide">Název<input name="title" maxlength="500" required></label><label class="wide">Popis<textarea name="description"></textarea></label>' + mediaPicker + '<label>Lokalita<input name="location" maxlength="200"></label></div><p class="form-message" data-form-message></p><button class="button button-primary" type="submit">Sformovat inzerát</button></form>' + renderPreview() + '</div></div>';
       fillForm(selected);
       document.getElementById('catalog-search-button')?.addEventListener('click', async () => {
         prepared = null;
@@ -2029,6 +2065,7 @@ export const appScript = `
             category: values.category,
             location: values.location || undefined,
             stockQuantity: Number(selected.stockQuantity || selected.stock || 0),
+            media: selectedMedia(),
           }),
         });
         draw(document.getElementById('catalog-search')?.value || '');

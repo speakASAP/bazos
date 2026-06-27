@@ -385,6 +385,7 @@ export class BazosPublisherQueueService {
         location: ad.location || identity.defaultLocation,
         rubric: this.submissionOptions(attempt).rubric,
         priceOption: this.submissionOptions(attempt).priceOption,
+        media: this.submissionOptions(attempt).media,
       },
     };
   }
@@ -396,6 +397,7 @@ export class BazosPublisherQueueService {
     return {
       rubric: policyOptions.rubric || draftOptions.rubric || null,
       priceOption: policyOptions.priceOption || draftOptions.priceOption || 'fixed_price',
+      media: this.normalizeMediaOverrides(policyOptions.media || draftOptions.media),
     };
   }
 
@@ -406,8 +408,23 @@ export class BazosPublisherQueueService {
       submissionOptions: {
         rubric: draftOptions.rubric || null,
         priceOption: priceOption || draftOptions.priceOption || 'fixed_price',
+        media: this.normalizeMediaOverrides(draftOptions.media),
       },
     };
+  }
+
+  private normalizeMediaOverrides(media?: any[]) {
+    return (Array.isArray(media) ? media : [])
+      .filter((item) => item && typeof item.url === 'string' && /^https?:\/\//i.test(item.url))
+      .slice(0, 20)
+      .map((item, index) => ({
+        id: item.id || undefined,
+        url: item.url,
+        thumbnailUrl: item.thumbnailUrl || item.url,
+        altText: item.altText || item.title || undefined,
+        title: item.title || item.altText || undefined,
+        position: Number.isFinite(Number(item.position)) ? Number(item.position) : index,
+      }));
   }
 
   private async identityIdsForUser(userId: string): Promise<string[]> {

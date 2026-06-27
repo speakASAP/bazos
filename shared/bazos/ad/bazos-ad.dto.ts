@@ -1,7 +1,38 @@
-import { IsString, IsNotEmpty, IsOptional, IsNumber, IsUUID, Length, Min, IsIn } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsNumber, IsUUID, Length, Min, IsIn, IsArray, ValidateNested, IsUrl } from 'class-validator';
 import { Type } from 'class-transformer';
 
 const PRICE_OPTIONS = ['fixed_price', 'dohodou', 'nabidnete', 'nerozhoduje', 'v_textu', 'zdarma'] as const;
+
+
+export class BazosMediaOverrideDto {
+  @IsOptional()
+  @IsString()
+  @Length(1, 200)
+  id?: string;
+
+  @IsUrl({ protocols: ['http', 'https'], require_protocol: true })
+  url: string;
+
+  @IsOptional()
+  @IsUrl({ protocols: ['http', 'https'], require_protocol: true })
+  thumbnailUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(0, 500)
+  altText?: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(0, 200)
+  title?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  position?: number;
+}
 
 export class CreateBazosAdDraftDto {
   @IsUUID()
@@ -48,6 +79,13 @@ export class CreateBazosAdDraftDto {
   @IsNumber()
   @Min(0)
   stockQuantity?: number;
+
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => BazosMediaOverrideDto)
+  media?: BazosMediaOverrideDto[];
 }
 
 export class CreateBazosAdDraftFromCatalogDto {
@@ -95,6 +133,13 @@ export class CreateBazosAdDraftFromCatalogDto {
   @Min(0)
   @Type(() => Number)
   stockQuantity?: number;
+
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => BazosMediaOverrideDto)
+  media?: BazosMediaOverrideDto[];
 }
 
 export class UpdateBazosAdDraftDto {
@@ -136,4 +181,11 @@ export class UpdateBazosAdDraftDto {
   @IsNumber()
   @Min(0)
   stockQuantity?: number;
+
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => BazosMediaOverrideDto)
+  media?: BazosMediaOverrideDto[];
 }

@@ -127,7 +127,7 @@ export class BazosCatalogSellActionService {
           publishStatus: 'draft',
           challengeState: null,
           bazosAdId: null,
-          lastPolicyCheck: this.buildDraftOptions(dto.rubric, dto.priceOption) as any,
+          lastPolicyCheck: this.buildDraftOptions(dto.rubric, dto.priceOption, dto.media) as any,
         },
         include: { identity: true },
       });
@@ -144,6 +144,7 @@ export class BazosCatalogSellActionService {
       category: dto.category,
       location: dto.location,
       stockQuantity: dto.stockQuantity ?? 0,
+      media: dto.media,
     });
   }
 
@@ -219,6 +220,7 @@ export class BazosCatalogSellActionService {
       price: draft.price,
       rubric: this.draftOptions(draft).rubric,
       priceOption: this.draftOptions(draft).priceOption,
+      media: this.draftOptions(draft).media,
       category: draft.category,
       location: draft.location,
       publishStatus: draft.publishStatus,
@@ -233,13 +235,28 @@ export class BazosCatalogSellActionService {
   }
 
 
-  private buildDraftOptions(rubric?: string, priceOption?: string) {
+  private buildDraftOptions(rubric?: string, priceOption?: string, media?: any[]) {
     return {
       draftOptions: {
         rubric: rubric || null,
         priceOption: priceOption || 'fixed_price',
+        media: this.normalizeMediaOverrides(media),
       },
     };
+  }
+
+  private normalizeMediaOverrides(media?: any[]) {
+    return (Array.isArray(media) ? media : [])
+      .filter((item) => item && typeof item.url === 'string' && /^https?:\/\//i.test(item.url))
+      .slice(0, 20)
+      .map((item, index) => ({
+        id: item.id || undefined,
+        url: item.url,
+        thumbnailUrl: item.thumbnailUrl || item.url,
+        altText: item.altText || item.title || undefined,
+        title: item.title || item.altText || undefined,
+        position: Number.isFinite(Number(item.position)) ? Number(item.position) : index,
+      }));
   }
 
   private canQueueAfterConfirmation(policyStatus: any) {
@@ -254,6 +271,7 @@ export class BazosCatalogSellActionService {
     return {
       rubric: options.rubric || null,
       priceOption: options.priceOption || 'fixed_price',
+      media: this.normalizeMediaOverrides(options.media),
     };
   }
 

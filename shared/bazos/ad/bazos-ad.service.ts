@@ -38,7 +38,7 @@ export class BazosAdService {
         price: dto.price,
         category: dto.category || null,
         location: dto.location || null,
-        lastPolicyCheck: this.buildDraftOptions(dto.rubric, dto.priceOption) as any,
+        lastPolicyCheck: this.buildDraftOptions(dto.rubric, dto.priceOption, dto.media) as any,
         stockQuantity: dto.stockQuantity ?? 0,
         publishStatus: 'draft',
       },
@@ -60,6 +60,7 @@ export class BazosAdService {
       category: dto.category,
       location: dto.location,
       stockQuantity: dto.stockQuantity ?? 0,
+      media: dto.media,
     });
   }
 
@@ -81,7 +82,7 @@ export class BazosAdService {
         category: dto.category,
         location: dto.location,
         stockQuantity: dto.stockQuantity,
-        ...(dto.rubric || dto.priceOption ? { lastPolicyCheck: this.buildDraftOptions(dto.rubric, dto.priceOption) as any } : {}),
+        ...(dto.rubric || dto.priceOption || dto.media ? { lastPolicyCheck: this.buildDraftOptions(dto.rubric, dto.priceOption, dto.media) as any } : {}),
       },
     });
   }
@@ -107,9 +108,10 @@ export class BazosAdService {
       adTitle: ad.title,
     });
 
+    const draftOptions = (ad?.lastPolicyCheck as any)?.draftOptions || {};
     await this.prisma.bazosAd.update({
       where: { id },
-      data: { lastPolicyCheck: result as any },
+      data: { lastPolicyCheck: { ...result, draftOptions } as any },
     });
 
     return result;
@@ -175,13 +177,28 @@ export class BazosAdService {
   }
 
 
-  private buildDraftOptions(rubric?: string, priceOption?: string) {
+  private buildDraftOptions(rubric?: string, priceOption?: string, media?: any[]) {
     return {
       draftOptions: {
         rubric: rubric || null,
         priceOption: priceOption || 'fixed_price',
+        media: this.normalizeMediaOverrides(media),
       },
     };
+  }
+
+  private normalizeMediaOverrides(media?: any[]) {
+    return (Array.isArray(media) ? media : [])
+      .filter((item) => item && typeof item.url === 'string' && /^https?:\/\//i.test(item.url))
+      .slice(0, 20)
+      .map((item, index) => ({
+        id: item.id || undefined,
+        url: item.url,
+        thumbnailUrl: item.thumbnailUrl || item.url,
+        altText: item.altText || item.title || undefined,
+        title: item.title || item.altText || undefined,
+        position: Number.isFinite(Number(item.position)) ? Number(item.position) : index,
+      }));
   }
 
   private async findByIdForUser(id: string, userId: string) {

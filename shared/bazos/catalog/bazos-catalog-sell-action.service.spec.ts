@@ -37,6 +37,15 @@ const draft = {
   identity,
 };
 
+const mediaOverride = {
+  id: 'media-1',
+  url: 'https://cdn.example.test/product.jpg',
+  thumbnailUrl: 'https://cdn.example.test/product-thumb.jpg',
+  altText: 'Product photo',
+  title: 'Front view',
+  position: 1,
+};
+
 const categoryMapping = {
   id: '44444444-4444-4444-8444-444444444444',
   bazosCategory: 'elektro',
@@ -132,7 +141,7 @@ describe('BazosCatalogSellActionService', () => {
       title: 'Bazos title',
       description: 'Bazos-only description',
       price: 1500,
-      lastPolicyCheck: { draftOptions: { rubric: 'auto', priceOption: 'fixed_price' } },
+      lastPolicyCheck: { draftOptions: { rubric: 'auto', priceOption: 'fixed_price', media: [mediaOverride] } },
     };
     const prisma = makePrisma({ existingDraft: draft, updatedDraft });
     const { service, ads } = makeService(prisma);
@@ -143,6 +152,7 @@ describe('BazosCatalogSellActionService', () => {
       description: 'Bazos-only description',
       price: 1500,
       category: 'elektro',
+      media: [mediaOverride],
     });
 
     expect(ads.createDraftFromCatalog).not.toHaveBeenCalled();
@@ -153,11 +163,13 @@ describe('BazosCatalogSellActionService', () => {
         description: 'Bazos-only description',
         price: 1500,
         publishStatus: 'draft',
+        lastPolicyCheck: expect.objectContaining({ draftOptions: expect.objectContaining({ media: [mediaOverride] }) }),
       }),
     }));
     expect(result.draft.id).toBe(draft.id);
     expect(result.draft.title).toBe('Bazos title');
     expect(result.draft.description).toBe('Bazos-only description');
+    expect(result.draft.media).toEqual([mediaOverride]);
   });
 
   it('requires explicit confirmation before queueing publish', async () => {
