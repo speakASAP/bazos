@@ -46,6 +46,15 @@ const mediaOverride = {
   position: 1,
 };
 
+const mediaFromUrl = {
+  id: 'https://cdn.example.test/product.jpg',
+  url: 'https://cdn.example.test/product.jpg',
+  thumbnailUrl: 'https://cdn.example.test/product.jpg',
+  altText: undefined,
+  title: undefined,
+  position: 0,
+};
+
 const categoryMapping = {
   id: '44444444-4444-4444-8444-444444444444',
   bazosCategory: 'elektro',
@@ -152,7 +161,7 @@ describe('BazosCatalogSellActionService', () => {
       description: 'Bazos-only description',
       price: 1500,
       category: 'elektro',
-      media: [mediaOverride],
+      mediaUrls: ['https://cdn.example.test/product.jpg'],
     });
 
     expect(ads.createDraftFromCatalog).not.toHaveBeenCalled();
@@ -163,7 +172,7 @@ describe('BazosCatalogSellActionService', () => {
         description: 'Bazos-only description',
         price: 1500,
         publishStatus: 'draft',
-        lastPolicyCheck: expect.objectContaining({ draftOptions: expect.objectContaining({ media: [mediaOverride] }) }),
+        lastPolicyCheck: expect.objectContaining({ draftOptions: expect.objectContaining({ media: [mediaFromUrl] }) }),
       }),
     }));
     expect(result.draft.id).toBe(draft.id);

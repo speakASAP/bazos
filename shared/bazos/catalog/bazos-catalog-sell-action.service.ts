@@ -104,6 +104,7 @@ export class BazosCatalogSellActionService {
   }
 
   private async findOrCreateDraft(userId: string, productId: string, dto: PrepareCatalogSellActionDto) {
+    const media = this.mediaFromDto(dto);
     const existing = await this.prisma.bazosAd.findFirst({
       where: {
         productId,
@@ -127,7 +128,7 @@ export class BazosCatalogSellActionService {
           publishStatus: 'draft',
           challengeState: null,
           bazosAdId: null,
-          lastPolicyCheck: this.buildDraftOptions(dto.rubric, dto.priceOption, dto.media) as any,
+          lastPolicyCheck: this.buildDraftOptions(dto.rubric, dto.priceOption, media) as any,
         },
         include: { identity: true },
       });
@@ -144,8 +145,18 @@ export class BazosCatalogSellActionService {
       category: dto.category,
       location: dto.location,
       stockQuantity: dto.stockQuantity ?? 0,
-      media: dto.media,
+      media,
     });
+  }
+
+  private mediaFromDto(dto: PrepareCatalogSellActionDto) {
+    if (Array.isArray(dto.media) && dto.media.length) return dto.media;
+    return (Array.isArray(dto.mediaUrls) ? dto.mediaUrls : []).map((url, index) => ({
+      id: url,
+      url,
+      thumbnailUrl: url,
+      position: index,
+    }));
   }
 
   private async findDraftForProduct(adId: string, productId: string, userId: string) {

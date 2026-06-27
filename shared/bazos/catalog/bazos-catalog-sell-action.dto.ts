@@ -83,6 +83,11 @@ export class PrepareCatalogSellActionDto {
   @ValidateNested({ each: true })
   @Type(() => BazosCatalogMediaOverrideDto)
   media?: BazosCatalogMediaOverrideDto[];
+
+  @IsOptional()
+  @IsArray()
+  @IsUrl({ protocols: ['http', 'https'], require_protocol: true }, { each: true })
+  mediaUrls?: string[];
 }
 
 export class ConfirmCatalogSellActionDto extends EnqueueBazosPublishDto {
