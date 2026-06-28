@@ -2141,12 +2141,13 @@ export const appScript = `
       ], identityRows, 'Pro tento účet zatím není připojena žádná Bazoš identita.', settingsLink('Připojit')) +
       '</div><div class="data-panel"><h2>Moje inzeráty v přehledu</h2>' +
       tableOnly([
-        { label: 'Inzerát', render: (r) => '<strong>' + cell(r.title || r.name || r.productName || r.id) + '</strong><small class="card-note">' + cell(r.category || r.categoryName || r.bazosCategory || r.productId || '') + '</small>' },
+        { label: 'Inzerát', render: (r) => '<button class="link-button" data-open-ad="' + cell(r.id) + '" type="button"><strong>' + cell(r.title || r.name || r.productName || r.id) + '</strong></button><small class="card-note">' + cell(r.category || r.categoryName || r.bazosCategory || r.productId || '') + '</small>' },
         { label: 'Stav', render: (r) => '<span class="status ' + statusClass(r.publishStatus || r.status || r.bazosStatus) + '">' + statusLabel(r.publishStatus || r.status || r.bazosStatus || 'draft') + '</span>' },
         { label: 'Odkaz', render: (r) => bazosAdUrl(r) ? '<a class="table-link" href="' + escapeHtml(bazosAdUrl(r)) + '" target="_blank" rel="noopener">Zobrazit na Bazoši</a>' : '<button class="link-button" data-nav-view="details" type="button">Otevřít v mých inzerátech</button>' },
       ], recentAds, 'Pro tento účet nebyly vráceny žádné inzeráty.') +
       '</div></div>';
     bindContentNavButtons();
+    content.querySelectorAll('[data-open-ad]').forEach((button) => button.addEventListener('click', () => openDraftDetails(button.dataset.openAd)));
     bindIdentityWizardButtons();
   }
 
