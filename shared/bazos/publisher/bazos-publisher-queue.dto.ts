@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsBoolean, IsDateString, IsIn, IsInt, IsNotEmpty, IsOptional, IsString, IsUUID, Length, Min, ValidateNested } from 'class-validator';
+import { IsBoolean, IsDateString, IsIn, IsInt, IsNotEmpty, IsObject, IsOptional, IsString, IsUUID, Length, Min } from 'class-validator';
 import { REVIEW_STATE } from '../identity/bazos-identity.types';
 
 const CHALLENGE_STATES = Object.values(REVIEW_STATE).filter((state) => state !== REVIEW_STATE.CLEAR);
@@ -37,22 +37,32 @@ export class ContentPolicyEvidenceDto {
 }
 
 export class PublishEvidenceDto {
-  @ValidateNested()
-  @Type(() => PublicDuplicateEvidenceDto)
+  @IsObject()
   publicDuplicateCheck: PublicDuplicateEvidenceDto;
 
-  @ValidateNested()
-  @Type(() => ContentPolicyEvidenceDto)
+  @IsObject()
   contentPolicy: ContentPolicyEvidenceDto;
 }
 
-export class EnqueueBazosPublishDto extends PublishEvidenceDto {
+export class EnqueueBazosPublishDto {
+  @IsObject()
+  publicDuplicateCheck: PublicDuplicateEvidenceDto;
+
+  @IsObject()
+  contentPolicy: ContentPolicyEvidenceDto;
+
   @IsOptional()
   @IsIn(PRICE_OPTIONS)
   priceOption?: typeof PRICE_OPTIONS[number];
 }
 
-export class ClaimBazosPublishDto extends PublishEvidenceDto {
+export class ClaimBazosPublishDto {
+  @IsObject()
+  publicDuplicateCheck: PublicDuplicateEvidenceDto;
+
+  @IsObject()
+  contentPolicy: ContentPolicyEvidenceDto;
+
   @IsOptional()
   @IsIn(PRICE_OPTIONS)
   priceOption?: typeof PRICE_OPTIONS[number];
