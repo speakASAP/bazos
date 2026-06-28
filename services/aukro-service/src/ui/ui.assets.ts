@@ -1496,7 +1496,7 @@ export const appScript = `
   function bazosAdUrl(ad) {
     if (!ad.bazosAdId) return '';
     const value = String(ad.bazosAdId).trim();
-    if (/^https?:\/\//i.test(value)) return value;
+    if (/^https?:\\/\\//i.test(value)) return value;
     return 'https://www.bazos.cz/inzerat/' + encodeURIComponent(value) + '/';
   }
 
@@ -1866,7 +1866,7 @@ export const appScript = `
 
   function bazosIdFromInput(value) {
     const text = String(value || '').trim();
-    if (/^https?:\/\//i.test(text)) return text;
+    if (/^https?:\\/\\//i.test(text)) return text;
     const match = text.match(/(?:inzerat\\/)?([0-9]{5,})/);
     return match ? match[1] : text;
   }
