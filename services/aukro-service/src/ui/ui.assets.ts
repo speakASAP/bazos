@@ -1546,6 +1546,42 @@ export const appScript = `
     return '<span class="policy-chip ' + escapeHtml(tone || 'wait') + '" title="' + cell(title || label) + '">' + escapeHtml(label) + '</span>';
   }
 
+  function latestAttemptForAd(queue, ad) {
+    const id = String(ad?.id || '');
+    return asArray({ queue }, ['queue'])
+      .filter((item) => String(item?.adId || item?.ad?.id || '') === id)
+      .sort((a, b) => String(b.updatedAt || b.createdAt || '').localeCompare(String(a.updatedAt || a.createdAt || '')))[0] || null;
+  }
+
+  function activeAttemptForAd(queue, ad) {
+    const attempt = latestAttemptForAd(queue, ad);
+    const status = String(attempt?.status || '').toLowerCase();
+    return ['queued', 'submitting'].includes(status) ? attempt : null;
+  }
+
+  function queueAttemptNote(attempt) {
+    if (!attempt) return '';
+    const status = String(attempt.status || '').toLowerCase();
+    if (status === 'queued') {
+      return attempt.notBefore
+        ? 'Čeká ve frontě na worker po ' + cell(attempt.notBefore)
+        : 'Čeká ve frontě na worker.';
+    }
+    if (status === 'submitting') return 'Worker nebo ruční odeslání právě zpracovává inzerát.';
+    return statusLabel(status);
+  }
+
+  function publishActionMarkup(ad, queue) {
+    const activeAttempt = activeAttemptForAd(queue, ad);
+    const detail = canEditAd(ad)
+      ? '<button class="button button-secondary" data-edit-ad="' + cell(ad.id) + '" type="button">Upravit</button>'
+      : '<button class="button button-secondary" data-open-ad="' + cell(ad.id) + '" type="button">Detail</button>';
+    if (activeAttempt) {
+      return '<div class="row-actions">' + detail + '<span class="status wait" title="' + cell(queueAttemptNote(activeAttempt)) + '">' + statusLabel(activeAttempt.status) + '</span></div>';
+    }
+    return '<div class="row-actions">' + detail + '<button class="button button-primary" data-publish="' + cell(ad.id) + '" type="button">Publikovat</button></div>';
+  }
+
   function policySummaryChips(ad) {
     const check = ad?.lastPolicyCheck || {};
     const failures = Array.isArray(check.failures) ? check.failures : [];
@@ -1795,13 +1831,29 @@ export const appScript = `
     }
   }
 
+  function renderQueueResult(result) {
+    const attempt = result?.attempt || {};
+    const queued = result?.queued === true;
+    const heading = queued ? 'Inzerát je ve frontě' : 'Publikování nebylo zařazeno';
+    const note = queued
+      ? queueAttemptNote(attempt) + ' Skutečné Bazoš ID se doplní až po úspěšném odeslání přes worker nebo ruční handoff.'
+      : (result?.decision?.failures || []).map((failure) => policyGateLabel(failure.gate)).join(', ') || 'Zkontrolujte pravidla před dalším pokusem.';
+    content.innerHTML = '<div class="data-panel panel-stack"><div><h2>' + escapeHtml(heading) + '</h2><p class="card-note">' + cell(note) + '</p></div><div class="summary-grid">' +
+      stat('Stav', statusLabel(attempt.status || (queued ? 'queued' : 'blocked')), attempt.id ? 'Pokus ' + attempt.id : '') +
+      stat('Nejdříve po', attempt.notBefore || 'Ihned', 'Cadence ochrana proti příliš častému publikování') +
+      stat('Kontrola pravidel', result?.decision?.allowed === true ? 'Splněna' : 'Vyžaduje kontrolu', result?.decision?.failures?.length ? result.decision.failures.length + ' blokací' : 'Bez blokací') +
+      '</div><div class="flow-actions"><button class="button button-primary" data-nav-view="details" type="button">Zpět na moje inzeráty</button><button class="button button-secondary" data-refresh-client type="button">Obnovit stav</button></div></div>';
+    bindContentNavButtons();
+    content.querySelector('[data-refresh-client]')?.addEventListener('click', () => renderClient());
+  }
+
   async function enqueuePublish(id) {
     const confirmed = window.confirm('Potvrďte, že jste ručně zkontrolovali duplicitu a obsah inzerátu. Žádost se odešle pouze do hlídané fronty a backend znovu vyhodnotí pravidla.');
     if (!confirmed) return;
     content.innerHTML = '<div class="data-panel empty-state">Odesílá se žádost do hlídané publikační fronty...</div>';
     try {
       const result = await request('/api/bazos/ads/' + encodeURIComponent(id) + '/publish', { method: 'POST', body: JSON.stringify(manualEvidence()) });
-      content.innerHTML = '<div class="data-panel"><h2>Výsledek fronty</h2><pre>' + escapeHtml(JSON.stringify(result, null, 2)) + '</pre></div>';
+      renderQueueResult(result);
     } catch (error) {
       content.innerHTML = '<div class="data-panel empty-state">' + settingsErrorMarkup(error.message) + '</div>';
     }
@@ -1992,7 +2044,7 @@ export const appScript = `
       { label: 'Odkaz', render: (r) => bazosAdUrl(r) ? '<a class="table-link" href="' + escapeHtml(bazosAdUrl(r)) + '" target="_blank" rel="noopener">Zobrazit</a>' : cell('Zatím bez Bazoš ID') },
       { label: 'Aktualizováno', render: (r) => cell(r.updatedAt || r.createdAt) },
       { label: 'Kontroly', render: (r) => policySummaryChips(r) },
-      { label: 'Akce', render: (r) => '<div class="row-actions">' + (canEditAd(r) ? '<button class="button button-secondary" data-edit-ad="' + cell(r.id) + '" type="button">Upravit</button>' : '<button class="button button-secondary" data-open-ad="' + cell(r.id) + '" type="button">Detail</button>') + '<button class="button button-primary" data-publish="' + cell(r.id) + '" type="button">Publikovat</button></div>' },
+      { label: 'Akce', render: (r) => publishActionMarkup(r, data.queue) },
     ], data.ads, 'Pro tento účet nebyly vráceny žádné inzeráty.');
     content.querySelectorAll('[data-open-ad], [data-edit-ad]').forEach((button) => button.addEventListener('click', () => openDraftDetails(button.dataset.openAd || button.dataset.editAd)));
     content.querySelectorAll('[data-publish]').forEach((button) => button.addEventListener('click', () => enqueuePublish(button.dataset.publish)));
