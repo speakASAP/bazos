@@ -180,6 +180,24 @@ export class BazosPublisherQueueService {
     return { claimed: false, reason: 'no_due_attempts' };
   }
 
+  async submissionForAttempt(attemptId: string, userId: string) {
+    const attempt = await this.prisma.bazosPublishAttempt.findFirst({
+      where: { id: attemptId, identity: { userId } },
+      include: { ad: true, identity: true },
+    });
+    if (!attempt) throw new NotFoundException('Bazos publish attempt not found');
+    if (!['queued', 'submitting'].includes(attempt.status)) {
+      throw new BadRequestException(`Publish attempt is not active: ${attempt.status}`);
+    }
+    if (!attempt.ad || !attempt.ad.isActive) {
+      throw new BadRequestException('Publish attempt has no active ad to submit');
+    }
+    return {
+      attempt,
+      submission: this.buildSubmissionPacket(attempt),
+    };
+  }
+
   async recordResult(attemptId: string, userId: string, dto: RecordBazosPublishResultDto) {
     const attempt = await this.prisma.bazosPublishAttempt.findFirst({
       where: { id: attemptId, identity: { userId } },

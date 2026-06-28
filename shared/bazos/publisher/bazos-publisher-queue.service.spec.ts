@@ -176,6 +176,26 @@ describe('BazosPublisherQueueService', () => {
     expect(result.submission.ad.media).toEqual([{ id: 'media-1', url: 'https://cdn.example.test/product.jpg', thumbnailUrl: 'https://cdn.example.test/product-thumb.jpg', altText: 'Product photo', title: 'Front view', position: 1 }]);
   });
 
+  it('returns a submission packet for an active attempt without changing status', async () => {
+    const prisma = makePrisma();
+    prisma.bazosPublishAttempt.findFirst = jest.fn().mockResolvedValue({
+      id: 'attempt-1',
+      status: 'submitting',
+      identityId: 'identity-1',
+      adId: 'ad-1',
+      ad,
+      identity,
+    });
+    const { service } = makeService(prisma);
+
+    const result = await service.submissionForAttempt('attempt-1', 'user-1');
+
+    expect(result.submission.requiresOperatorBrowser).toBe(true);
+    expect(result.submission.serverSideBazosRequestsAllowed).toBe(false);
+    expect(result.submission.ad.title).toBe('Telefon test');
+    expect(prisma.bazosPublishAttempt.update).not.toHaveBeenCalled();
+  });
+
   it('records successful publish metadata, active count, and category cadence', async () => {
     const prisma = makePrisma();
     prisma.bazosPublishAttempt.findFirst = jest.fn().mockResolvedValue({

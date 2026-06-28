@@ -28,6 +28,11 @@ export class BazosPublisherQueueController {
     return this.queue.claimNext(req.user.id, dto);
   }
 
+  @Get('publish-queue/attempts/:id/submission')
+  submission(@Param('id') id: string, @Request() req) {
+    return this.queue.submissionForAttempt(id, req.user.id);
+  }
+
   @Post('publish-queue/attempts/:id/result')
   recordResult(@Param('id') id: string, @Request() req, @Body() dto: RecordBazosPublishResultDto) {
     return this.queue.recordResult(id, req.user.id, dto);
