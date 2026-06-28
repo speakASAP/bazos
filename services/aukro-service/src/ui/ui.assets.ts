@@ -2272,7 +2272,7 @@ export const appScript = `
       values.description || '',
       '',
       'Původní Bazoš odkaz: ' + (values.bazosUrl || ''),
-    ].join('\n');
+    ].join('\\n');
   }
 
   function preparedBazosUpdateText(form, originalAd, originalOptions) {
