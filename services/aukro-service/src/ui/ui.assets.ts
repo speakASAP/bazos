@@ -1500,6 +1500,10 @@ export const appScript = `
     return 'https://www.bazos.cz/inzerat/' + encodeURIComponent(value) + '/';
   }
 
+  function bazosManageUrl() {
+    return 'https://www.bazos.cz/moje-inzeraty.php';
+  }
+
   function draftOptions(ad) {
     const options = ad?.lastPolicyCheck?.draftOptions || ad?.lastPolicyCheck?.submissionOptions || {};
     return {
@@ -1595,6 +1599,10 @@ export const appScript = `
           ? '<button class="button button-primary" data-claim-attempt="' + cell(activeAttempt.id) + '" type="button">Odeslat přes worker</button>'
           : '<span class="status wait" title="' + cell(queueAttemptNote(activeAttempt)) + '">' + statusLabel(activeAttempt.status) + '</span>');
       return '<div class="row-actions">' + detail + action + '</div><small class="card-note">' + cell(queueAttemptNote(activeAttempt)) + '</small>';
+    }
+    if (isPublishedAd(ad)) {
+      const manageUrl = escapeHtml(bazosManageUrl());
+      return '<div class="row-actions">' + detail + '<a class="button button-secondary" href="' + manageUrl + '" target="_blank" rel="noopener">Upravit na Bazoši</a><a class="button button-primary" href="' + manageUrl + '" target="_blank" rel="noopener">Smazat z Bazoše</a></div>';
     }
     return '<div class="row-actions">' + detail + '<button class="button button-primary" data-publish="' + cell(ad.id) + '" type="button">Publikovat</button></div>';
   }
