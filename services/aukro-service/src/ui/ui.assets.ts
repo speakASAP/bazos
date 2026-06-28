@@ -1514,7 +1514,12 @@ export const appScript = `
   }
 
   function canEditAd(ad) {
-    return publishStatus(ad) === 'draft';
+    const status = publishStatus(ad);
+    return status === 'draft' || status === 'published' || status === 'active' || Boolean(ad.bazosAdId);
+  }
+
+  function needsBazosUpdate(ad) {
+    return Boolean(ad?.lastPolicyCheck?.pendingBazosUpdate?.required);
   }
 
   function manualEvidence() {
@@ -1602,7 +1607,8 @@ export const appScript = `
     }
     if (isPublishedAd(ad)) {
       const manageUrl = escapeHtml(bazosManageUrl());
-      return '<div class="row-actions">' + detail + '<a class="button button-secondary" href="' + manageUrl + '" target="_blank" rel="noopener">Upravit na Bazoši</a><a class="button button-primary" href="' + manageUrl + '" target="_blank" rel="noopener">Smazat z Bazoše</a></div>';
+      const updateLabel = needsBazosUpdate(ad) ? 'Dokončit aktualizaci na Bazoši' : 'Aktualizovat na Bazoši';
+      return '<div class="row-actions"><button class="button button-secondary" data-edit-ad="' + cell(ad.id) + '" type="button">Upravit u nás</button><button class="button button-primary" data-bazos-update="' + cell(ad.id) + '" type="button">' + updateLabel + '</button><a class="button button-secondary" href="' + manageUrl + '" target="_blank" rel="noopener">Upravit na Bazoši</a><a class="button button-secondary" href="' + manageUrl + '" target="_blank" rel="noopener">Smazat z Bazoše</a></div>';
     }
     return '<div class="row-actions">' + detail + '<button class="button button-primary" data-publish="' + cell(ad.id) + '" type="button">Publikovat</button></div>';
   }
@@ -2163,6 +2169,7 @@ export const appScript = `
     ], data.ads, 'Pro tento účet nebyly vráceny žádné inzeráty.');
     content.querySelectorAll('[data-open-ad], [data-edit-ad]').forEach((button) => button.addEventListener('click', () => openDraftDetails(button.dataset.openAd || button.dataset.editAd)));
     content.querySelectorAll('[data-publish]').forEach((button) => button.addEventListener('click', () => enqueuePublish(button.dataset.publish)));
+    content.querySelectorAll('[data-bazos-update]').forEach((button) => button.addEventListener('click', () => openBazosUpdateHandoff(button.dataset.bazosUpdate)));
     content.querySelectorAll('[data-claim-attempt]').forEach((button) => button.addEventListener('click', () => claimDueAttempt(button.dataset.claimAttempt)));
     content.querySelectorAll('[data-open-submission]').forEach((button) => button.addEventListener('click', () => openSubmission(button.dataset.openSubmission)));
   }
@@ -2170,8 +2177,12 @@ export const appScript = `
   function renderDraftEditor(ad) {
     const options = draftOptions(ad);
     const editable = canEditAd(ad);
+    const published = isPublishedAd(ad);
     const rubric = options.rubric || inferRubricForCategory(ad.category);
-    content.innerHTML = '<form class="form-panel panel-stack" id="edit-draft-form"><div><h2>' + (editable ? 'Upravit inzerát' : 'Detail inzerátu') + '</h2><p class="card-note">Aktuální stav: <span class="status ' + statusClass(ad.publishStatus || ad.status || ad.bazosStatus) + '">' + statusLabel(ad.publishStatus || ad.status || ad.bazosStatus || 'draft') + '</span></p></div><div class="form-grid">' +
+    const editorNote = published
+      ? 'Změny se nejdříve uloží u nás. Potom pokračujte tlačítkem Aktualizovat na Bazoši a přeneste nové hodnoty do Bazoš.cz.'
+      : 'Změny se uloží do konceptu před publikováním.';
+    content.innerHTML = '<form class="form-panel panel-stack" id="edit-draft-form"><div><h2>' + (editable ? 'Upravit inzerát' : 'Detail inzerátu') + '</h2><p class="card-note">Aktuální stav: <span class="status ' + statusClass(ad.publishStatus || ad.status || ad.bazosStatus) + '">' + statusLabel(ad.publishStatus || ad.status || ad.bazosStatus || 'draft') + '</span></p><p class="card-note">' + editorNote + '</p></div><div class="form-grid">' +
       '<label>Cena v Kč<input name="price" type="number" min="0" step="1" value="' + escapeHtml(ad.price ?? 0) + '"' + (editable ? '' : ' disabled') + '></label>' +
       '<label>Volba ceny<select name="priceOption"' + (editable ? '' : ' disabled') + '>' + priceOptionOptions(options.priceOption) + '</select></label>' +
       '<label>Rubrika<select name="rubric" data-bazos-rubric required' + (editable ? '' : ' disabled') + '>' + rubricOptions(rubric) + '</select></label>' +
@@ -2181,10 +2192,11 @@ export const appScript = `
       '<label class="wide">Popis<textarea name="description"' + (editable ? '' : ' disabled') + '>' + escapeHtml(ad.description || '') + '</textarea></label>' +
       '<label>Lokalita<input name="location" maxlength="200" value="' + escapeHtml(ad.location || '') + '"' + (editable ? '' : ' disabled') + '></label>' +
       '<label>Sklad<input name="stockQuantity" type="number" min="0" step="1" value="' + escapeHtml(ad.stockQuantity ?? 0) + '"' + (editable ? '' : ' disabled') + '></label>' +
-      '</div><p class="form-message" data-form-message>' + (editable ? '' : 'Publikované nebo rozpracované mimo koncept nelze upravovat.') + '</p><div class="row-actions"><button class="button button-secondary" data-back-details type="button">Zpět na moje inzeráty</button>' + (editable ? '<button class="button button-primary" type="submit">Uložit změny</button>' : '') + '</div></form>';
+      '</div><p class="form-message" data-form-message>' + (editable ? '' : 'Tento stav zatím nelze upravovat u nás.') + '</p><div class="row-actions"><button class="button button-secondary" data-back-details type="button">Zpět na moje inzeráty</button>' + (editable ? '<button class="button button-primary" type="submit">' + (published ? 'Uložit změny u nás' : 'Uložit změny') + '</button>' : '') + (published ? '<button class="button button-secondary" data-bazos-update="' + cell(ad.id) + '" type="button">Aktualizovat na Bazoši</button><a class="button button-secondary" href="' + escapeHtml(bazosManageUrl()) + '" target="_blank" rel="noopener">Upravit na Bazoši</a>' : '') + '</div></form>';
     const form = document.getElementById('edit-draft-form');
     bindBazosCategoryControls(form);
     content.querySelector('[data-back-details]')?.addEventListener('click', () => renderClient());
+    content.querySelector('[data-bazos-update]')?.addEventListener('click', () => openBazosUpdateHandoff(ad.id));
     if (editable) form.addEventListener('submit', (event) => saveDraftEdits(event, ad, options));
   }
 
@@ -2196,6 +2208,36 @@ export const appScript = `
     } catch (error) {
       content.innerHTML = '<div class="data-panel empty-state">' + settingsErrorMarkup(error.message) + '</div>';
     }
+  }
+
+  async function openBazosUpdateHandoff(id) {
+    content.innerHTML = '<div class="data-panel empty-state">Načítají se podklady pro aktualizaci...</div>';
+    try {
+      const ad = await request('/api/bazos/ads/' + encodeURIComponent(id));
+      renderBazosUpdateHandoff(ad);
+    } catch (error) {
+      content.innerHTML = '<div class="data-panel empty-state">' + settingsErrorMarkup(error.message) + '</div>';
+    }
+  }
+
+  function renderBazosUpdateHandoff(ad) {
+    const options = draftOptions(ad);
+    const targetUrl = bazosManageUrl();
+    content.innerHTML = '<div class="form-panel panel-stack"><div><h2>Aktualizovat inzerát na Bazoši</h2><p class="card-note">Hodnoty níže jsou uložené u nás. Otevřete správu Bazoš.cz v ověřeném prohlížeči, vyberte tento inzerát a přepište ho podle připravených hodnot. Pokud Bazoš požádá o SMS, CAPTCHA nebo jinou kontrolu, dokončete ji pouze na Bazoš.cz.</p></div>' +
+      '<div class="flow-actions"><a class="button button-primary" href="' + escapeHtml(targetUrl) + '" target="_blank" rel="noopener">Otevřít správu Bazoš</a><button class="button button-secondary" data-edit-ad="' + cell(ad.id) + '" type="button">Zpět do editoru u nás</button><button class="button button-secondary" data-nav-view="details" type="button">Moje inzeráty</button></div>' +
+      '<div class="form-grid">' +
+        submissionField('Bazoš ID nebo odkaz', bazosAdUrl(ad) || ad.bazosAdId || '') +
+        submissionField('Heslo pro úpravu/smazání', ad.bazosEditPassword || '') +
+        submissionField('Název', ad.title || '') +
+        submissionField('Cena', ad.price ? String(ad.price) + ' Kč' : '') +
+        submissionField('Volba ceny', options.priceOption || '') +
+        submissionField('Rubrika', options.rubric || inferRubricForCategory(ad.category)) +
+        submissionField('Kategorie', ad.category || '') +
+        submissionField('Lokalita', ad.location || '') +
+        '<label class="wide">Popis<textarea readonly>' + escapeHtml(ad.description || '') + '</textarea></label>' +
+      '</div><p class="form-message">' + (needsBazosUpdate(ad) ? 'Změny jsou uložené u nás a čekají na přenesení na Bazoš.cz.' : 'Podklady odpovídají aktuálně uloženému stavu u nás.') + '</p></div>';
+    bindContentNavButtons();
+    content.querySelector('[data-edit-ad]')?.addEventListener('click', () => openDraftDetails(ad.id));
   }
 
   async function saveDraftEdits(event, originalAd, originalOptions) {
@@ -2218,7 +2260,7 @@ export const appScript = `
       const updated = await request('/api/bazos/ads/' + encodeURIComponent(originalAd.id), { method: 'PATCH', body: JSON.stringify(payload) });
       renderDraftEditor(updated);
       const savedMessage = content.querySelector('[data-form-message]');
-      if (savedMessage) savedMessage.textContent = 'Změny byly uloženy.';
+      if (savedMessage) savedMessage.textContent = isPublishedAd(updated) ? 'Změny byly uloženy u nás. Pokračujte aktualizací na Bazoši.' : 'Změny byly uloženy.';
     } catch (error) {
       if (formMessage) formMessage.innerHTML = settingsErrorMarkup(error.message);
     }

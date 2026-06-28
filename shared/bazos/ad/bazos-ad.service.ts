@@ -65,12 +65,16 @@ export class BazosAdService {
   }
 
   /**
-   * Update draft content. Only drafts may be edited.
+   * Update ad content in the local workspace.
+   * Drafts remain directly editable. Published ads may be changed locally so
+   * operators can then apply the prepared update through the verified Bazoš flow.
    */
   async updateDraft(id: string, userId: string, dto: UpdateBazosAdDraftDto) {
     const ad = await this.findByIdForUser(id, userId);
-    if (ad.publishStatus !== 'draft') {
-      throw new BadRequestException('Only draft ads can be edited');
+    const status = String(ad.publishStatus || 'draft').toLowerCase();
+    const editableStatuses = ['draft', 'published', 'active'];
+    if (!editableStatuses.includes(status) && !ad.bazosAdId) {
+      throw new BadRequestException('Only draft or published ads can be edited');
     }
 
     return this.prisma.bazosAd.update({
@@ -82,7 +86,7 @@ export class BazosAdService {
         category: dto.category,
         location: dto.location,
         stockQuantity: dto.stockQuantity,
-        ...(dto.rubric || dto.priceOption || dto.media ? { lastPolicyCheck: this.buildDraftOptions(dto.rubric, dto.priceOption, dto.media) as any } : {}),
+        ...(dto.rubric || dto.priceOption || dto.media || ad.bazosAdId ? { lastPolicyCheck: this.buildUpdatedPolicyState(ad, dto) as any } : {}),
       },
     });
   }
@@ -190,6 +194,26 @@ export class BazosAdService {
         priceOption: priceOption || 'fixed_price',
         media: this.normalizeMediaOverrides(media),
       },
+    };
+  }
+
+  private buildUpdatedPolicyState(ad: any, dto: UpdateBazosAdDraftDto) {
+    const current = ad?.lastPolicyCheck && typeof ad.lastPolicyCheck === 'object' ? ad.lastPolicyCheck : {};
+    const currentOptions = (current as any).draftOptions || (current as any).submissionOptions || {};
+    return {
+      ...(current as any),
+      draftOptions: {
+        rubric: dto.rubric || currentOptions.rubric || null,
+        priceOption: dto.priceOption || currentOptions.priceOption || 'fixed_price',
+        media: this.normalizeMediaOverrides(dto.media || currentOptions.media),
+      },
+      ...(ad?.bazosAdId ? {
+        pendingBazosUpdate: {
+          required: true,
+          savedAt: new Date().toISOString(),
+          bazosAdId: ad.bazosAdId,
+        },
+      } : {}),
     };
   }
 
