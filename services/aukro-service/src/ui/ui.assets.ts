@@ -2209,7 +2209,7 @@ export const appScript = `
     const published = isPublishedAd(ad);
     const rubric = options.rubric || inferRubricForCategory(ad.category);
     const editorNote = published
-      ? 'Změny se nejdříve uloží u nás. Potom pokračujte tlačítkem Obnovit na Bazoš.cz a přeneste nové hodnoty do Bazoš.cz.'
+      ? 'Tlačítko Obnovit na Bazoš.cz nejdříve uloží aktuální hodnoty u nás a potom otevře podklady pro přenesení na Bazoš.cz.'
       : 'Změny se uloží do konceptu před publikováním.';
     content.innerHTML = '<form class="form-panel panel-stack" id="edit-draft-form"><div><h2>' + (editable ? 'Upravit inzerát' : 'Detail inzerátu') + '</h2><p class="card-note">Aktuální stav: <span class="status ' + statusClass(ad.publishStatus || ad.status || ad.bazosStatus) + '">' + statusLabel(ad.publishStatus || ad.status || ad.bazosStatus || 'draft') + '</span></p><p class="card-note">' + editorNote + '</p></div><div class="form-grid">' +
       '<label>Cena v Kč<input name="price" type="number" min="0" step="1" value="' + escapeHtml(ad.price ?? 0) + '"' + (editable ? '' : ' disabled') + '></label>' +
@@ -2221,12 +2221,16 @@ export const appScript = `
       '<label class="wide">Popis<textarea name="description"' + (editable ? '' : ' disabled') + '>' + escapeHtml(ad.description || '') + '</textarea></label>' +
       '<label>Lokalita<input name="location" maxlength="200" value="' + escapeHtml(ad.location || '') + '"' + (editable ? '' : ' disabled') + '></label>' +
       '<label>Sklad<input name="stockQuantity" type="number" min="0" step="1" value="' + escapeHtml(ad.stockQuantity ?? 0) + '"' + (editable ? '' : ' disabled') + '></label>' +
-      '</div><p class="form-message" data-form-message>' + (editable ? '' : 'Tento stav zatím nelze upravovat u nás.') + '</p><div class="row-actions"><button class="button button-secondary" data-back-details type="button">Zpět na moje inzeráty</button>' + (editable ? '<button class="button button-primary" type="submit">' + (published ? 'Uložit změny u nás' : 'Uložit změny') + '</button>' : '') + (published ? '<button class="button button-secondary" data-bazos-update="' + cell(ad.id) + '" type="button">Obnovit na Bazoš.cz</button><a class="button button-secondary" href="' + escapeHtml(bazosManageUrl(ad)) + '" target="_blank" rel="noopener">Upravit na Bazoši</a>' : '') + '</div></form>';
+      '</div><p class="form-message" data-form-message>' + (editable ? '' : 'Tento stav zatím nelze upravovat u nás.') + '</p><div class="row-actions"><button class="button button-secondary" data-back-details type="button">Zpět na moje inzeráty</button>' + (editable && !published ? '<button class="button button-primary" type="submit">Uložit změny</button>' : '') + (published ? '<button class="button button-primary" data-save-and-bazos-update type="button">Obnovit na Bazoš.cz</button><a class="button button-secondary" href="' + escapeHtml(bazosManageUrl(ad)) + '" target="_blank" rel="noopener">Upravit na Bazoši</a>' : '') + '</div></form>';
     const form = document.getElementById('edit-draft-form');
     bindBazosCategoryControls(form);
     content.querySelector('[data-back-details]')?.addEventListener('click', () => renderClient());
-    content.querySelector('[data-bazos-update]')?.addEventListener('click', () => openBazosUpdateHandoff(ad.id));
-    if (editable) form.addEventListener('submit', (event) => saveDraftEdits(event, ad, options));
+    content.querySelector('[data-save-and-bazos-update]')?.addEventListener('click', () => saveAndOpenBazosUpdateHandoff(form, ad, options));
+    if (editable) form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      if (published) return saveAndOpenBazosUpdateHandoff(form, ad, options);
+      return saveDraftEditsFromForm(form, ad, options);
+    });
   }
 
   async function openDraftDetails(id) {
@@ -2269,10 +2273,9 @@ export const appScript = `
     content.querySelector('[data-edit-ad]')?.addEventListener('click', () => openDraftDetails(ad.id));
   }
 
-  async function saveDraftEdits(event, originalAd, originalOptions) {
-    event.preventDefault();
-    const values = Object.fromEntries(new FormData(event.currentTarget).entries());
-    const payload = {
+  function adPayloadFromForm(form, originalOptions) {
+    const values = Object.fromEntries(new FormData(form).entries());
+    return {
       title: values.title,
       description: values.description || undefined,
       price: Number(values.price || 0),
@@ -2283,16 +2286,38 @@ export const appScript = `
       stockQuantity: values.stockQuantity ? Number(values.stockQuantity) : 0,
       media: originalOptions.media || [],
     };
+  }
+
+  async function saveDraftEditsFromForm(form, originalAd, originalOptions, renderAfterSave = true) {
+    const payload = adPayloadFromForm(form, originalOptions);
     const formMessage = content.querySelector('[data-form-message]');
     if (formMessage) formMessage.textContent = 'Ukládají se změny...';
     try {
       const updated = await request('/api/bazos/ads/' + encodeURIComponent(originalAd.id), { method: 'PATCH', body: JSON.stringify(payload) });
-      renderDraftEditor(updated);
-      const savedMessage = content.querySelector('[data-form-message]');
-      if (savedMessage) savedMessage.textContent = isPublishedAd(updated) ? 'Změny byly uloženy u nás. Pokračujte obnovením na Bazoš.cz.' : 'Změny byly uloženy.';
+      if (renderAfterSave) {
+        renderDraftEditor(updated);
+        const savedMessage = content.querySelector('[data-form-message]');
+        if (savedMessage) savedMessage.textContent = isPublishedAd(updated) ? 'Změny byly uloženy u nás. Pokračujte obnovením na Bazoš.cz.' : 'Změny byly uloženy.';
+      }
+      return updated;
     } catch (error) {
       if (formMessage) formMessage.innerHTML = settingsErrorMarkup(error.message);
+      throw error;
     }
+  }
+
+  async function saveAndOpenBazosUpdateHandoff(form, originalAd, originalOptions) {
+    try {
+      const updated = await saveDraftEditsFromForm(form, originalAd, originalOptions, false);
+      renderBazosUpdateHandoff(updated);
+    } catch (error) {
+      // saveDraftEditsFromForm already renders the form error.
+    }
+  }
+
+  async function saveDraftEdits(event, originalAd, originalOptions) {
+    event.preventDefault();
+    return saveDraftEditsFromForm(event.currentTarget, originalAd, originalOptions);
   }
 
   function renderPublish(data) {
