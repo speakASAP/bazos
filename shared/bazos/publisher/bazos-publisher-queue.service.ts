@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { randomBytes } from 'crypto';
 import { PrismaService } from '../../database/prisma.service';
 import { LoggerService } from '../../logger/logger.service';
 import { BazosIdentityService } from '../identity/bazos-identity.service';
@@ -13,6 +14,7 @@ import {
 
 const ACTIVE_ATTEMPT_STATUSES = ['queued', 'submitting'];
 const TERMINAL_ATTEMPT_STATUSES = ['submitted', 'challenge_required', 'failed', 'policy_blocked'];
+const BAZOS_EDIT_PASSWORD_PREFIX = 'bz';
 
 @Injectable()
 export class BazosPublisherQueueService {
@@ -170,10 +172,11 @@ export class BazosPublisherQueueService {
         data: { publishStatus: 'publishing', lastPolicyCheck: policyResult as any },
       });
 
+      const adWithPassword = await this.ensureAdEditPassword(claimed.ad);
       return {
         claimed: true,
         attempt: claimed,
-        submission: this.buildSubmissionPacket(claimed),
+        submission: this.buildSubmissionPacket({ ...claimed, ad: adWithPassword }),
       };
     }
 
@@ -192,9 +195,10 @@ export class BazosPublisherQueueService {
     if (!attempt.ad || !attempt.ad.isActive) {
       throw new BadRequestException('Publish attempt has no active ad to submit');
     }
+    const adWithPassword = await this.ensureAdEditPassword(attempt.ad);
     return {
       attempt,
-      submission: this.buildSubmissionPacket(attempt),
+      submission: this.buildSubmissionPacket({ ...attempt, ad: adWithPassword }),
     };
   }
 
@@ -399,6 +403,7 @@ export class BazosPublisherQueueService {
         title: ad.title,
         description: ad.description,
         price: ad.price,
+        editPassword: ad.bazosEditPassword,
         category: ad.category,
         location: ad.location || identity.defaultLocation,
         rubric: this.submissionOptions(attempt).rubric,
@@ -408,6 +413,19 @@ export class BazosPublisherQueueService {
     };
   }
 
+
+  private async ensureAdEditPassword(ad: any) {
+    if (ad?.bazosEditPassword) return ad;
+    const password = this.generateEditPassword();
+    return this.prisma.bazosAd.update({
+      where: { id: ad.id },
+      data: { bazosEditPassword: password },
+    });
+  }
+
+  private generateEditPassword() {
+    return `${BAZOS_EDIT_PASSWORD_PREFIX}-${randomBytes(12).toString('base64url')}`;
+  }
 
   private submissionOptions(attempt: any) {
     const policyOptions = attempt?.policyResult?.submissionOptions || {};

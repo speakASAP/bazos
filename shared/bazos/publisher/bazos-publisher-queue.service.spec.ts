@@ -32,6 +32,7 @@ const ad = {
   category: 'elektro',
   location: 'Praha',
   bazosAdId: null,
+  bazosEditPassword: null,
   publishStatus: 'draft',
   isActive: true,
   lastPolicyCheck: {
@@ -176,6 +177,27 @@ describe('BazosPublisherQueueService', () => {
     expect(result.submission.ad.media).toEqual([{ id: 'media-1', url: 'https://cdn.example.test/product.jpg', thumbnailUrl: 'https://cdn.example.test/product-thumb.jpg', altText: 'Product photo', title: 'Front view', position: 1 }]);
   });
 
+  it('adds a per-ad edit password to submission packets when missing', async () => {
+    const prisma = makePrisma();
+    prisma.bazosPublishAttempt.findFirst = jest.fn().mockResolvedValue({
+      id: 'attempt-1',
+      status: 'submitting',
+      identityId: 'identity-1',
+      adId: 'ad-1',
+      ad: { ...ad, bazosEditPassword: null },
+      identity,
+    });
+    const { service } = makeService(prisma);
+
+    const result = await service.submissionForAttempt('attempt-1', 'user-1');
+
+    expect(prisma.bazosAd.update).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: 'ad-1' },
+      data: { bazosEditPassword: expect.stringMatching(/^bz-[A-Za-z0-9_-]+$/) },
+    }));
+    expect(result.submission.ad.editPassword).toMatch(/^bz-[A-Za-z0-9_-]+$/);
+  });
+
   it('returns a submission packet for an active attempt without changing status', async () => {
     const prisma = makePrisma();
     prisma.bazosPublishAttempt.findFirst = jest.fn().mockResolvedValue({
@@ -193,6 +215,7 @@ describe('BazosPublisherQueueService', () => {
     expect(result.submission.requiresOperatorBrowser).toBe(true);
     expect(result.submission.serverSideBazosRequestsAllowed).toBe(false);
     expect(result.submission.ad.title).toBe('Telefon test');
+    expect(result.submission.ad.editPassword).toMatch(/^bz-[A-Za-z0-9_-]+$/);
     expect(prisma.bazosPublishAttempt.update).not.toHaveBeenCalled();
   });
 
@@ -203,7 +226,7 @@ describe('BazosPublisherQueueService', () => {
       status: 'submitting',
       identityId: 'identity-1',
       adId: 'ad-1',
-      ad: { ...ad, price: 10000, lastPolicyCheck: { draftOptions: { priceOption: 'v_textu' } } },
+      ad: { ...ad, price: 10000, bazosEditPassword: 'bz-existing-password', lastPolicyCheck: { draftOptions: { priceOption: 'v_textu' } } },
       identity,
       policyResult: { submissionOptions: { priceOption: 'v_textu' } },
     });

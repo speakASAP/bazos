@@ -1889,6 +1889,7 @@ export const appScript = `
         submissionField('Lokalita', ad.location || identity.defaultLocation || '') +
         submissionField('Kontakt', identity.contactName || identity.displayName || '') +
         submissionField('Telefon', identity.contactPhone || identity.phoneNumber || '') +
+        submissionField('Vaše heslo', ad.editPassword || '') +
         '<label class="wide">Popis<textarea readonly>' + escapeHtml(ad.description || '') + '</textarea></label>' +
       '</div>' +
       '<form class="form-grid" id="record-publish-result">' +

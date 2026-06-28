@@ -39,6 +39,7 @@ model BazosAd {
   identityId    String?       @db.Uuid
   productId     String?       @db.Uuid // Catalog product ID (no FK - references catalog-microservice)
   bazosAdId     String?       @db.VarChar(100) // Bazos platform ad ID
+  bazosEditPassword String?   @db.Text // Per-ad Bazos edit/delete password
   title         String        @db.VarChar(500)
   description   String?       @db.Text
   price         Decimal       @db.Decimal(10, 2)
