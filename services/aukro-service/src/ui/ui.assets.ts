@@ -2258,78 +2258,10 @@ export const appScript = `
     };
   }
 
-  function preparedBazosUpdateTextFromValues(values) {
-    return [
-      'Bazoš aktualizace inzerátu',
-      'Název: ' + (values.title || ''),
-      'Cena: ' + (Number.isFinite(values.price) ? values.price + ' Kč' : ''),
-      'Volba ceny: ' + (values.priceOption || ''),
-      'Rubrika: ' + (values.rubric || ''),
-      'Kategorie: ' + (values.category || ''),
-      'Lokalita: ' + (values.location || ''),
-      '',
-      'Popis:',
-      values.description || '',
-      '',
-      'Původní Bazoš odkaz: ' + (values.bazosUrl || ''),
-    ].join('\\n');
-  }
-
-  function preparedBazosUpdateText(form, originalAd, originalOptions) {
-    const payload = adPayloadFromForm(form, originalOptions);
-    return preparedBazosUpdateTextFromValues({
-      ...payload,
-      bazosUrl: bazosAdUrl(originalAd) || originalAd.bazosAdId || '',
-    });
-  }
-
-  function preparedBazosUpdateTextFromAd(ad) {
-    const options = draftOptions(ad);
-    return preparedBazosUpdateTextFromValues({
-      title: ad.title || '',
-      description: ad.description || '',
-      price: Number(ad.price || 0),
-      priceOption: options.priceOption || '',
-      rubric: options.rubric || inferRubricForCategory(ad.category),
-      category: ad.category || '',
-      location: ad.location || '',
-      bazosUrl: bazosAdUrl(ad) || ad.bazosAdId || '',
-    });
-  }
-
-  async function copyTextToClipboard(text) {
-    if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(text);
-      return true;
-    }
-    const textarea = document.createElement('textarea');
-    textarea.value = text;
-    textarea.setAttribute('readonly', 'readonly');
-    textarea.style.position = 'fixed';
-    textarea.style.left = '-9999px';
-    document.body.appendChild(textarea);
-    textarea.select();
-    const copied = document.execCommand('copy');
-    textarea.remove();
-    return copied;
-  }
-
-  async function copyPreparedBazosUpdate(form, originalAd, originalOptions) {
-    return copyTextToClipboard(preparedBazosUpdateText(form, originalAd, originalOptions));
-  }
-
-  async function copyPreparedBazosAd(ad) {
-    return copyTextToClipboard(preparedBazosUpdateTextFromAd(ad));
-  }
 
   async function openBazosManageWithPreparedData(id) {
     try {
       const ad = await request('/api/bazos/ads/' + encodeURIComponent(id));
-      try {
-        await copyPreparedBazosAd(ad);
-      } catch (error) {
-        // Clipboard support is best-effort; Bazoš remains the authoritative edit form.
-      }
       window.location.href = bazosManageUrl(ad);
     } catch (error) {
       content.innerHTML = '<div class="data-panel empty-state">' + settingsErrorMarkup(error.message) + '</div>';
@@ -2338,15 +2270,7 @@ export const appScript = `
 
   async function saveAndOpenBazosManage(form, originalAd, originalOptions) {
     const formMessage = content.querySelector('[data-form-message]');
-    let copied = false;
-    try {
-      copied = await copyPreparedBazosUpdate(form, originalAd, originalOptions);
-    } catch (error) {
-      copied = false;
-    }
-    if (formMessage) formMessage.textContent = copied
-      ? 'Údaje jsou zkopírované. Ukládá se a otevírá Bazoš.cz...'
-      : 'Ukládá se a otevírá Bazoš.cz. Údaje se nepodařilo zkopírovat automaticky.';
+    if (formMessage) formMessage.textContent = 'Ukládá se a otevírá Bazoš.cz...';
     try {
       const updated = await saveDraftEditsFromForm(form, originalAd, originalOptions, false);
       window.location.href = bazosManageUrl(updated);
