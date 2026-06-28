@@ -196,6 +196,25 @@ describe('BazosPublisherQueueService', () => {
     expect(prisma.bazosPublishAttempt.update).not.toHaveBeenCalled();
   });
 
+  it('uses a fixed price option when a numeric price is present', async () => {
+    const prisma = makePrisma();
+    prisma.bazosPublishAttempt.findFirst = jest.fn().mockResolvedValue({
+      id: 'attempt-1',
+      status: 'submitting',
+      identityId: 'identity-1',
+      adId: 'ad-1',
+      ad: { ...ad, price: 10000, lastPolicyCheck: { draftOptions: { priceOption: 'v_textu' } } },
+      identity,
+      policyResult: { submissionOptions: { priceOption: 'v_textu' } },
+    });
+    const { service } = makeService(prisma);
+
+    const result = await service.submissionForAttempt('attempt-1', 'user-1');
+
+    expect(result.submission.ad.price).toBe(10000);
+    expect(result.submission.ad.priceOption).toBe('fixed_price');
+  });
+
   it('records successful publish metadata, active count, and category cadence', async () => {
     const prisma = makePrisma();
     prisma.bazosPublishAttempt.findFirst = jest.fn().mockResolvedValue({

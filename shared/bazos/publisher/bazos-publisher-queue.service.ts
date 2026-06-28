@@ -414,7 +414,7 @@ export class BazosPublisherQueueService {
     const draftOptions = attempt?.ad?.lastPolicyCheck?.draftOptions || attempt?.ad?.lastPolicyCheck?.submissionOptions || {};
     return {
       rubric: policyOptions.rubric || draftOptions.rubric || null,
-      priceOption: policyOptions.priceOption || draftOptions.priceOption || 'fixed_price',
+      priceOption: this.effectivePriceOption(attempt?.ad, policyOptions.priceOption || draftOptions.priceOption),
       media: this.normalizeMediaOverrides(policyOptions.media || draftOptions.media),
     };
   }
@@ -425,10 +425,18 @@ export class BazosPublisherQueueService {
       ...policyResult,
       submissionOptions: {
         rubric: draftOptions.rubric || null,
-        priceOption: priceOption || draftOptions.priceOption || 'fixed_price',
+        priceOption: this.effectivePriceOption(ad, priceOption || draftOptions.priceOption),
         media: this.normalizeMediaOverrides(draftOptions.media),
       },
     };
+  }
+
+  private effectivePriceOption(ad: any, option?: string) {
+    const numericPrice = Number(ad?.price || 0);
+    if (Number.isFinite(numericPrice) && numericPrice > 0 && (!option || option === 'v_textu')) {
+      return 'fixed_price';
+    }
+    return option || 'fixed_price';
   }
 
   private normalizeMediaOverrides(media?: any[]) {
