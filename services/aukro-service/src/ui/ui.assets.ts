@@ -1547,6 +1547,10 @@ export const appScript = `
     return status === 'draft' || status === 'published' || status === 'active' || Boolean(ad.bazosAdId);
   }
 
+  function needsBazosUpdate(ad) {
+    return Boolean(ad?.lastPolicyCheck?.pendingBazosUpdate?.required);
+  }
+
   function manualEvidence() {
     const checkedAt = new Date().toISOString();
     return {
@@ -1651,6 +1655,9 @@ export const appScript = `
     }
     if (!ad?.category && !ad?.categoryName && !ad?.bazosCategory) {
       chips.push(policyChip('Kategorie chybí', 'risk', 'Bez Bazoš kategorie nelze inzerát vyhodnotit ani publikovat.'));
+    }
+    if (needsBazosUpdate(ad)) {
+      chips.push(policyChip('Bazoš čeká na aktualizaci', 'wait', 'Změny jsou uložené u nás, ale externí Bazoš.cz zatím nepotvrdil aktualizaci v ověřené relaci.'));
     }
     if (ad?.challengeState) {
       chips.push(policyChip(statusLabel(ad.challengeState), 'risk', 'Bazoš vyžaduje ruční zásah: ' + ad.challengeState));
@@ -2203,7 +2210,7 @@ export const appScript = `
     const published = isPublishedAd(ad);
     const rubric = options.rubric || inferRubricForCategory(ad.category);
     const editorNote = published
-      ? 'Po uložení se změny uloží u nás a označí pro systémovou aktualizaci Bazoš.cz.'
+      ? 'Po uložení se změny uloží u nás. Externí Bazoš.cz se nezmění, dokud aktualizace neproběhne v ověřené Bazoš relaci.'
       : 'Změny se uloží do konceptu před publikováním.';
     content.innerHTML = '<form class="form-panel panel-stack" id="edit-draft-form"><div><h2>' + (editable ? 'Upravit inzerát' : 'Detail inzerátu') + '</h2><p class="card-note">Aktuální stav: <span class="status ' + statusClass(ad.publishStatus || ad.status || ad.bazosStatus) + '">' + statusLabel(ad.publishStatus || ad.status || ad.bazosStatus || 'draft') + '</span></p><p class="card-note">' + editorNote + '</p></div><div class="form-grid">' +
       '<label>Cena v Kč<input name="price" type="number" min="0" step="1" value="' + escapeHtml(ad.price ?? 0) + '"' + (editable ? '' : ' disabled') + '></label>' +
@@ -2259,7 +2266,7 @@ export const appScript = `
       if (renderAfterSave) {
         renderDraftEditor(updated);
         const savedMessage = content.querySelector('[data-form-message]');
-        if (savedMessage) savedMessage.textContent = isPublishedAd(updated) ? 'Změny byly uloženy u nás a označeny pro systémovou aktualizaci Bazoš.cz.' : 'Změny byly uloženy.';
+        if (savedMessage) savedMessage.textContent = isPublishedAd(updated) ? 'Změny byly uloženy u nás. Externí Bazoš.cz zatím není potvrzeně aktualizovaný.' : 'Změny byly uloženy.';
       }
       return updated;
     } catch (error) {
