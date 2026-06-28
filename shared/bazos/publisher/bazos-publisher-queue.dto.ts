@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsBoolean, IsDateString, IsIn, IsInt, IsNotEmpty, IsOptional, IsString, IsUUID, Length, Min } from 'class-validator';
+import { IsBoolean, IsDateString, IsIn, IsInt, IsNotEmpty, IsOptional, IsString, IsUUID, Length, Min, ValidateNested } from 'class-validator';
 import { REVIEW_STATE } from '../identity/bazos-identity.types';
 
 const CHALLENGE_STATES = Object.values(REVIEW_STATE).filter((state) => state !== REVIEW_STATE.CLEAR);
@@ -37,9 +37,11 @@ export class ContentPolicyEvidenceDto {
 }
 
 export class PublishEvidenceDto {
+  @ValidateNested()
   @Type(() => PublicDuplicateEvidenceDto)
   publicDuplicateCheck: PublicDuplicateEvidenceDto;
 
+  @ValidateNested()
   @Type(() => ContentPolicyEvidenceDto)
   contentPolicy: ContentPolicyEvidenceDto;
 }
