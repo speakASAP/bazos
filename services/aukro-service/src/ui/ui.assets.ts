@@ -1550,7 +1550,8 @@ export const appScript = `
 
   function latestAttemptForAd(queue, ad) {
     const id = String(ad?.id || '');
-    return asArray({ queue }, ['queue'])
+    const attempts = [...asArray({ queue }, ['queue']), ...asArray(ad, ['publishAttempts'])];
+    return attempts
       .filter((item) => String(item?.adId || item?.ad?.id || '') === id)
       .sort((a, b) => String(b.updatedAt || b.createdAt || '').localeCompare(String(a.updatedAt || a.createdAt || '')))[0] || null;
   }

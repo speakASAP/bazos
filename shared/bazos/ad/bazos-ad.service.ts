@@ -168,6 +168,12 @@ export class BazosAdService {
         ...(query.isActive !== undefined ? { isActive: query.isActive } : {}),
         ...(query.productId ? { productId: query.productId } : {}),
       },
+      include: {
+        publishAttempts: {
+          orderBy: { createdAt: 'desc' },
+          take: 3,
+        },
+      },
       orderBy: { createdAt: 'desc' },
     });
   }
