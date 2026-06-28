@@ -1515,7 +1515,7 @@ export const appScript = `
     const fallback = 'https://www.bazos.cz/moje-inzeraty.php';
     const rawId = String(ad?.bazosAdId || '').trim();
     if (!rawId) return fallback;
-    if (/^https?:\/\//i.test(rawId)) {
+    if (/^https?:\\/\\//i.test(rawId)) {
       try {
         const url = new URL(rawId);
         const id = bazosNumericAdId(url.pathname);
