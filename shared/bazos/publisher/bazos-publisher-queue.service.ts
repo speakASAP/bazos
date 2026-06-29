@@ -83,7 +83,10 @@ export class BazosPublisherQueueService {
 
     await this.prisma.bazosAd.update({
       where: { id: ad.id },
-      data: { publishStatus: 'queued' },
+      data: {
+        publishStatus: 'queued',
+        ...(String(ad.publishStatus || '').toLowerCase() === 'deleted' ? { bazosAdId: null } : {}),
+      },
     });
 
     this.logger.log('Bazos publish attempt queued', {
@@ -337,7 +340,8 @@ export class BazosPublisherQueueService {
   private assertPublishableDraft(ad: any) {
     if (!ad.identityId) throw new BadRequestException('Ad has no linked Bazos identity');
     if (!ad.category) throw new BadRequestException('Ad must have a Bazos category before publishing');
-    if (ad.bazosAdId || ['published', 'publishing'].includes(ad.publishStatus)) {
+    const status = String(ad.publishStatus || '').toLowerCase();
+    if (['published', 'publishing'].includes(status) || (ad.bazosAdId && status !== 'deleted')) {
       throw new BadRequestException('Ad is already published or currently submitting');
     }
     if (!ad.isActive) throw new BadRequestException('Inactive ads cannot be published');

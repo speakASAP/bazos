@@ -1548,8 +1548,7 @@ export const appScript = `
 
   function canEditAd(ad) {
     const status = publishStatus(ad);
-    if (status === 'deleted') return false;
-    return status === 'draft' || status === 'published' || status === 'active' || Boolean(ad.bazosAdId);
+    return status === 'draft' || status === 'published' || status === 'active' || status === 'deleted' || Boolean(ad.bazosAdId);
   }
 
   function needsBazosUpdate(ad) {
@@ -2223,6 +2222,7 @@ export const appScript = `
     const options = draftOptions(ad);
     const editable = canEditAd(ad);
     const published = isPublishedAd(ad);
+    const publishButton = published ? '' : '<button class="button button-primary" data-publish-detail="' + cell(ad.id) + '" type="button">Publikovat</button>';
     const rubric = options.rubric || inferRubricForCategory(ad.category);
     const editorNote = published
       ? 'Po uložení se změny uloží u nás. Externí Bazoš.cz se nezmění, dokud aktualizace neproběhne v ověřené Bazoš relaci.'
@@ -2237,10 +2237,11 @@ export const appScript = `
       '<label class="wide">Popis<textarea name="description"' + (editable ? '' : ' disabled') + '>' + escapeHtml(ad.description || '') + '</textarea></label>' +
       '<label>Lokalita<input name="location" maxlength="200" value="' + escapeHtml(ad.location || '') + '"' + (editable ? '' : ' disabled') + '></label>' +
       '<label>Sklad<input name="stockQuantity" type="number" min="0" step="1" value="' + escapeHtml(ad.stockQuantity ?? 0) + '"' + (editable ? '' : ' disabled') + '></label>' +
-      '</div><p class="form-message" data-form-message>' + (editable ? '' : 'Tento stav zatím nelze upravovat u nás.') + '</p><div class="row-actions"><button class="button button-secondary" data-back-details type="button">Zpět na moje inzeráty</button>' + (editable ? '<button class="button button-primary" type="submit">' + (published ? 'Uložit a otevřít Upravit/Vymazat' : 'Uložit změny') + '</button>' : '') + '</div></form>';
+      '</div><p class="form-message" data-form-message></p><div class="row-actions"><button class="button button-secondary" data-back-details type="button">Zpět na moje inzeráty</button>' + (editable ? '<button class="button button-primary" type="submit">' + (published ? 'Uložit a otevřít Upravit/Vymazat' : 'Uložit změny') + '</button>' : '') + publishButton + '</div></form>';
     const form = document.getElementById('edit-draft-form');
     bindBazosCategoryControls(form);
     content.querySelector('[data-back-details]')?.addEventListener('click', () => renderClient());
+    content.querySelector('[data-publish-detail]')?.addEventListener('click', (event) => enqueuePublish(event.currentTarget.dataset.publishDetail));
     if (editable) form.addEventListener('submit', (event) => {
       event.preventDefault();
       if (published) return saveAndOpenBazosManage(form, ad, options);

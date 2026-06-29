@@ -123,6 +123,23 @@ describe('BazosPublisherQueueService', () => {
     expect(identities.reservePublishSlot).not.toHaveBeenCalled();
   });
 
+
+  it('queues a deleted ad for republish and clears the stale Bazoš id', async () => {
+    const deletedAd = { ...ad, bazosAdId: 'https://ostatni.bazos.cz/inzerat/220689308/deleted-ad.php', publishStatus: 'deleted' };
+    const prisma = makePrisma({ ad: deletedAd });
+    const { service } = makeService(prisma);
+
+    const result = await service.enqueueDraft('ad-1', 'user-1', cleanEvidence);
+
+    expect(result.queued).toBe(true);
+    expect(prisma.bazosAd.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'ad-1' },
+        data: expect.objectContaining({ publishStatus: 'queued', bazosAdId: null }),
+      }),
+    );
+  });
+
   it('records policy-blocked enqueue attempts without reserving a publish slot', async () => {
     const prisma = makePrisma();
     const { service, identities } = makeService(prisma, blockedPolicy());

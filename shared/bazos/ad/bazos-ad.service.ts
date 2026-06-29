@@ -66,13 +66,13 @@ export class BazosAdService {
 
   /**
    * Update ad content in the local workspace.
-   * Drafts remain directly editable. Published ads may be changed locally so
+   * Drafts remain directly editable. Published or deleted ads may be changed locally so
    * operators can then apply the prepared update through the verified Bazoš flow.
    */
   async updateDraft(id: string, userId: string, dto: UpdateBazosAdDraftDto) {
     const ad = await this.findByIdForUser(id, userId);
     const status = String(ad.publishStatus || 'draft').toLowerCase();
-    const editableStatuses = ['draft', 'published', 'active'];
+    const editableStatuses = ['draft', 'published', 'active', 'deleted'];
     if (!editableStatuses.includes(status) && !ad.bazosAdId) {
       throw new BadRequestException('Only draft or published ads can be edited');
     }
