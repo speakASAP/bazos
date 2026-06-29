@@ -984,6 +984,21 @@ button, input { font: inherit; }
 .check-row input { width: auto !important; min-height: auto !important; margin-top: 3px; }
 .panel-stack { display: grid; gap: 16px; }
 .account-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 0.75fr); gap: 16px; }
+.account-tools {
+  display: grid;
+  gap: 12px;
+  margin: 16px 0;
+}
+.bulk-account-help {
+  display: grid;
+  gap: 6px;
+}
+.bulk-account-help code {
+  padding: 2px 5px;
+  border-radius: 6px;
+  background: var(--panel-strong);
+  color: var(--ink);
+}
 .gate-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
 .gate-item { padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
 .gate-item strong { display: block; margin-bottom: 4px; }
@@ -1350,6 +1365,8 @@ export const appScript = `
   let currentUser = null;
   let publishWorkerBusy = false;
   let publishWorkerTimer = null;
+  let accountBulkOpen = false;
+  let editingIdentityId = null;
   const BAZOS_TITLE_MAX_LENGTH = 500;
   const BAZOS_DESCRIPTION_MAX_LENGTH = 5000;
   const BAZOS_MEDIA_LIMIT = 20;
@@ -2303,6 +2320,31 @@ export const appScript = `
     draw();
   }
 
+  function identityFormPayload(data) {
+    const authEmail = String(currentUser?.email || data.authEmail || '').trim();
+    const notes = [data.notes, authEmail ? 'E-mail v Alfares Auth se musí shodovat s e-mailem účtu na Bazoši: ' + authEmail : ''].filter(Boolean).join('\n');
+    return {
+      phoneNumber: String(data.phoneNumber || '').trim(),
+      displayName: defaultIdentityDisplayName(data),
+      contactName: String(data.contactName || '').trim() || undefined,
+      contactPhone: String(data.contactPhone || '').trim() || undefined,
+      defaultZip: String(data.defaultZip || '').trim() || undefined,
+      defaultLocation: String(data.defaultLocation || '').trim() || undefined,
+      notes: notes || undefined,
+    };
+  }
+
+  function updateIdentityPayload(data) {
+    return {
+      displayName: String(data.displayName || '').trim() || undefined,
+      contactName: String(data.contactName || '').trim() || undefined,
+      contactPhone: String(data.contactPhone || '').trim() || undefined,
+      defaultZip: String(data.defaultZip || '').trim() || undefined,
+      defaultLocation: String(data.defaultLocation || '').trim() || undefined,
+      notes: String(data.notes || '').trim() || undefined,
+    };
+  }
+
   function defaultIdentityDisplayName(data) {
     const explicitName = String(data.displayName || '').trim();
     if (explicitName) return explicitName;
@@ -2317,24 +2359,76 @@ export const appScript = `
     event.preventDefault();
     const form = event.currentTarget;
     const data = Object.fromEntries(new FormData(form).entries());
-    const authEmail = String(currentUser?.email || data.authEmail || '').trim();
-    const notes = [data.notes, authEmail ? 'E-mail v Alfares Auth se musí shodovat s e-mailem účtu na Bazoši: ' + authEmail : ''].filter(Boolean).join('\\n');
-    const payload = {
-      phoneNumber: data.phoneNumber,
-      displayName: defaultIdentityDisplayName(data),
-      contactName: data.contactName || undefined,
-      contactPhone: data.contactPhone || undefined,
-      defaultZip: data.defaultZip || undefined,
-      defaultLocation: data.defaultLocation || undefined,
-      notes: notes || undefined,
-    };
+    const payload = identityFormPayload(data);
     const formMessage = form.querySelector('[data-form-message]') || content.querySelector('[data-form-message]');
     try {
       await request('/api/bazos/identities', { method: 'POST', body: JSON.stringify(payload) });
       sessionStorage.setItem(connectionWizardKey(), 'completed');
       closeConnectionWizard();
+      accountBulkOpen = false;
+      editingIdentityId = null;
       activeView = 'account';
       syncActiveTabs();
+      await renderClient();
+    } catch (error) {
+      if (formMessage) formMessage.innerHTML = settingsErrorMarkup(error.message);
+    }
+  }
+
+  function parseBulkIdentityRows(value) {
+    return String(value || '').split(/\n+/).map((line) => line.trim()).filter(Boolean).map((line) => {
+      const parts = line.split(/[;\t,]/).map((part) => part.trim());
+      const phoneNumber = parts[0] || '';
+      return identityFormPayload({
+        phoneNumber,
+        displayName: parts[1] || '',
+        contactName: parts[2] || '',
+        contactPhone: parts[3] || phoneNumber,
+        defaultZip: parts[4] || '',
+        defaultLocation: parts[5] || '',
+        notes: parts.slice(6).join('; '),
+      });
+    }).filter((item) => item.phoneNumber);
+  }
+
+  async function createBulkIdentities(event) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const formMessage = form.querySelector('[data-form-message]');
+    const rows = parseBulkIdentityRows(form.elements.bulkIdentities?.value);
+    if (!rows.length) {
+      if (formMessage) formMessage.innerHTML = settingsErrorMarkup('Vložte alespoň jeden telefon.');
+      return;
+    }
+    if (formMessage) formMessage.textContent = 'Ukládají se účty...';
+    const created = [];
+    const failed = [];
+    for (const payload of rows) {
+      try {
+        await request('/api/bazos/identities', { method: 'POST', body: JSON.stringify(payload) });
+        created.push(payload.phoneNumber);
+      } catch (error) {
+        failed.push(payload.phoneNumber + ': ' + error.message);
+      }
+    }
+    if (failed.length) {
+      if (formMessage) formMessage.innerHTML = settingsErrorMarkup('Uloženo ' + created.length + ', neuloženo ' + failed.length + ': ' + failed.join('; '));
+      await renderClient();
+      return;
+    }
+    accountBulkOpen = false;
+    editingIdentityId = null;
+    await renderClient();
+  }
+
+  async function saveIdentityEdit(event, identityId) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const formMessage = form.querySelector('[data-form-message]');
+    try {
+      if (formMessage) formMessage.textContent = 'Ukládají se změny...';
+      await request('/api/bazos/identities/' + encodeURIComponent(identityId), { method: 'PATCH', body: JSON.stringify(updateIdentityPayload(Object.fromEntries(new FormData(form).entries()))) });
+      editingIdentityId = null;
       await renderClient();
     } catch (error) {
       if (formMessage) formMessage.innerHTML = settingsErrorMarkup(error.message);
@@ -2536,6 +2630,34 @@ export const appScript = `
     form.addEventListener('submit', createDraft);
   }
 
+  function accountBulkFormMarkup() {
+    if (!accountBulkOpen) return '';
+    return '<form class="form-panel panel-stack" id="bulk-identity-form"><div><h2>Přidat více Bazoš účtů</h2><div class="bulk-account-help card-note"><span>Každý řádek je jeden účet. Formát: <code>telefon; název; kontaktní jméno; kontaktní telefon; PSČ; lokalita; poznámka</code>.</span><span>Stačí vyplnit telefon; ostatní údaje můžete doplnit později přes Upravit.</span></div></div><label class="wide">Účty<textarea name="bulkIdentities" rows="6" placeholder="+420777000001; Bazoš účet - motodíly; Jan Novák; +420777000001; 11000; Praha; hlavní účet"></textarea></label><p class="form-message" data-form-message></p><div class="row-actions"><button class="button button-primary" type="submit">Uložit účty</button><button class="button button-secondary" data-close-bulk-identities type="button">Zavřít</button></div></form>';
+  }
+
+  function identityEditFormMarkup(identity) {
+    if (!identity) return '';
+    return '<form class="form-panel panel-stack" id="identity-edit-form"><div><h2>Upravit Bazoš účet</h2><p class="card-note">Telefon se nemění. Pro jiný telefon přidejte novou identitu a dokončete ověření.</p></div><div class="form-grid">' +
+      '<label>Telefon<input value="' + cell(identity.phoneNumber) + '" readonly></label>' +
+      '<label>Název pro přehled<input name="displayName" maxlength="200" value="' + cell(identity.displayName || '') + '" required></label>' +
+      '<label>Kontaktní jméno<input name="contactName" maxlength="200" value="' + cell(identity.contactName || '') + '"></label>' +
+      '<label>Kontaktní telefon<input name="contactPhone" maxlength="50" value="' + cell(identity.contactPhone || '') + '"></label>' +
+      '<label>PSČ<input name="defaultZip" maxlength="20" value="' + cell(identity.defaultZip || '') + '"></label>' +
+      '<label>Lokalita<input name="defaultLocation" maxlength="200" value="' + cell(identity.defaultLocation || '') + '"></label>' +
+      '<label class="wide">Popis účtu<textarea name="notes">' + cell(identity.notes || '') + '</textarea></label>' +
+      '</div><p class="form-message" data-form-message></p><div class="row-actions"><button class="button button-primary" type="submit">Uložit změny</button><button class="button button-secondary" data-cancel-identity-edit type="button">Zrušit</button></div></form>';
+  }
+
+  function bindAccountIdentityButtons(data) {
+    content.querySelector('[data-open-bulk-identities]')?.addEventListener('click', () => { accountBulkOpen = true; editingIdentityId = null; renderAccount(data); });
+    content.querySelector('[data-close-bulk-identities]')?.addEventListener('click', () => { accountBulkOpen = false; renderAccount(data); });
+    content.querySelector('#bulk-identity-form')?.addEventListener('submit', createBulkIdentities);
+    content.querySelectorAll('[data-edit-identity]').forEach((button) => button.addEventListener('click', () => { editingIdentityId = button.dataset.editIdentity; accountBulkOpen = false; renderAccount(data); }));
+    content.querySelector('[data-cancel-identity-edit]')?.addEventListener('click', () => { editingIdentityId = null; renderAccount(data); });
+    const editForm = content.querySelector('#identity-edit-form');
+    if (editForm && editingIdentityId) editForm.addEventListener('submit', (event) => saveIdentityEdit(event, editingIdentityId));
+  }
+
   function renderAccount(data) {
     const summary = accountSummary(data.identities, data.ads, data.queue);
     const identityRows = data.identities.map((identity) => ({
@@ -2544,20 +2666,25 @@ export const appScript = `
       remaining: isVerified(identity) ? Math.max(50 - identityActiveCount(identity, data.ads), 0) : 0,
       canPublish: isPublishableIdentity(identity, data.ads),
     }));
+    const editingIdentity = data.identities.find((identity) => identity.id === editingIdentityId);
     content.innerHTML = '<div class="summary-grid">' +
       stat('Bazoš identity', data.identities.length) +
       stat('Ověřené telefony', data.identities.filter(isVerified).length) +
       stat('Aktivní relace', data.identities.filter(hasActiveSession).length) +
       stat('Může publikovat', summary.publishable.length) +
-      '</div>' + table([
+      '</div><div class="account-tools"><div class="row-actions"><button class="button button-primary" data-open-bulk-identities type="button">Přidat Bazoš účty</button><button class="button button-secondary" data-nav-view="publish" type="button">Publikovat přes účet</button><button class="button button-secondary" data-nav-view="settings" type="button">Jednotlivé nastavení</button></div>' +
+      accountBulkFormMarkup() + identityEditFormMarkup(editingIdentity) + '</div>' + table([
         { label: 'Účet', render: (r) => '<strong>' + cell(r.displayName || r.phoneNumber) + '</strong><small class="card-note">Propojení účtu: ' + (hasLinkedAccount(r) ? 'propojeno' : 'čeká na dokončení') + '</small>' },
         { label: 'Telefon', render: (r) => '<span class="status ' + (isVerified(r) ? 'ok' : 'risk') + '">' + statusLabel(r.status) + '</span><small class="card-note">' + cell(r.phoneNumber) + '</small>' },
         { label: 'Relace', render: (r) => '<span class="status ' + statusClass(r.sessionState) + '">' + statusLabel(r.sessionState) + '</span>' },
         { label: 'Publikování', render: (r) => '<span class="status ' + (r.canPublish ? 'ok' : 'risk') + '">' + (r.canPublish ? 'Může publikovat' : 'Nelze publikovat') + '</span><small class="card-note">Aktivní: ' + cell(r.activeCount) + ' / 50, zbývá ' + cell(r.remaining) + '</small>' },
         { label: 'Kontrola', render: (r) => '<span class="status ' + statusClass(r.reviewState) + '">' + statusLabel(r.reviewState || 'clear') + '</span><small class="card-note">Platnost: ' + cell(r.verificationExpiresAt) + '</small>' },
         { label: 'Ověření', render: (r) => verificationActions(r) },
-      ], identityRows, 'Pro účet nejsou nastavené žádné Bazos identity.', settingsLink('Nastavit'));
+        { label: 'Akce', render: (r) => '<div class="row-actions"><button class="button button-secondary" data-edit-identity="' + cell(r.id) + '" type="button">Upravit</button><button class="button button-secondary" data-nav-view="publish" type="button">Publikovat</button></div>' },
+      ], identityRows, 'Pro účet nejsou nastavené žádné Bazos identity.', '<div class="row-actions" style="justify-content:center;margin-top:14px"><button class="button button-primary" data-open-bulk-identities type="button">Přidat Bazoš účty</button></div>');
     bindVerificationButtons();
+    bindAccountIdentityButtons(data);
+    bindNavigationLinks(content);
   }
 
   function renderSettings(data) {
