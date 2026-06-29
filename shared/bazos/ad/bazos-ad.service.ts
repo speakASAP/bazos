@@ -5,6 +5,8 @@ import { PublishPolicyService } from '../policy/publish-policy.service';
 import { CreateBazosAdDraftDto, CreateBazosAdDraftFromCatalogDto, UpdateBazosAdDraftDto } from './bazos-ad.dto';
 import { REVIEW_STATE } from '../identity/bazos-identity.types';
 
+const DEFAULT_BAZOS_LISTING_LIFETIME_DAYS = 30;
+
 @Injectable()
 export class BazosAdService {
   constructor(
@@ -185,7 +187,7 @@ export class BazosAdService {
 
   async findById(id: string, userId: string) {
     const ad = await this.findByIdForUser(id, userId);
-    return this.resolvePendingBazosUpdate(ad);
+    return this.resolveBazosStateOnOpen(ad);
   }
 
   async refreshExternalStatuses(userId: string) {
@@ -316,6 +318,45 @@ export class BazosAdService {
     };
   }
 
+  private async resolveBazosStateOnOpen(ad: any) {
+    const pendingResolved = await this.resolvePendingBazosUpdate(ad);
+    return this.refreshManagedListingOnOpen(pendingResolved);
+  }
+
+  private async refreshManagedListingOnOpen(ad: any) {
+    const current = this.jsonObject(ad?.lastPolicyCheck);
+    const checkState = this.jsonObject((current as any).bazosAvailabilityCheck);
+    if ((checkState as any).enabled !== true) return ad;
+
+    const now = new Date();
+    if (String(ad.publishStatus || '').toLowerCase() === 'deleted') {
+      return this.disableAvailabilityCheck(ad, 'already_deleted', now);
+    }
+    if (this.isManagedAvailabilityTrackingExpired(ad, now)) {
+      return this.disableAvailabilityCheck(ad, 'tracking_expired', now);
+    }
+
+    const publicStatus = await this.fetchBazosPublicStatus(ad).catch((error) => {
+      this.logger.warn('Unable to refresh managed public Bazos listing on open', {
+        adId: ad.id,
+        bazosAdId: ad.bazosAdId,
+        error: error?.message || String(error),
+      });
+      return { available: null as boolean | null, updatedAt: null as Date | null, reason: 'request_failed' };
+    });
+
+    if (publicStatus.available === false) {
+      const deleted = await this.markDeletedOnBazos(ad, publicStatus.reason || 'not_available');
+      if (deleted.identityId) await this.reconcileIdentityCounts([deleted.identityId]);
+      return deleted;
+    }
+    if (publicStatus.available === true) {
+      const synced = await this.syncFromPublicListing(ad, publicStatus);
+      return this.scheduleNextAvailabilityCheck(synced, now, 'checked_on_open');
+    }
+    return this.scheduleNextAvailabilityCheck(ad, now, publicStatus.reason || 'unknown_on_open');
+  }
+
   private async resolvePendingBazosUpdate(ad: any) {
     const pending = ad?.lastPolicyCheck?.pendingBazosUpdate;
     if (!pending?.required || !pending?.savedAt || !ad?.bazosAdId) return ad;
@@ -396,6 +437,27 @@ export class BazosAdService {
             ...this.jsonObject((current as any).bazosAvailabilityCheck),
             enabled: false,
             lastCheckedAt: new Date().toISOString(),
+            lastReason: reason,
+          },
+        } as any,
+      },
+    });
+  }
+
+  private async disableAvailabilityCheck(ad: any, reason: string, at = new Date()) {
+    const current = this.jsonObject(ad?.lastPolicyCheck);
+    const check = this.jsonObject((current as any).bazosAvailabilityCheck);
+    if ((check as any).enabled !== true) return ad;
+    return this.prisma.bazosAd.update({
+      where: { id: ad.id },
+      data: {
+        lastPolicyCheck: {
+          ...current,
+          bazosAvailabilityCheck: {
+            ...check,
+            enabled: false,
+            stoppedAt: at.toISOString(),
+            lastCheckedAt: at.toISOString(),
             lastReason: reason,
           },
         } as any,
@@ -521,6 +583,14 @@ export class BazosAdService {
       .replace(/&gt;/g, '>');
   }
 
+  private isManagedAvailabilityTrackingExpired(ad: any, now: Date) {
+    const expiresAt = this.toValidDate(ad.expiresAt);
+    if (expiresAt) return expiresAt <= now;
+    const lastPublishedAt = this.toValidDate(ad.lastPublishedAt);
+    if (!lastPublishedAt) return false;
+    return new Date(lastPublishedAt.getTime() + DEFAULT_BAZOS_LISTING_LIFETIME_DAYS * 24 * 60 * 60_000) <= now;
+  }
+
   private isAvailabilityCheckDue(ad: any, now: Date) {
     const state = this.jsonObject(ad.lastPolicyCheck);
     const check = this.jsonObject((state as any).bazosAvailabilityCheck);
@@ -565,7 +635,7 @@ export class BazosAdService {
     const expiresAt = this.toValidDate(ad.expiresAt);
     if (expiresAt && expiresAt > from) return expiresAt;
     const lastPublishedAt = this.toValidDate(ad.lastPublishedAt);
-    if (lastPublishedAt) return new Date(lastPublishedAt.getTime() + 14 * 24 * 60 * 60_000);
+    if (lastPublishedAt) return new Date(lastPublishedAt.getTime() + DEFAULT_BAZOS_LISTING_LIFETIME_DAYS * 24 * 60 * 60_000);
     return this.nextAvailabilityCheckAt(from);
   }
 

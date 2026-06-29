@@ -29,15 +29,19 @@ const publishedAd = {
 };
 
 function makePrisma(ad: any = publishedAd) {
+  let currentAd = ad;
   return {
     bazosIdentity: {
       findMany: jest.fn().mockResolvedValue([identity]),
       update: jest.fn().mockImplementation(({ data }) => Promise.resolve({ ...identity, ...data })),
     },
     bazosAd: {
-      findFirst: jest.fn().mockResolvedValue(ad),
-      findMany: jest.fn().mockResolvedValue([ad]),
-      update: jest.fn().mockImplementation(({ data }) => Promise.resolve({ ...ad, ...data })),
+      findFirst: jest.fn().mockImplementation(() => Promise.resolve(currentAd)),
+      findMany: jest.fn().mockImplementation(() => Promise.resolve([currentAd])),
+      update: jest.fn().mockImplementation(({ data }) => {
+        currentAd = { ...currentAd, ...data };
+        return Promise.resolve(currentAd);
+      }),
       count: jest.fn().mockResolvedValue(0),
     },
   } as any;
@@ -166,6 +170,85 @@ describe('BazosAdService pending Bazos updates', () => {
             source: 'manage_opened',
             lastManageOpenedAt: expect.any(String),
             nextCheckAt: expect.any(String),
+          }),
+        }),
+      }),
+    }));
+  });
+
+
+  it('refreshes and syncs a managed Bazoš listing whenever its detail is opened locally', async () => {
+    const managedAd = {
+      ...publishedAd,
+      lastPolicyCheck: {
+        allowed: true,
+        bazosAvailabilityCheck: { enabled: true, source: 'manage_opened' },
+      },
+      expiresAt: '2026-07-12T12:00:00.000Z',
+    };
+    const prisma = makePrisma(managedAd);
+    const service = makeService(prisma) as any;
+    jest.spyOn(service, 'fetchBazosPublicStatus').mockResolvedValue({
+      available: true,
+      updatedAt: new Date(Date.UTC(2026, 5, 29)),
+      listing: {
+        title: 'Managed title from Bazoš',
+        description: 'Managed public description',
+        price: 1300,
+        category: 'Ostatní',
+        location: 'Plzeň',
+        sourceUrl: managedAd.bazosAdId,
+      },
+    });
+
+    const result = await service.findById(publishedAd.id, 'user-1');
+
+    expect(result.title).toBe('Managed title from Bazoš');
+    expect(prisma.bazosAd.update).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: publishedAd.id },
+      data: expect.objectContaining({
+        title: 'Managed title from Bazoš',
+        description: 'Managed public description',
+        price: 1300,
+        category: 'Ostatní',
+        location: 'Plzeň',
+      }),
+    }));
+    expect(prisma.bazosAd.update).toHaveBeenLastCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        lastPolicyCheck: expect.objectContaining({
+          bazosAvailabilityCheck: expect.objectContaining({
+            enabled: true,
+            lastReason: 'checked_on_open',
+          }),
+        }),
+      }),
+    }));
+  });
+
+  it('stops managed Bazoš checks after the listing lifetime expires', async () => {
+    const expiredManagedAd = {
+      ...publishedAd,
+      lastPolicyCheck: {
+        allowed: true,
+        bazosAvailabilityCheck: { enabled: true, source: 'manage_opened' },
+      },
+      expiresAt: '2026-01-01T00:00:00.000Z',
+    };
+    const prisma = makePrisma(expiredManagedAd);
+    const service = makeService(prisma) as any;
+    const fetchSpy = jest.spyOn(service, 'fetchBazosPublicStatus');
+
+    await service.findById(publishedAd.id, 'user-1');
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(prisma.bazosAd.update).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: publishedAd.id },
+      data: expect.objectContaining({
+        lastPolicyCheck: expect.objectContaining({
+          bazosAvailabilityCheck: expect.objectContaining({
+            enabled: false,
+            lastReason: 'tracking_expired',
           }),
         }),
       }),

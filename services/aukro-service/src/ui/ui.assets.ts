@@ -2290,6 +2290,7 @@ export const appScript = `
     if (formMessage) formMessage.textContent = 'Ukládá se a otevírá Bazoš.cz...';
     try {
       const updated = await saveDraftEditsFromForm(form, originalAd, originalOptions, false);
+      await request('/api/bazos/ads/' + encodeURIComponent(updated.id) + '/manage-opened', { method: 'POST', body: '{}' });
       window.open(bazosManageUrl(updated), '_blank', 'noopener');
     } catch (error) {
       // saveDraftEditsFromForm already renders the form error.
