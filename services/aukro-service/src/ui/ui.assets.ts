@@ -1635,7 +1635,7 @@ export const appScript = `
       return '<div class="row-actions">' + detail + action + '</div><small class="card-note">' + cell(queueAttemptNote(activeAttempt)) + '</small>';
     }
     if (isPublishedAd(ad)) {
-      return '<div class="row-actions"><button class="button button-primary" data-open-bazos-manage="' + cell(ad.id) + '" type="button">Upravit na Bazoši</button></div>';
+      return '<div class="row-actions"><button class="button button-primary" data-open-bazos-manage="' + cell(ad.id) + '" type="button">Upravit/Vymazat</button></div>';
     }
     return '<div class="row-actions">' + detail + '<button class="button button-primary" data-publish="' + cell(ad.id) + '" type="button">Publikovat</button></div>';
   }
@@ -2222,7 +2222,7 @@ export const appScript = `
       '<label class="wide">Popis<textarea name="description"' + (editable ? '' : ' disabled') + '>' + escapeHtml(ad.description || '') + '</textarea></label>' +
       '<label>Lokalita<input name="location" maxlength="200" value="' + escapeHtml(ad.location || '') + '"' + (editable ? '' : ' disabled') + '></label>' +
       '<label>Sklad<input name="stockQuantity" type="number" min="0" step="1" value="' + escapeHtml(ad.stockQuantity ?? 0) + '"' + (editable ? '' : ' disabled') + '></label>' +
-      '</div><p class="form-message" data-form-message>' + (editable ? '' : 'Tento stav zatím nelze upravovat u nás.') + '</p><div class="row-actions"><button class="button button-secondary" data-back-details type="button">Zpět na moje inzeráty</button>' + (editable ? '<button class="button button-primary" type="submit">' + (published ? 'Uložit a upravit na Bazoši' : 'Uložit změny') + '</button>' : '') + '</div></form>';
+      '</div><p class="form-message" data-form-message>' + (editable ? '' : 'Tento stav zatím nelze upravovat u nás.') + '</p><div class="row-actions"><button class="button button-secondary" data-back-details type="button">Zpět na moje inzeráty</button>' + (editable ? '<button class="button button-primary" type="submit">' + (published ? 'Uložit a otevřít Upravit/Vymazat' : 'Uložit změny') + '</button>' : '') + '</div></form>';
     const form = document.getElementById('edit-draft-form');
     bindBazosCategoryControls(form);
     content.querySelector('[data-back-details]')?.addEventListener('click', () => renderClient());
@@ -2262,7 +2262,7 @@ export const appScript = `
   async function openBazosManageWithPreparedData(id) {
     try {
       const ad = await request('/api/bazos/ads/' + encodeURIComponent(id));
-      window.location.href = bazosManageUrl(ad);
+      window.open(bazosManageUrl(ad), '_blank', 'noopener');
     } catch (error) {
       content.innerHTML = '<div class="data-panel empty-state">' + settingsErrorMarkup(error.message) + '</div>';
     }
@@ -2273,7 +2273,7 @@ export const appScript = `
     if (formMessage) formMessage.textContent = 'Ukládá se a otevírá Bazoš.cz...';
     try {
       const updated = await saveDraftEditsFromForm(form, originalAd, originalOptions, false);
-      window.location.href = bazosManageUrl(updated);
+      window.open(bazosManageUrl(updated), '_blank', 'noopener');
     } catch (error) {
       // saveDraftEditsFromForm already renders the form error.
     }
