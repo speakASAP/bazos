@@ -52,6 +52,11 @@ export class BazosAdController {
     return this.adService.refreshExternalStatuses(req.user.id);
   }
 
+  @Post(':id/manage-opened')
+  recordManageOpened(@Param('id') id: string, @Request() req) {
+    return this.adService.recordBazosManageOpened(id, req.user.id);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string, @Request() req) {
     return this.adService.findById(id, req.user.id);

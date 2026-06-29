@@ -216,6 +216,8 @@ export class BazosAdService {
       });
       if (check.available === false) {
         await this.markDeletedOnBazos(ad, check.reason || 'not_available');
+      } else if (check.available === true) {
+        await this.syncFromPublicListing(ad, check);
       }
       checked.push({
         adId: ad.id,
@@ -241,6 +243,76 @@ export class BazosAdService {
       unknown: checked.filter((item) => item.available === null).length,
       ads: await this.findMany(userId, {}),
       checks: checked,
+    };
+  }
+
+
+  async recordBazosManageOpened(id: string, userId: string) {
+    const ad = await this.findByIdForUser(id, userId);
+    if (!ad.bazosAdId) {
+      throw new BadRequestException('Ad has no Bazoš public identifier yet');
+    }
+    if (String(ad.publishStatus || '').toLowerCase() === 'deleted') {
+      throw new BadRequestException('Deleted Bazoš ads can be published again instead of managed');
+    }
+
+    const current = this.jsonObject(ad.lastPolicyCheck);
+    const now = new Date();
+    return this.prisma.bazosAd.update({
+      where: { id: ad.id },
+      data: {
+        lastPolicyCheck: {
+          ...current,
+          bazosAvailabilityCheck: {
+            ...this.jsonObject((current as any).bazosAvailabilityCheck),
+            enabled: true,
+            source: 'manage_opened',
+            lastManageOpenedAt: now.toISOString(),
+            nextCheckAt: this.nextAvailabilityCheckAt(now).toISOString(),
+          },
+        } as any,
+      },
+    });
+  }
+
+  async refreshDueExternalStatus() {
+    const candidates = await this.prisma.bazosAd.findMany({
+      where: {
+        bazosAdId: { not: null },
+        publishStatus: { in: ['published', 'active'] },
+      },
+      orderBy: { updatedAt: 'asc' },
+      take: 100,
+    });
+    const now = new Date();
+    const due = candidates.find((ad) => this.isAvailabilityCheckDue(ad, now));
+    if (!due) return { checked: 0, deleted: 0, unknown: 0, reason: 'no_due_ads' };
+
+    const check = await this.fetchBazosPublicStatus(due).catch((error) => {
+      this.logger.warn('Unable to refresh due public Bazos listing status', {
+        adId: due.id,
+        bazosAdId: due.bazosAdId,
+        error: error?.message || String(error),
+      });
+      return { available: null as boolean | null, updatedAt: null as Date | null, reason: 'request_failed' };
+    });
+
+    if (check.available === false) {
+      await this.markDeletedOnBazos(due, check.reason || 'not_available');
+    } else if (check.available === true) {
+      const updated = await this.syncFromPublicListing(due, check);
+      await this.scheduleNextAvailabilityCheck(updated, now, 'checked_available');
+    } else {
+      await this.scheduleNextAvailabilityCheck(due, now, check.reason || 'unknown');
+    }
+    if (due.identityId) await this.reconcileIdentityCounts([due.identityId]);
+
+    return {
+      checked: 1,
+      deleted: check.available === false ? 1 : 0,
+      unknown: check.available === null ? 1 : 0,
+      adId: due.id,
+      reason: check.reason,
     };
   }
 
@@ -286,7 +358,7 @@ export class BazosAdService {
     return (await this.fetchBazosPublicStatus(ad)).updatedAt;
   }
 
-  private async fetchBazosPublicStatus(ad: any): Promise<{ available: boolean | null; updatedAt: Date | null; reason?: string }> {
+  private async fetchBazosPublicStatus(ad: any): Promise<{ available: boolean | null; updatedAt: Date | null; reason?: string; listing?: any }> {
     const publicUrl = this.bazosPublicUrl(ad);
     if (!publicUrl) return { available: null, updatedAt: null, reason: 'missing_public_url' };
     const controller = new AbortController();
@@ -302,14 +374,14 @@ export class BazosAdService {
       if (!response.ok) return { available: null, updatedAt: null, reason: 'http_' + response.status };
       const html = await response.text();
       if (this.isBazosDeletedPage(html)) return { available: false, updatedAt: null, reason: 'deleted_page' };
-      return { available: true, updatedAt: this.parseBazosUpdatedDate(html) };
+      return { available: true, updatedAt: this.parseBazosUpdatedDate(html), listing: this.parseBazosPublicListing(html, publicUrl) };
     } finally {
       clearTimeout(timeout);
     }
   }
 
   private async markDeletedOnBazos(ad: any, reason: string) {
-    const current = ad?.lastPolicyCheck && typeof ad.lastPolicyCheck === 'object' ? ad.lastPolicyCheck : {};
+    const current = this.jsonObject(ad?.lastPolicyCheck);
     return this.prisma.bazosAd.update({
       where: { id: ad.id },
       data: {
@@ -320,6 +392,12 @@ export class BazosAdService {
           bazosDeletionVerifiedAt: new Date().toISOString(),
           bazosDeletionReason: reason,
           previousPublishStatus: ad.publishStatus,
+          bazosAvailabilityCheck: {
+            ...this.jsonObject((current as any).bazosAvailabilityCheck),
+            enabled: false,
+            lastCheckedAt: new Date().toISOString(),
+            lastReason: reason,
+          },
         } as any,
       },
     });
@@ -341,6 +419,163 @@ export class BazosAdService {
     const match = raw.match(/[0-9]{5,}/);
     if (!match) return '';
     return `https://www.bazos.cz/inzerat/${encodeURIComponent(match[0])}/`;
+  }
+
+
+  private async syncFromPublicListing(ad: any, check: { updatedAt: Date | null; listing?: any }) {
+    const listing = check.listing || {};
+    const data: any = {};
+    if (listing.title && listing.title !== ad.title) data.title = listing.title;
+    if (listing.description && listing.description !== (ad.description || '')) data.description = listing.description;
+    if (Number.isFinite(listing.price) && Number(listing.price) !== Number(ad.price)) data.price = listing.price;
+    if (listing.category && listing.category !== ad.category) data.category = listing.category;
+    if (listing.location && listing.location !== ad.location) data.location = listing.location;
+
+    const current = this.jsonObject(ad.lastPolicyCheck);
+    data.lastPolicyCheck = {
+      ...current,
+      bazosLastSyncedAt: new Date().toISOString(),
+      bazosPublicUpdatedAt: check.updatedAt?.toISOString() || (current as any).bazosPublicUpdatedAt,
+      bazosPublicSnapshot: {
+        title: listing.title || null,
+        price: Number.isFinite(listing.price) ? listing.price : null,
+        category: listing.category || null,
+        location: listing.location || null,
+        sourceUrl: listing.sourceUrl || this.bazosPublicUrl(ad),
+      },
+    } as any;
+    return this.prisma.bazosAd.update({ where: { id: ad.id }, data });
+  }
+
+  private parseBazosPublicListing(html: string, sourceUrl: string) {
+    const text = (value: string) => this.decodeHtml(value)
+      .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+      .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+      .replace(/<br\s*\/?\s*>/gi, '\n')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/[ \t\r\f\v]+/g, ' ')
+      .replace(/\n\s+/g, '\n')
+      .trim();
+    const title = this.firstMatch(html, [
+      /<h1[^>]*class=["'][^"']*nadpisdetail[^"']*["'][^>]*>([\s\S]*?)<\/h1>/i,
+      /<h1[^>]*>([\s\S]*?)<\/h1>/i,
+      /<meta\s+property=["']og:title["']\s+content=["']([^"']+)["']/i,
+      /<title>([\s\S]*?)\s+bazar\s+-/i,
+    ]);
+    const description = this.firstMatch(html, [
+      /<div[^>]*class=["'][^"']*popisdetail[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
+      /<meta\s+property=["']og:description["']\s+content=["']([^"']+)["']/i,
+      /<meta\s+name=["']description["']\s+content=["']([^"']+)["']/i,
+    ]);
+    const priceText = this.firstMatch(html, [
+      /Cena:\s*<\/[^>]+>\s*<[^>]+>([^<]+)</i,
+      /<td[^>]*>\s*Cena\s*<\/td>\s*<td[^>]*>([\s\S]*?)<\/td>/i,
+      /(?:Cena|cena)[^0-9]{0,40}([0-9][0-9 .,&nbsp;]*)(?:Kč|CZK)/i,
+    ]);
+    const location = this.firstMatch(html, [
+      /Lokalita:\s*<\/[^>]+>\s*<[^>]+>([\s\S]*?)<\/[^>]+>/i,
+      /<td[^>]*>\s*Lokalita\s*<\/td>\s*<td[^>]*>([\s\S]*?)<\/td>/i,
+      /Okres:\s*<\/[^>]+>\s*<[^>]+>([\s\S]*?)<\/[^>]+>/i,
+    ]);
+    const category = this.firstMatch(html, [
+      /<div[^>]*class=["']drobky["'][^>]*>[\s\S]*?<a[^>]*>\s*([^<]+)\s*<\/a>\s*>\s*<h1/i,
+      /<h1[^>]*class=["']nadpiskategorie["'][^>]*>([\s\S]*?)<\/h1>/i,
+    ]);
+
+    return {
+      title: this.cleanBazosTitle(text(title)),
+      description: text(description),
+      price: this.parseBazosPrice(text(priceText)),
+      category: text(category),
+      location: text(location),
+      sourceUrl,
+    };
+  }
+
+  private firstMatch(html: string, patterns: RegExp[]) {
+    for (const pattern of patterns) {
+      const match = html.match(pattern);
+      if (match?.[1]) return match[1];
+    }
+    return '';
+  }
+
+  private cleanBazosTitle(value: string) {
+    return value.replace(/\s+-\s+[^-]+\s*$/i, '').replace(/\s+bazar\s*$/i, '').trim();
+  }
+
+  private parseBazosPrice(value: string) {
+    if (!/\d/.test(value || '')) return undefined;
+    const normalized = value.replace(/&nbsp;/g, ' ').replace(/[^0-9.,]/g, '').replace(/[ .]/g, '').replace(',', '.');
+    const price = Number(normalized);
+    return Number.isFinite(price) ? price : undefined;
+  }
+
+  private decodeHtml(value: string) {
+    return String(value || '')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>');
+  }
+
+  private isAvailabilityCheckDue(ad: any, now: Date) {
+    const state = this.jsonObject(ad.lastPolicyCheck);
+    const check = this.jsonObject((state as any).bazosAvailabilityCheck);
+    const enabled = (check as any).enabled === true;
+    const nextCheckAt = this.toValidDate((check as any).nextCheckAt);
+    if (enabled) return !nextCheckAt || nextCheckAt <= now;
+    const expiresAt = this.toValidDate(ad.expiresAt);
+    if (expiresAt) return expiresAt <= now;
+    const lastPublishedAt = this.toValidDate(ad.lastPublishedAt);
+    if (!lastPublishedAt) return false;
+    return new Date(lastPublishedAt.getTime() + 14 * 24 * 60 * 60_000) <= now;
+  }
+
+  private async scheduleNextAvailabilityCheck(ad: any, from: Date, reason: string) {
+    const current = this.jsonObject(ad.lastPolicyCheck);
+    const check = this.jsonObject((current as any).bazosAvailabilityCheck);
+    const nextCheckAt = (check as any).enabled === true
+      ? this.nextAvailabilityCheckAt(from)
+      : this.nextExpiryFallbackCheckAt(ad, from);
+    return this.prisma.bazosAd.update({
+      where: { id: ad.id },
+      data: {
+        lastPolicyCheck: {
+          ...current,
+          bazosAvailabilityCheck: {
+            ...check,
+            lastCheckedAt: from.toISOString(),
+            lastReason: reason,
+            nextCheckAt: nextCheckAt.toISOString(),
+          },
+        } as any,
+      },
+    });
+  }
+
+  private nextAvailabilityCheckAt(from: Date) {
+    const jitterMinutes = Math.floor(Math.random() * 21) - 10;
+    return new Date(from.getTime() + (60 + jitterMinutes) * 60_000);
+  }
+
+  private nextExpiryFallbackCheckAt(ad: any, from: Date) {
+    const expiresAt = this.toValidDate(ad.expiresAt);
+    if (expiresAt && expiresAt > from) return expiresAt;
+    const lastPublishedAt = this.toValidDate(ad.lastPublishedAt);
+    if (lastPublishedAt) return new Date(lastPublishedAt.getTime() + 14 * 24 * 60 * 60_000);
+    return this.nextAvailabilityCheckAt(from);
+  }
+
+  private toValidDate(value: any) {
+    const date = value ? new Date(value) : null;
+    return date && !Number.isNaN(date.getTime()) ? date : null;
+  }
+
+  private jsonObject(value: any): Record<string, any> {
+    return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
   }
 
   private parseBazosUpdatedDate(html: string): Date | null {
@@ -366,6 +601,7 @@ export class BazosAdService {
     return [
       'inzerat neexistuje',
       'inzerat nenalezen',
+      'inzerat je jiz vymazan',
       'inzerat byl smazan',
       'inzerat byl vymazan',
       'stranka nenalezena',

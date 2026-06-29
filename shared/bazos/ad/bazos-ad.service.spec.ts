@@ -112,6 +112,64 @@ describe('BazosAdService pending Bazos updates', () => {
     const service = makeService(makePrisma()) as any;
 
     expect(service.isBazosDeletedPage('<html><body>Inzerát neexistuje nebo byl smazán.</body></html>')).toBe(true);
+    expect(service.isBazosDeletedPage('<html><body>Inzerát je již vymazán.</body></html>')).toBe(true);
+  });
+
+  it('syncs changed public Bazoš listing fields during manual refresh', async () => {
+    const prisma = makePrisma({ ...publishedAd, lastPolicyCheck: { allowed: true } });
+    const service = makeService(prisma) as any;
+    jest.spyOn(service, 'fetchBazosPublicStatus').mockResolvedValue({
+      available: true,
+      updatedAt: new Date(Date.UTC(2026, 5, 29)),
+      listing: {
+        title: 'Updated Bazoš title',
+        description: 'Updated public description',
+        price: 1200,
+        category: 'Ostatní',
+        location: 'Brno',
+        sourceUrl: publishedAd.bazosAdId,
+      },
+    });
+
+    const result = await service.refreshExternalStatuses('user-1');
+
+    expect(result.checked).toBe(1);
+    expect(result.deleted).toBe(0);
+    expect(prisma.bazosAd.update).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: publishedAd.id },
+      data: expect.objectContaining({
+        title: 'Updated Bazoš title',
+        description: 'Updated public description',
+        price: 1200,
+        category: 'Ostatní',
+        location: 'Brno',
+        lastPolicyCheck: expect.objectContaining({
+          bazosPublicUpdatedAt: '2026-06-29T00:00:00.000Z',
+          bazosPublicSnapshot: expect.objectContaining({ title: 'Updated Bazoš title' }),
+        }),
+      }),
+    }));
+  });
+
+  it('enables staggered availability checks after opening Bazoš manage flow', async () => {
+    const prisma = makePrisma({ ...publishedAd, lastPolicyCheck: { allowed: true } });
+    const service = makeService(prisma) as any;
+
+    await service.recordBazosManageOpened(publishedAd.id, 'user-1');
+
+    expect(prisma.bazosAd.update).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: publishedAd.id },
+      data: expect.objectContaining({
+        lastPolicyCheck: expect.objectContaining({
+          bazosAvailabilityCheck: expect.objectContaining({
+            enabled: true,
+            source: 'manage_opened',
+            lastManageOpenedAt: expect.any(String),
+            nextCheckAt: expect.any(String),
+          }),
+        }),
+      }),
+    }));
   });
 
   it('parses the public Bazoš listing date format', () => {

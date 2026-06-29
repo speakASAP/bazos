@@ -1497,6 +1497,7 @@ export const appScript = `
   }
 
   function bazosAdUrl(ad) {
+    if (publishStatus(ad) === 'deleted') return '';
     if (!ad.bazosAdId) return '';
     const value = String(ad.bazosAdId).trim();
     if (/^https?:\\/\\//i.test(value)) return value;
@@ -2275,6 +2276,7 @@ export const appScript = `
 
   async function openBazosManageWithPreparedData(id) {
     try {
+      await request('/api/bazos/ads/' + encodeURIComponent(id) + '/manage-opened', { method: 'POST', body: '{}' });
       const ad = await request('/api/bazos/ads/' + encodeURIComponent(id));
       window.open(bazosManageUrl(ad), '_blank', 'noopener');
     } catch (error) {

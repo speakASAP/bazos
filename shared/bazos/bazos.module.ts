@@ -7,6 +7,7 @@ import { BazosIdentityController } from './identity/bazos-identity.controller';
 import { PublishPolicyService } from './policy/publish-policy.service';
 import { BazosAdService } from './ad/bazos-ad.service';
 import { BazosAdController } from './ad/bazos-ad.controller';
+import { BazosAdAvailabilityScheduler } from './ad/bazos-ad-availability.scheduler';
 import { BazosPublisherQueueService } from './publisher/bazos-publisher-queue.service';
 import { BazosPublisherQueueController } from './publisher/bazos-publisher-queue.controller';
 import { BazosCatalogSellActionService } from './catalog/bazos-catalog-sell-action.service';
@@ -20,6 +21,7 @@ import { BazosMonitoringController } from './monitoring/bazos-monitoring.control
     BazosIdentityService,
     PublishPolicyService,
     BazosAdService,
+    BazosAdAvailabilityScheduler,
     BazosPublisherQueueService,
     BazosCatalogSellActionService,
     BazosMonitoringService,
@@ -35,6 +37,7 @@ import { BazosMonitoringController } from './monitoring/bazos-monitoring.control
     BazosIdentityService,
     PublishPolicyService,
     BazosAdService,
+    BazosAdAvailabilityScheduler,
     BazosPublisherQueueService,
     BazosCatalogSellActionService,
     BazosMonitoringService,
