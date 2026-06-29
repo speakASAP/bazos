@@ -7,7 +7,7 @@ const pageShell = (title: string, body: string) => `<!doctype html>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${title}</title>
   <meta name="description" content="Služba AlfaRes Bazoš pomáhá prodejcům připravovat, sledovat a spravovat inzeráty na Bazoš.cz v souladu s pravidly.">
-  <link rel="stylesheet" href="/ui/app.css?v=czech-settings-20260627">
+  <link rel="stylesheet" href="/ui/app.css?v=settings-defaults-20260629">
 </head>
 <body>
 ${body}
@@ -247,7 +247,7 @@ export const renderAppPage = (mode: AppMode) => {
         </section>
       </main>
     </div>
-    <script src="/ui/app.js?v=czech-settings-20260627"></script>`,
+    <script src="/ui/app.js?v=settings-defaults-20260629"></script>`,
   );
 };
 
@@ -912,6 +912,19 @@ button, input { font: inherit; }
   text-transform: uppercase;
   letter-spacing: 0;
 }
+.settings-field-list {
+  display: grid;
+  gap: 6px;
+  min-width: 220px;
+}
+.settings-field-list span {
+  display: grid;
+  grid-template-columns: 118px minmax(0, 1fr);
+  gap: 8px;
+  color: var(--muted);
+  line-height: 1.35;
+}
+.settings-field-list strong { color: var(--ink); }
 .form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1456,7 +1469,7 @@ export const appScript = `
   const isReviewClear = (identity) => !identity?.reviewState || String(identity.reviewState).toLowerCase() === 'clear';
   const hasLinkedAccount = (identity) => Boolean(identity?.accountId);
   const hasLinkedBazosIdentity = (data) => Array.isArray(data?.identities) && data.identities.length > 0;
-  const isPublishableIdentity = (identity) => hasLinkedAccount(identity) && isVerified(identity) && hasActiveSession(identity) && isReviewClear(identity) && Number(identity?.activeAdCount || 0) < 50;
+  const isPublishableIdentity = (identity, ads) => hasLinkedAccount(identity) && isVerified(identity) && hasActiveSession(identity) && isReviewClear(identity) && (Array.isArray(ads) ? identityActiveCount(identity, ads) : Number(identity?.activeAdCount || 0)) < 50;
 
   function connectionWizardKey() {
     const email = String(currentUser?.email || 'anonymous').trim().toLowerCase();
@@ -1678,11 +1691,10 @@ export const appScript = `
 
   async function loadClientData(options) {
     const refreshExternal = Boolean(options?.refreshExternal);
-    const [adsResult, identitiesResult, queueResult] = await Promise.all([
-      request(refreshExternal ? '/api/bazos/ads/refresh' : '/api/bazos/ads', refreshExternal ? { method: 'POST', body: '{}' } : undefined).catch((error) => ({ error: error.message })),
-      request('/api/bazos/identities').catch((error) => ({ error: error.message })),
-      request('/api/bazos/publish-queue?limit=50').catch(() => []),
-    ]);
+    const queuePromise = request('/api/bazos/publish-queue?limit=50').catch(() => []);
+    const adsResult = await request(refreshExternal ? '/api/bazos/ads/refresh' : '/api/bazos/ads', refreshExternal ? { method: 'POST', body: '{}' } : undefined).catch((error) => ({ error: error.message }));
+    const identitiesResult = await request('/api/bazos/identities').catch((error) => ({ error: error.message }));
+    const queueResult = await queuePromise;
     return {
       ads: adsResult.error ? [] : asArray(adsResult, ['items', 'offers', 'ads']),
       refreshSummary: adsResult.error ? null : (adsResult.checked !== undefined ? { checked: adsResult.checked, deleted: adsResult.deleted, unknown: adsResult.unknown } : null),
@@ -1697,7 +1709,7 @@ export const appScript = `
     const activeAds = ads.filter(isActiveAd).length;
     const publishedAds = ads.filter(isPublishedAd).length;
     const verified = identities.filter(isVerified);
-    const publishable = identities.filter(isPublishableIdentity);
+    const publishable = identities.filter((identity) => isPublishableIdentity(identity, ads));
     const capacityTotal = verified.length * 50;
     const capacityUsed = verified.reduce((sum, identity) => sum + identityActiveCount(identity, ads), 0);
     const nextNotBefore = identities.map((identity) => identity.nextPublishNotBefore).filter(Boolean).sort()[0];
@@ -1718,6 +1730,46 @@ export const appScript = `
 
   function renderIdentityOptions(identities) {
     return identities.map((identity) => '<option value="' + cell(identity.id) + '">' + cell(identity.displayName || identity.contactName || identity.phoneNumber) + ' - ' + statusLabel(identity.status) + '</option>').join('');
+  }
+
+  function findIdentity(identities, id) {
+    return (identities || []).find((identity) => String(identity.id) === String(id)) || null;
+  }
+
+  function identityDefaultLocation(identity) {
+    return String(identity?.defaultLocation || '').trim();
+  }
+
+  function applyIdentityDefaults(form, identities, force) {
+    if (!form) return;
+    const identity = findIdentity(identities, form.elements.identityId?.value);
+    const location = identityDefaultLocation(identity);
+    if (form.elements.location && location && (force || !String(form.elements.location.value || '').trim())) {
+      form.elements.location.value = location;
+    }
+  }
+
+  function bindIdentityDefaults(form, identities) {
+    if (!form) return;
+    applyIdentityDefaults(form, identities, false);
+    form.elements.identityId?.addEventListener('change', () => applyIdentityDefaults(form, identities, true));
+  }
+
+  function identitySavedFields(identity) {
+    const fields = [
+      ['Telefon', identity.phoneNumber],
+      ['Kontaktní jméno', identity.contactName],
+      ['Kontaktní telefon', identity.contactPhone],
+      ['PSČ', identity.defaultZip],
+      ['Lokalita', identity.defaultLocation],
+      ['Alfares účet', currentUser?.email],
+      ['Poznámka', identity.notes],
+    ];
+    return '<div class="settings-field-list">' + fields.map(([label, value]) => '<span><strong>' + escapeHtml(label) + '</strong>' + cell(value || 'neuloženo') + '</span>').join('') + '</div>';
+  }
+
+  function externalBazosNotice() {
+    return '<p class="form-message">Změny uložené tady jsou výchozí údaje pro nové koncepty v Alfares. Pokud jste stejný telefon, lokalitu nebo kontaktní údaje změnili na Bazoš.cz, aktualizujte je také přímo na Bazoš.cz.</p>';
   }
 
   function settingsLink(label, className) {
@@ -2186,7 +2238,7 @@ export const appScript = `
       '<div class="data-panel"><h2>Moje identity na Bazoši</h2>' +
       tableOnly([
         { label: 'Identita', render: (r) => '<strong>' + cell(r.displayName || r.contactName || r.id) + '</strong><small class="card-note">Telefon: ' + (isVerified(r) ? 'ověřen' : 'neověřen') + '</small>' },
-        { label: 'Bazoš stav', render: (r) => '<span class="status ' + (isPublishableIdentity(r) ? 'ok' : 'risk') + '">' + (isPublishableIdentity(r) ? 'Připraveno' : 'Vyžaduje zásah') + '</span><small class="card-note">' + statusLabel(r.status) + ' / ' + statusLabel(r.sessionState) + ' / ' + statusLabel(r.reviewState || 'clear') + '</small>' },
+        { label: 'Bazoš stav', render: (r) => '<span class="status ' + (isPublishableIdentity(r, data.ads) ? 'ok' : 'risk') + '">' + (isPublishableIdentity(r, data.ads) ? 'Připraveno' : 'Vyžaduje zásah') + '</span><small class="card-note">' + statusLabel(r.status) + ' / ' + statusLabel(r.sessionState) + ' / ' + statusLabel(r.reviewState || 'clear') + '</small>' },
         { label: 'Kapacita', render: (r) => '<strong>' + cell(r.remaining) + '</strong><small class="card-note">zbývá z 50, aktivní ' + cell(r.activeCount) + '</small>' },
       ], identityRows, 'Pro tento účet zatím není připojena žádná Bazoš identita.', settingsLink('Připojit')) +
       '</div><div class="data-panel"><h2>Moje inzeráty v přehledu</h2>' +
@@ -2225,7 +2277,7 @@ export const appScript = `
     const publishButton = published ? '' : '<button class="button button-primary" data-publish-detail="' + cell(ad.id) + '" type="button">Publikovat</button>';
     const rubric = options.rubric || inferRubricForCategory(ad.category);
     const editorNote = published
-      ? 'Po uložení se změny uloží u nás. Externí Bazoš.cz se nezmění, dokud aktualizace neproběhne v ověřené Bazoš relaci.'
+      ? 'Po uložení se změny uloží u nás. Externí Bazoš.cz se nezmění, dokud aktualizace neproběhne v ověřené Bazoš relaci. Stejné změny je potřeba provést také přímo na Bazoš.cz.'
       : 'Změny se uloží do konceptu před publikováním.';
     content.innerHTML = '<form class="form-panel panel-stack" id="edit-draft-form"><div><h2>' + (editable ? 'Upravit inzerát' : 'Detail inzerátu') + '</h2><p class="card-note">Aktuální stav: <span class="status ' + statusClass(ad.publishStatus || ad.status || ad.bazosStatus) + '">' + statusLabel(ad.publishStatus || ad.status || ad.bazosStatus || 'draft') + '</span></p><p class="card-note">' + editorNote + '</p></div><div class="form-grid">' +
       '<label>Cena v Kč<input name="price" type="number" min="0" step="1" value="' + escapeHtml(ad.price ?? 0) + '"' + (editable ? '' : ' disabled') + '></label>' +
@@ -2340,12 +2392,20 @@ export const appScript = `
       '<label>Sklad<input name="stockQuantity" type="number" min="0" step="1" value="0"></label>' +
       '<label class="check-row"><input name="enqueue" type="checkbox"><span>Po vytvoření rovnou odeslat do fronty. Potvrzuji ruční kontrolu duplicity a obsahu.</span></label>' +
       '</div><p class="form-message" data-form-message></p><button class="button button-primary" type="submit">Vytvořit inzerát</button></form>';
-    bindBazosCategoryControls(document.getElementById('draft-form'));
-    document.getElementById('draft-form').addEventListener('submit', createDraft);
+    const form = document.getElementById('draft-form');
+    bindBazosCategoryControls(form);
+    bindIdentityDefaults(form, data.identities);
+    form.addEventListener('submit', createDraft);
   }
 
   function renderAccount(data) {
     const summary = accountSummary(data.identities, data.ads, data.queue);
+    const identityRows = data.identities.map((identity) => ({
+      ...identity,
+      activeCount: identityActiveCount(identity, data.ads),
+      remaining: isVerified(identity) ? Math.max(50 - identityActiveCount(identity, data.ads), 0) : 0,
+      canPublish: isPublishableIdentity(identity, data.ads),
+    }));
     content.innerHTML = '<div class="summary-grid">' +
       stat('Bazoš identity', data.identities.length) +
       stat('Ověřené telefony', data.identities.filter(isVerified).length) +
@@ -2355,15 +2415,15 @@ export const appScript = `
         { label: 'Účet', render: (r) => '<strong>' + cell(r.displayName || r.phoneNumber) + '</strong><small class="card-note">Propojení účtu: ' + (hasLinkedAccount(r) ? 'propojeno' : 'čeká na dokončení') + '</small>' },
         { label: 'Telefon', render: (r) => '<span class="status ' + (isVerified(r) ? 'ok' : 'risk') + '">' + statusLabel(r.status) + '</span><small class="card-note">' + cell(r.phoneNumber) + '</small>' },
         { label: 'Relace', render: (r) => '<span class="status ' + statusClass(r.sessionState) + '">' + statusLabel(r.sessionState) + '</span>' },
-        { label: 'Publikování', render: (r) => '<span class="status ' + (isPublishableIdentity(r) ? 'ok' : 'risk') + '">' + (isPublishableIdentity(r) ? 'Může publikovat' : 'Nelze publikovat') + '</span><small class="card-note">Aktivní: ' + cell(r.activeAdCount || 0) + ' / 50</small>' },
+        { label: 'Publikování', render: (r) => '<span class="status ' + (r.canPublish ? 'ok' : 'risk') + '">' + (r.canPublish ? 'Může publikovat' : 'Nelze publikovat') + '</span><small class="card-note">Aktivní: ' + cell(r.activeCount) + ' / 50, zbývá ' + cell(r.remaining) + '</small>' },
         { label: 'Kontrola', render: (r) => '<span class="status ' + statusClass(r.reviewState) + '">' + statusLabel(r.reviewState || 'clear') + '</span><small class="card-note">Platnost: ' + cell(r.verificationExpiresAt) + '</small>' },
         { label: 'Ověření', render: (r) => verificationActions(r) },
-      ], data.identities, 'Pro účet nejsou nastavené žádné Bazos identity.', settingsLink('Nastavit'));
+      ], identityRows, 'Pro účet nejsou nastavené žádné Bazos identity.', settingsLink('Nastavit'));
     bindVerificationButtons();
   }
 
   function renderSettings(data) {
-    content.innerHTML = '<div class="account-grid"><form class="form-panel panel-stack" id="identity-form"><div><h2>Nastavení Bazos.cz</h2><p class="card-note">Přidejte telefon a údaje prodejce. Interní ID Bazoš účtu není potřeba hledat ani vyplňovat; systém ho doplní při propojení účtu. Ověření telefonu a relace se dokončuje ručně přes Bazos.cz.</p></div><div class="form-grid">' +
+    content.innerHTML = '<div class="account-grid"><form class="form-panel panel-stack" id="identity-form"><div><h2>Nastavení Bazos.cz</h2><p class="card-note">Přidejte telefon a údaje prodejce. Interní ID Bazoš účtu není potřeba hledat ani vyplňovat; systém ho doplní při propojení účtu. Ověření telefonu a relace se dokončuje ručně přes Bazos.cz.</p>' + externalBazosNotice() + '</div><div class="form-grid">' +
       '<label>Telefon<input name="phoneNumber" minlength="9" maxlength="20" required></label>' +
       '<label>Název pro přehled<input name="displayName" maxlength="200" placeholder="např. Bazoš účet - motodíly" required></label>' +
       '<label>Kontaktní jméno<input name="contactName" maxlength="200"></label>' +
@@ -2373,8 +2433,9 @@ export const appScript = `
       '<label class="wide">Popis účtu<textarea name="notes" placeholder="např. prodej motodílů, knih nebo sezónního zboží"></textarea></label>' +
       '</div><p class="form-message" data-form-message></p><button class="button button-primary" type="submit">Uložit nastavení</button></form><div class="data-panel"><h2>Co musí být splněno</h2><div class="gate-grid"><div class="gate-item"><strong>Telefon</strong>ověřený</div><div class="gate-item"><strong>Relace</strong>aktivní</div><div class="gate-item"><strong>Kontrola</strong>bez blokace</div><div class="gate-item"><strong>Účet</strong>propojený systémem</div><div class="gate-item"><strong>Limit</strong>méně než 50 aktivních inzerátů</div></div></div></div>' +
       table([
-        { label: 'Identita', render: (r) => cell(r.displayName || r.phoneNumber) },
-        { label: 'Stav', render: (r) => '<span class="status ' + statusClass(r.status) + '">' + statusLabel(r.status) + '</span>' },
+        { label: 'Identita', render: (r) => '<strong>' + cell(r.displayName || r.phoneNumber) + '</strong><small class="card-note">Účet Alfares: ' + cell(currentUser?.email || 'není k dispozici') + '</small>' },
+        { label: 'Uložené údaje', render: (r) => identitySavedFields(r) },
+        { label: 'Stav', render: (r) => '<span class="status ' + statusClass(r.status) + '">' + statusLabel(r.status) + '</span><small class="card-note">Telefon: ' + cell(r.phoneNumber) + '</small>' },
         { label: 'Relace', render: (r) => '<span class="status ' + statusClass(r.sessionState) + '">' + statusLabel(r.sessionState) + '</span>' },
         { label: 'Může publikovat', render: (r) => '<span class="status ' + (isPublishableIdentity(r) ? 'ok' : 'risk') + '">' + (isPublishableIdentity(r) ? 'Ano' : 'Ne') + '</span><small class="card-note">' + (hasLinkedAccount(r) ? 'Účet je propojený' : 'Čeká na propojení účtu') + '</small>' },
         { label: 'Ověření', render: (r) => verificationActions(r) },
@@ -2449,7 +2510,7 @@ export const appScript = `
       bindBazosCategoryControls(form);
       form.elements.category.value = category;
       bindBazosCategoryControls(form);
-      form.elements.location.value = draft.location || '';
+      form.elements.location.value = draft.location || identityDefaultLocation(findIdentity(data.identities, form.elements.identityId?.value)) || '';
     }
 
     function draw(searchValue) {
@@ -2470,8 +2531,10 @@ export const appScript = `
         prepared = null;
         draw(document.getElementById('catalog-search')?.value || '');
       }));
-      bindBazosCategoryControls(document.getElementById('catalog-draft-form'));
-      document.getElementById('catalog-draft-form')?.addEventListener('submit', prepare);
+      const form = document.getElementById('catalog-draft-form');
+      bindBazosCategoryControls(form);
+      bindIdentityDefaults(form, data.identities);
+      form?.addEventListener('submit', prepare);
       document.getElementById('catalog-confirm')?.addEventListener('click', confirm);
       content.querySelector('[data-policy]')?.addEventListener('click', () => policyCheck(prepared?.draft?.id));
     }
