@@ -80,6 +80,10 @@ export class BazosCatalogSellActionService {
 
   async status(userId: string, productId: string, query: CatalogSellActionStatusQueryDto = {}) {
     const draft = await this.findLatestDraftForStatus(userId, productId, query);
+    if (!draft) {
+      return this.emptyStatusResponse(productId);
+    }
+
     const latestAttempt = await this.prisma.bazosPublishAttempt.findFirst({
       where: { adId: draft.id },
       orderBy: { createdAt: 'desc' },
@@ -169,7 +173,7 @@ export class BazosCatalogSellActionService {
   }
 
   private async findLatestDraftForStatus(userId: string, productId: string, query: CatalogSellActionStatusQueryDto) {
-    const draft = await this.prisma.bazosAd.findFirst({
+    return this.prisma.bazosAd.findFirst({
       where: {
         productId,
         isActive: true,
@@ -183,8 +187,27 @@ export class BazosCatalogSellActionService {
         { createdAt: 'desc' },
       ],
     });
-    if (!draft) throw new NotFoundException('Catalog Bazos draft not found for this product');
-    return draft;
+  }
+
+  private emptyStatusResponse(productId: string) {
+    return {
+      action: 'sell_on_bazos',
+      productId,
+      draft: null,
+      identity: null,
+      categoryMapping: null,
+      latestAttempt: null,
+      publishedOnBazos: false,
+      listingUrl: null,
+      requiresConfirmation: false,
+      requiresHumanAction: {
+        required: false,
+        reason: null,
+        policyFailures: [],
+        error: null,
+      },
+      nextAction: 'create_bazos_draft',
+    };
   }
 
   private async findIdentityForUser(identityId: string, userId: string) {

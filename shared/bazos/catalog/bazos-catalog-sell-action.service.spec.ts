@@ -93,9 +93,9 @@ function makePrisma(overrides: Record<string, any> = {}) {
         if (Object.prototype.hasOwnProperty.call(overrides, 'existingDraft')) {
           mock.mockResolvedValueOnce(overrides.existingDraft);
         }
-        return mock.mockResolvedValue(overrides.draft ?? draft);
+        return mock.mockResolvedValue(Object.prototype.hasOwnProperty.call(overrides, "draft") ? overrides.draft : draft);
       })(),
-      update: jest.fn().mockResolvedValue(overrides.updatedDraft ?? overrides.draft ?? draft),
+      update: jest.fn().mockResolvedValue(overrides.updatedDraft ?? (Object.prototype.hasOwnProperty.call(overrides, "draft") ? overrides.draft : draft)),
     },
     bazosPublishAttempt: {
       findFirst: jest.fn().mockResolvedValue(overrides.latestAttempt ?? null),
@@ -228,6 +228,26 @@ describe('BazosCatalogSellActionService', () => {
     expect(result.requiresHumanAction.policyFailures).toEqual(blockedPolicy.failures);
   });
 
+
+  it('returns an empty status envelope when no draft exists for this product', async () => {
+    const prisma = makePrisma({ draft: null });
+    const { service } = makeService(prisma);
+
+    const result = await service.status('user-1', draft.productId, {});
+
+    expect(prisma.bazosPublishAttempt.findFirst).not.toHaveBeenCalled();
+    expect(result).toMatchObject({
+      action: 'sell_on_bazos',
+      productId: draft.productId,
+      draft: null,
+      identity: null,
+      publishedOnBazos: false,
+      listingUrl: null,
+      requiresConfirmation: false,
+      requiresHumanAction: { required: false, reason: null, policyFailures: [], error: null },
+      nextAction: 'create_bazos_draft',
+    });
+  });
 
   it('returns published status and listing URL by product without requiring ad or identity query', async () => {
     const publishedDraft = {
