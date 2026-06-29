@@ -2378,7 +2378,7 @@ export const appScript = `
 
   function identityFormPayload(data) {
     const authEmail = String(currentUser?.email || data.authEmail || '').trim();
-    const notes = [data.notes, authEmail ? 'E-mail v Alfares Auth se musí shodovat s e-mailem účtu na Bazoši: ' + authEmail : ''].filter(Boolean).join('\n');
+    const notes = [data.notes, authEmail ? 'E-mail v Alfares Auth se musí shodovat s e-mailem účtu na Bazoši: ' + authEmail : ''].filter(Boolean).join('\\n');
     return {
       phoneNumber: String(data.phoneNumber || '').trim(),
       displayName: defaultIdentityDisplayName(data),
