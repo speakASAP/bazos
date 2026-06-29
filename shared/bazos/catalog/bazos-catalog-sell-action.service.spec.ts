@@ -103,7 +103,7 @@ function makePrisma(overrides: Record<string, any> = {}) {
   } as any;
 }
 
-function makeService(prisma: any, policy = blockedPolicy) {
+function makeService(prisma: any, policy = blockedPolicy, warehouseAvailable = 60) {
   const ads = {
     createDraftFromCatalog: jest.fn().mockResolvedValue(draft),
     evaluatePublishPolicy: jest.fn().mockResolvedValue(policy),
@@ -116,8 +116,11 @@ function makeService(prisma: any, policy = blockedPolicy) {
       decision: allowedPolicy,
     }),
   } as any;
-  const service = new BazosCatalogSellActionService(prisma, makeLogger(), ads, queue);
-  return { service, ads, queue };
+  const warehouseClient = {
+    getTotalAvailable: jest.fn().mockResolvedValue(warehouseAvailable),
+  } as any;
+  const service = new BazosCatalogSellActionService(prisma, makeLogger(), ads, queue, warehouseClient);
+  return { service, ads, queue, warehouseClient };
 }
 
 describe('BazosCatalogSellActionService', () => {
@@ -134,7 +137,7 @@ describe('BazosCatalogSellActionService', () => {
       stockQuantity: 1,
     });
 
-    expect(ads.createDraftFromCatalog).toHaveBeenCalledWith('user-1', expect.objectContaining({ productId: draft.productId }));
+    expect(ads.createDraftFromCatalog).toHaveBeenCalledWith('user-1', expect.objectContaining({ productId: draft.productId, stockQuantity: 1 }));
     expect(ads.evaluatePublishPolicy).toHaveBeenCalledWith(draft.id, 'user-1');
     expect(queue.enqueueDraft).not.toHaveBeenCalled();
     expect(result.requiresConfirmation).toBe(true);
@@ -142,6 +145,70 @@ describe('BazosCatalogSellActionService', () => {
     expect(result.categoryMapping.mapped).toBe(true);
     expect(result.nextAction).toBe('resolve_policy_failures');
     expect(result.canQueueAfterConfirmation).toBe(true);
+  });
+
+  it('caps catalog sell action stock quantity to Warehouse availability', async () => {
+    const prisma = makePrisma({ existingDraft: null });
+    const { service, ads, warehouseClient } = makeService(prisma, blockedPolicy, 60);
+
+    await service.prepare('user-1', draft.productId, {
+      identityId: identity.id,
+      title: draft.title,
+      price: 1000,
+      category: 'elektro',
+      location: 'Praha',
+      stockQuantity: 999,
+    });
+
+    expect(warehouseClient.getTotalAvailable).toHaveBeenCalledWith(draft.productId);
+    expect(ads.createDraftFromCatalog).toHaveBeenCalledWith('user-1', expect.objectContaining({
+      productId: draft.productId,
+      stockQuantity: 60,
+    }));
+  });
+
+  it('caps reused catalog Bazos drafts to Warehouse availability and records stock metadata', async () => {
+    const updatedDraft = {
+      ...draft,
+      stockQuantity: 60,
+      lastPolicyCheck: {
+        draftOptions: {
+          rubric: 'auto',
+          priceOption: 'fixed_price',
+          media: [],
+          warehouseStock: { source: 'warehouse-microservice', totalAvailable: 60, requestedQuantity: 999, quantity: 60, capped: true },
+        },
+      },
+    };
+    const prisma = makePrisma({ existingDraft: draft, updatedDraft });
+    const { service, warehouseClient } = makeService(prisma, blockedPolicy, 60);
+
+    const result = await service.prepare('user-1', draft.productId, {
+      identityId: identity.id,
+      title: draft.title,
+      price: 1000,
+      category: 'elektro',
+      stockQuantity: 999,
+    });
+
+    expect(warehouseClient.getTotalAvailable).toHaveBeenCalledWith(draft.productId);
+    expect(prisma.bazosAd.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        stockQuantity: 60,
+        lastPolicyCheck: expect.objectContaining({
+          draftOptions: expect.objectContaining({
+            warehouseStock: expect.objectContaining({
+              source: 'warehouse-microservice',
+              totalAvailable: 60,
+              requestedQuantity: 999,
+              quantity: 60,
+              capped: true,
+            }),
+          }),
+        }),
+      }),
+    }));
+    expect(result.draft.stockQuantity).toBe(60);
   });
 
   it('updates an existing active draft for the same product and identity with channel-specific fields', async () => {

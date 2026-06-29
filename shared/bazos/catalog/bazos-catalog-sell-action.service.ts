@@ -3,6 +3,7 @@ import { PrismaService } from '../../database/prisma.service';
 import { LoggerService } from '../../logger/logger.service';
 import { BazosAdService } from '../ad/bazos-ad.service';
 import { BazosPublisherQueueService } from '../publisher/bazos-publisher-queue.service';
+import { WarehouseClientService } from '../../clients/warehouse-client.service';
 import { POLICY_GATE } from '../policy/publish-policy.types';
 import {
   CatalogSellActionStatusQueryDto,
@@ -25,6 +26,7 @@ export class BazosCatalogSellActionService {
     private readonly logger: LoggerService,
     private readonly ads: BazosAdService,
     private readonly queue: BazosPublisherQueueService,
+    private readonly warehouseClient: WarehouseClientService,
   ) {}
 
   async prepare(userId: string, productId: string, dto: PrepareCatalogSellActionDto) {
@@ -109,6 +111,7 @@ export class BazosCatalogSellActionService {
 
   private async findOrCreateDraft(userId: string, productId: string, dto: PrepareCatalogSellActionDto) {
     const media = this.mediaFromDto(dto);
+    const stock = await this.resolveWarehouseStock(productId, dto.stockQuantity);
     const existing = await this.prisma.bazosAd.findFirst({
       where: {
         productId,
@@ -128,11 +131,11 @@ export class BazosCatalogSellActionService {
           price: dto.price,
           category: dto.category,
           location: dto.location || null,
-          stockQuantity: dto.stockQuantity ?? 0,
+          stockQuantity: stock.quantity,
           publishStatus: 'draft',
           challengeState: null,
           bazosAdId: null,
-          lastPolicyCheck: this.buildDraftOptions(dto.rubric, dto.priceOption, media) as any,
+          lastPolicyCheck: this.buildDraftOptions(dto.rubric, dto.priceOption, media, stock) as any,
         },
         include: { identity: true },
       });
@@ -148,9 +151,29 @@ export class BazosCatalogSellActionService {
       priceOption: dto.priceOption,
       category: dto.category,
       location: dto.location,
-      stockQuantity: dto.stockQuantity ?? 0,
+      stockQuantity: stock.quantity,
       media,
     });
+  }
+
+  private async resolveWarehouseStock(productId: string, requestedQuantity?: number) {
+    const totalAvailable = this.normalizeQuantity(await this.warehouseClient.getTotalAvailable(productId));
+    const requested = requestedQuantity === undefined ? totalAvailable : this.normalizeQuantity(requestedQuantity);
+    const quantity = Math.min(requested, totalAvailable);
+
+    return {
+      source: 'warehouse-microservice',
+      totalAvailable,
+      requestedQuantity: requestedQuantity === undefined ? null : requested,
+      quantity,
+      capped: quantity < requested,
+    };
+  }
+
+  private normalizeQuantity(value: unknown) {
+    const quantity = Number(value);
+    if (!Number.isFinite(quantity) || quantity <= 0) return 0;
+    return Math.floor(quantity);
   }
 
   private mediaFromDto(dto: PrepareCatalogSellActionDto) {
@@ -257,6 +280,7 @@ export class BazosCatalogSellActionService {
       media: this.draftOptions(draft).media,
       category: draft.category,
       location: draft.location,
+      stockQuantity: draft.stockQuantity,
       publishStatus: draft.publishStatus,
       challengeState: draft.challengeState,
       bazosAdId: draft.bazosAdId,
@@ -269,12 +293,13 @@ export class BazosCatalogSellActionService {
   }
 
 
-  private buildDraftOptions(rubric?: string, priceOption?: string, media?: any[]) {
+  private buildDraftOptions(rubric?: string, priceOption?: string, media?: any[], warehouseStock?: any) {
     return {
       draftOptions: {
         rubric: rubric || null,
         priceOption: priceOption || 'fixed_price',
         media: this.normalizeMediaOverrides(media),
+        ...(warehouseStock ? { warehouseStock } : {}),
       },
     };
   }
