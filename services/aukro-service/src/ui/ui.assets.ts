@@ -247,7 +247,7 @@ export const renderAppPage = (mode: AppMode) => {
         </section>
       </main>
     </div>
-    <script src="/ui/app.js?v=settings-defaults-20260629"></script>`,
+    <script src="/ui/app.js?v=active-status-20260629"></script>`,
   );
 };
 
@@ -1505,8 +1505,9 @@ export const appScript = `
 
   function identityActiveCount(identity, ads) {
     const tracked = Number(identity.activeAdCount || 0);
-    const listed = ads.filter((ad) => ad.identityId === identity.id && isActiveAd(ad)).length;
-    return Math.max(tracked, listed);
+    const identityAds = Array.isArray(ads) ? ads.filter((ad) => ad.identityId === identity.id) : [];
+    const listed = identityAds.filter(isActiveAd).length;
+    return identityAds.length ? listed : tracked;
   }
 
   function bazosAdUrl(ad) {
