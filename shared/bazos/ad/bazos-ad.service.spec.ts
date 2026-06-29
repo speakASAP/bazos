@@ -32,11 +32,13 @@ function makePrisma(ad: any = publishedAd) {
   return {
     bazosIdentity: {
       findMany: jest.fn().mockResolvedValue([identity]),
+      update: jest.fn().mockImplementation(({ data }) => Promise.resolve({ ...identity, ...data })),
     },
     bazosAd: {
       findFirst: jest.fn().mockResolvedValue(ad),
       findMany: jest.fn().mockResolvedValue([ad]),
       update: jest.fn().mockImplementation(({ data }) => Promise.resolve({ ...ad, ...data })),
+      count: jest.fn().mockResolvedValue(0),
     },
   } as any;
 }
@@ -53,7 +55,7 @@ describe('BazosAdService pending Bazos updates', () => {
   it('keeps the pending flag when public Bazoš date is older than the local saved update day', async () => {
     const prisma = makePrisma();
     const service = makeService(prisma) as any;
-    jest.spyOn(service, 'fetchBazosPublicUpdatedAt').mockResolvedValue(new Date(Date.UTC(2026, 5, 27)));
+    jest.spyOn(service, 'fetchBazosPublicStatus').mockResolvedValue({ available: true, updatedAt: new Date(Date.UTC(2026, 5, 27)) });
 
     const result = await service.findMany('user-1', {});
 
@@ -64,7 +66,7 @@ describe('BazosAdService pending Bazos updates', () => {
   it('clears the pending flag when public Bazoš date is same day or newer than local saved update', async () => {
     const prisma = makePrisma();
     const service = makeService(prisma) as any;
-    jest.spyOn(service, 'fetchBazosPublicUpdatedAt').mockResolvedValue(new Date(Date.UTC(2026, 5, 28)));
+    jest.spyOn(service, 'fetchBazosPublicStatus').mockResolvedValue({ available: true, updatedAt: new Date(Date.UTC(2026, 5, 28)) });
 
     await service.findMany('user-1', {});
 
@@ -73,6 +75,43 @@ describe('BazosAdService pending Bazos updates', () => {
     expect(updateData.lastPolicyCheck.draftOptions).toEqual(publishedAd.lastPolicyCheck.draftOptions);
     expect(updateData.lastPolicyCheck.bazosPublicUpdatedAt).toBe('2026-06-28T00:00:00.000Z');
     expect(updateData.lastPolicyCheck.previousPendingBazosUpdate).toEqual(publishedAd.lastPolicyCheck.pendingBazosUpdate);
+  });
+
+  it('marks an active published ad as deleted when the public Bazoš listing is gone', async () => {
+    const prisma = makePrisma({ ...publishedAd, lastPolicyCheck: { allowed: true } });
+    const service = makeService(prisma) as any;
+    jest.spyOn(service, 'fetchBazosPublicStatus').mockResolvedValue({ available: false, updatedAt: null, reason: 'http_404' });
+
+    const result = await service.refreshExternalStatuses('user-1');
+
+    expect(result.deleted).toBe(1);
+    expect(prisma.bazosAd.update).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: publishedAd.id },
+      data: expect.objectContaining({
+        isActive: false,
+        publishStatus: 'deleted',
+        lastPolicyCheck: expect.objectContaining({ bazosDeletionReason: 'http_404' }),
+      }),
+    }));
+    expect(prisma.bazosIdentity.update).toHaveBeenCalledWith({ where: { id: identity.id }, data: { activeAdCount: 0 } });
+  });
+
+  it('keeps local state unchanged when public Bazoš availability cannot be verified', async () => {
+    const prisma = makePrisma({ ...publishedAd, lastPolicyCheck: { allowed: true } });
+    const service = makeService(prisma) as any;
+    jest.spyOn(service, 'fetchBazosPublicStatus').mockResolvedValue({ available: null, updatedAt: null, reason: 'http_503' });
+
+    const result = await service.refreshExternalStatuses('user-1');
+
+    expect(result.unknown).toBe(1);
+    expect(prisma.bazosAd.update).not.toHaveBeenCalled();
+    expect(prisma.bazosIdentity.update).toHaveBeenCalledWith({ where: { id: identity.id }, data: { activeAdCount: 0 } });
+  });
+
+  it('detects deleted Bazoš pages by their page text', () => {
+    const service = makeService(makePrisma()) as any;
+
+    expect(service.isBazosDeletedPage('<html><body>Inzerát neexistuje nebo byl smazán.</body></html>')).toBe(true);
   });
 
   it('parses the public Bazoš listing date format', () => {

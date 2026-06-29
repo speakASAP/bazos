@@ -1397,6 +1397,7 @@ export const appScript = `
 
   function statusClass(value) {
     const text = String(value || '').toLowerCase();
+    if (text.includes('deleted')) return 'risk';
     if (text.includes('verified') || text.includes('active') || text.includes('published') || text.includes('ok') || text.includes('ready') || text.includes('clear') || text.includes('queued')) return 'ok';
     if (text.includes('blocked') || text.includes('banned') || text.includes('suspended') || text.includes('failed') || text.includes('review') || text.includes('challenge') || text.includes('missing') || text.includes('expired') || text.includes('required')) return 'risk';
     return 'wait';
@@ -1411,6 +1412,7 @@ export const appScript = `
 
   function statusLabel(value) {
     const text = String(value || '').toLowerCase();
+    if (text.includes('deleted')) return 'Vymazáno';
     if (text.includes('verified')) return 'Ověřeno';
     if (text.includes('active')) return 'Aktivní';
     if (text.includes('published')) return 'Publikováno';
@@ -1479,6 +1481,7 @@ export const appScript = `
 
   function isPublishedAd(ad) {
     const status = publishStatus(ad);
+    if (status === 'deleted') return false;
     return status === 'published' || status === 'active' || Boolean(ad.bazosAdId);
   }
 
@@ -1544,6 +1547,7 @@ export const appScript = `
 
   function canEditAd(ad) {
     const status = publishStatus(ad);
+    if (status === 'deleted') return false;
     return status === 'draft' || status === 'published' || status === 'active' || Boolean(ad.bazosAdId);
   }
 
@@ -1644,6 +1648,9 @@ export const appScript = `
     const check = ad?.lastPolicyCheck || {};
     const failures = Array.isArray(check.failures) ? check.failures : [];
     const chips = [];
+    if (publishStatus(ad) === 'deleted') {
+      chips.push(policyChip('Vymazáno na Bazoši', 'risk', 'Veřejná stránka inzerátu už není dostupná.'));
+    }
     if (check.allowed === true) {
       chips.push(policyChip('Pravidla prošla', 'ok', 'Poslední uložená kontrola pravidel povolila publikování.'));
     } else if (failures.length) {
@@ -1664,14 +1671,21 @@ export const appScript = `
     return '<div class="policy-chip-list">' + chips.join('') + '</div>';
   }
 
-  async function loadClientData() {
+  function refreshSummaryMarkup(summary) {
+    if (!summary) return '';
+    return '<div class="data-panel compact"><strong>Obnoveno z Bazoš.cz</strong><small class="card-note">Zkontrolováno: ' + cell(summary.checked || 0) + ', vymazáno: ' + cell(summary.deleted || 0) + ', neověřeno: ' + cell(summary.unknown || 0) + '</small></div>';
+  }
+
+  async function loadClientData(options) {
+    const refreshExternal = Boolean(options?.refreshExternal);
     const [adsResult, identitiesResult, queueResult] = await Promise.all([
-      request('/api/bazos/ads').catch((error) => ({ error: error.message })),
+      request(refreshExternal ? '/api/bazos/ads/refresh' : '/api/bazos/ads', refreshExternal ? { method: 'POST', body: '{}' } : undefined).catch((error) => ({ error: error.message })),
       request('/api/bazos/identities').catch((error) => ({ error: error.message })),
       request('/api/bazos/publish-queue?limit=50').catch(() => []),
     ]);
     return {
       ads: adsResult.error ? [] : asArray(adsResult, ['items', 'offers', 'ads']),
+      refreshSummary: adsResult.error ? null : (adsResult.checked !== undefined ? { checked: adsResult.checked, deleted: adsResult.deleted, unknown: adsResult.unknown } : null),
       adsError: adsResult.error,
       identities: identitiesResult.error ? [] : asArray(identitiesResult, ['items', 'identities']),
       identitiesError: identitiesResult.error,
@@ -2188,7 +2202,7 @@ export const appScript = `
   }
 
   function renderDetails(data) {
-    content.innerHTML = table([
+    content.innerHTML = refreshSummaryMarkup(data.refreshSummary) + table([
       { label: 'Inzerát', render: (r) => '<button class="link-button" data-open-ad="' + cell(r.id) + '" type="button"><strong>' + cell(r.title || r.name || r.productName || r.id) + '</strong></button><small class="card-note">' + cell(r.productId || r.sku || '') + '</small>' },
       { label: 'Stav na Bazoši', render: (r) => '<span class="status ' + statusClass(r.status || r.bazosStatus || r.publishStatus) + '">' + statusLabel(r.status || r.bazosStatus || r.publishStatus || 'draft') + '</span>' },
       { label: 'Kategorie', render: (r) => cell(r.category || r.categoryName || r.bazosCategory) },
@@ -2529,9 +2543,9 @@ export const appScript = `
     content.querySelector('[data-claim-attempt]')?.addEventListener('click', () => claimDueAttempt(due.id));
   }
 
-  async function renderClient() {
+  async function renderClient(options) {
     content.innerHTML = '<div class="data-panel empty-state">Načítají se data Bazos.cz...</div>';
-    const data = await loadClientData();
+    const data = await loadClientData(options);
     renderConnectionBanner(data);
     maybeAutoOpenConnectionWizard(data);
     if (activeView === 'overview') renderOverview(data);
@@ -2617,7 +2631,10 @@ export const appScript = `
 
   startPublishWorkerTimer();
 
-  refresh.addEventListener('click', render);
+  refresh.addEventListener('click', () => {
+    if (mode === 'client') return renderClient({ refreshExternal: true });
+    return render();
+  });
   document.querySelectorAll('.tab').forEach((tab) => {
     tab.addEventListener('click', () => {
       activeView = tab.dataset.view;

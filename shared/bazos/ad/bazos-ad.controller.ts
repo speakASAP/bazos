@@ -47,6 +47,11 @@ export class BazosAdController {
     });
   }
 
+  @Post('refresh')
+  refreshExternalStatuses(@Request() req) {
+    return this.adService.refreshExternalStatuses(req.user.id);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string, @Request() req) {
     return this.adService.findById(id, req.user.id);

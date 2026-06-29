@@ -188,14 +188,72 @@ export class BazosAdService {
     return this.resolvePendingBazosUpdate(ad);
   }
 
+  async refreshExternalStatuses(userId: string) {
+    const identitiesForUser = await this.prisma.bazosIdentity.findMany({
+      where: { userId },
+      select: { id: true, activeAdCount: true },
+    });
+    const identityIds = identitiesForUser.map((identity) => identity.id);
+    const ads = await this.prisma.bazosAd.findMany({
+      where: {
+        identityId: { in: identityIds },
+        isActive: true,
+        bazosAdId: { not: null },
+        publishStatus: { in: ['published', 'active'] },
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
+
+    const checked = [];
+    for (const ad of ads) {
+      const check = await this.fetchBazosPublicStatus(ad).catch((error) => {
+        this.logger.warn('Unable to refresh public Bazos listing status', {
+          adId: ad.id,
+          bazosAdId: ad.bazosAdId,
+          error: error?.message || String(error),
+        });
+        return { available: null as boolean | null, updatedAt: null as Date | null, reason: 'request_failed' };
+      });
+      if (check.available === false) {
+        await this.markDeletedOnBazos(ad, check.reason || 'not_available');
+      }
+      checked.push({
+        adId: ad.id,
+        bazosAdId: ad.bazosAdId,
+        available: check.available,
+        reason: check.reason,
+      });
+    }
+
+    await this.reconcileIdentityCounts(identityIds);
+
+    this.logger.log('Bazos public listing statuses refreshed', {
+      userId,
+      checked: checked.length,
+      deleted: checked.filter((item) => item.available === false).length,
+      unknown: checked.filter((item) => item.available === null).length,
+    });
+
+    return {
+      refreshedAt: new Date(),
+      checked: checked.length,
+      deleted: checked.filter((item) => item.available === false).length,
+      unknown: checked.filter((item) => item.available === null).length,
+      ads: await this.findMany(userId, {}),
+      checks: checked,
+    };
+  }
+
   private async resolvePendingBazosUpdate(ad: any) {
     const pending = ad?.lastPolicyCheck?.pendingBazosUpdate;
     if (!pending?.required || !pending?.savedAt || !ad?.bazosAdId) return ad;
 
-    const externalUpdatedAt = await this.fetchBazosPublicUpdatedAt(ad).catch((error) => {
+    const publicStatus = await this.fetchBazosPublicStatus(ad).catch((error) => {
       this.logger.warn('Unable to verify public Bazos update timestamp', { adId: ad.id, bazosAdId: ad.bazosAdId, error: error?.message || String(error) });
-      return null;
+      return { available: null as boolean | null, updatedAt: null as Date | null, reason: 'request_failed' };
     });
+    if (publicStatus.available === false) return this.markDeletedOnBazos(ad, publicStatus.reason || 'not_available');
+    const externalUpdatedAt = publicStatus.updatedAt;
     if (!this.isExternalUpdateFreshEnough(pending.savedAt, externalUpdatedAt)) return ad;
 
     const { pendingBazosUpdate, ...rest } = ad.lastPolicyCheck || {};
@@ -225,8 +283,12 @@ export class BazosAdService {
   }
 
   private async fetchBazosPublicUpdatedAt(ad: any): Promise<Date | null> {
+    return (await this.fetchBazosPublicStatus(ad)).updatedAt;
+  }
+
+  private async fetchBazosPublicStatus(ad: any): Promise<{ available: boolean | null; updatedAt: Date | null; reason?: string }> {
     const publicUrl = this.bazosPublicUrl(ad);
-    if (!publicUrl) return null;
+    if (!publicUrl) return { available: null, updatedAt: null, reason: 'missing_public_url' };
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
     try {
@@ -234,10 +296,41 @@ export class BazosAdService {
         signal: controller.signal,
         headers: { 'user-agent': 'Mozilla/5.0 Bazos-Service/1.0' },
       });
-      if (!response.ok) return null;
-      return this.parseBazosUpdatedDate(await response.text());
+      if (response.status === 404 || response.status === 410) {
+        return { available: false, updatedAt: null, reason: 'http_' + response.status };
+      }
+      if (!response.ok) return { available: null, updatedAt: null, reason: 'http_' + response.status };
+      const html = await response.text();
+      if (this.isBazosDeletedPage(html)) return { available: false, updatedAt: null, reason: 'deleted_page' };
+      return { available: true, updatedAt: this.parseBazosUpdatedDate(html) };
     } finally {
       clearTimeout(timeout);
+    }
+  }
+
+  private async markDeletedOnBazos(ad: any, reason: string) {
+    const current = ad?.lastPolicyCheck && typeof ad.lastPolicyCheck === 'object' ? ad.lastPolicyCheck : {};
+    return this.prisma.bazosAd.update({
+      where: { id: ad.id },
+      data: {
+        isActive: false,
+        publishStatus: 'deleted',
+        lastPolicyCheck: {
+          ...(current as any),
+          bazosDeletionVerifiedAt: new Date().toISOString(),
+          bazosDeletionReason: reason,
+          previousPublishStatus: ad.publishStatus,
+        } as any,
+      },
+    });
+  }
+
+  private async reconcileIdentityCounts(identityIds: string[]) {
+    for (const identityId of identityIds) {
+      const activeAdCount = await this.prisma.bazosAd.count({
+        where: { identityId, isActive: true, publishStatus: { in: ['published', 'active'] } },
+      });
+      await this.prisma.bazosIdentity.update({ where: { id: identityId }, data: { activeAdCount } });
     }
   }
 
@@ -259,6 +352,24 @@ export class BazosAdService {
     const year = Number(match[3]);
     if (!day || !month || !year) return null;
     return new Date(Date.UTC(year, month - 1, day));
+  }
+
+  private isBazosDeletedPage(html: string) {
+    const text = html
+      .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+      .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+      .replace(/<[^>]+>/g, ' ')
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .replace(/&nbsp;/g, ' ')
+      .toLowerCase();
+    return [
+      'inzerat neexistuje',
+      'inzerat nenalezen',
+      'inzerat byl smazan',
+      'inzerat byl vymazan',
+      'stranka nenalezena',
+    ].some((marker) => text.includes(marker));
   }
 
   private buildDraftOptions(rubric?: string, priceOption?: string, media?: any[]) {
