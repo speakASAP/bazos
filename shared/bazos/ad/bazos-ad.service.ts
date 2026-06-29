@@ -8,6 +8,7 @@ import { CatalogClientService } from '../../clients/catalog-client.service';
 
 const DEFAULT_BAZOS_LISTING_LIFETIME_DAYS = 30;
 const BAZOS_CATALOG_TAGS = ['bazos', 'bazos-draft'];
+const BAZOS_MEDIA_LIMIT = 20;
 
 @Injectable()
 export class BazosAdService {
@@ -33,6 +34,11 @@ export class BazosAdService {
       throw new BadRequestException('Identity must be linked to a Bazos account before creating ads');
     }
 
+    const media = this.normalizeMedia(dto.media);
+    if (!media.length) {
+      throw new BadRequestException('At least one photo URL is required before creating a Bazos ad');
+    }
+
     const productId = dto.productId || (dto.saveToCatalog ? await this.ensureCatalogProduct(dto, authorization) : null);
 
     const ad = await this.prisma.bazosAd.create({
@@ -45,7 +51,7 @@ export class BazosAdService {
         price: dto.price,
         category: dto.category || null,
         location: dto.location || null,
-        lastPolicyCheck: this.buildDraftOptions(dto.rubric, dto.priceOption, dto.media) as any,
+        lastPolicyCheck: this.buildDraftOptions(dto.rubric, dto.priceOption, media) as any,
         stockQuantity: dto.stockQuantity ?? 0,
         publishStatus: 'draft',
       },
@@ -57,6 +63,46 @@ export class BazosAdService {
 
     this.logger.log('Bazos ad draft created', { adId: ad.id, identityId: dto.identityId, userId });
     return ad;
+  }
+
+  async createDraftWithUploadedMedia(userId: string, dto: CreateBazosAdDraftDto, files: any[] = [], authorization?: string) {
+    const normalizedFiles = files.slice(0, Math.max(0, BAZOS_MEDIA_LIMIT - this.normalizeMedia(dto.media).length));
+    if (!normalizedFiles.length) {
+      return this.createDraft(userId, dto, authorization);
+    }
+    if (!this.catalogClient) {
+      throw new BadRequestException('Catalog integration is required before uploading Bazos photos');
+    }
+
+    const productId = dto.productId || await this.ensureCatalogProduct(dto, authorization);
+    const existingMedia = this.normalizeMedia(dto.media);
+    const uploadedMedia = [];
+    for (const [index, file] of normalizedFiles.entries()) {
+      const position = existingMedia.length + index;
+      const uploaded = await this.catalogClient.uploadMedia(file, {
+        productId,
+        altText: dto.title,
+        position,
+        isPrimary: position === 0,
+      }, authorization);
+      if (uploaded?.url) {
+        uploadedMedia.push({
+          id: uploaded.id || uploaded.url,
+          url: uploaded.url,
+          thumbnailUrl: uploaded.thumbnailUrl || uploaded.url,
+          altText: uploaded.altText || dto.title,
+          title: uploaded.title || file.originalname || dto.title,
+          position,
+        });
+      }
+    }
+
+    return this.createDraft(userId, {
+      ...dto,
+      productId,
+      saveToCatalog: true,
+      media: [...existingMedia, ...uploadedMedia],
+    }, authorization);
   }
 
   async createDraftFromCatalog(userId: string, dto: CreateBazosAdDraftFromCatalogDto, authorization?: string) {
@@ -71,6 +117,11 @@ export class BazosAdService {
       category: dto.category,
       location: dto.location,
       stockQuantity: dto.stockQuantity ?? 0,
+      brand: dto.brand,
+      manufacturer: dto.manufacturer,
+      ean: dto.ean,
+      weightKg: dto.weightKg,
+      dimensionsCm: dto.dimensionsCm,
       media: dto.media,
     }, authorization);
   }
@@ -83,6 +134,7 @@ export class BazosAdService {
     const existing = await this.findSimilarCatalogProduct(dto.title);
     if (existing?.id) {
       await this.markCatalogProductAsBazosVersion(existing, dto, authorization);
+      await this.syncCatalogMedia(existing.id, dto, authorization);
       return existing.id;
     }
 
@@ -90,6 +142,7 @@ export class BazosAdService {
     if (!product?.id) {
       throw new BadRequestException('Catalog product was not created for this Bazos ad');
     }
+    await this.syncCatalogMedia(product.id, dto, authorization);
     return product.id;
   }
 
@@ -140,8 +193,44 @@ export class BazosAdService {
       isActive: true,
       lifecycle: 'active',
       tags: BAZOS_CATALOG_TAGS,
+      brand: dto.brand || undefined,
+      manufacturer: dto.manufacturer || undefined,
+      ean: dto.ean || undefined,
+      weightKg: dto.weightKg || undefined,
+      dimensionsCm: dto.dimensionsCm || undefined,
       seoData: this.mergeSeoData(null, dto),
     };
+  }
+
+  private async syncCatalogMedia(productId: string, dto: CreateBazosAdDraftDto, authorization?: string) {
+    if (!this.catalogClient) return;
+    const media = this.normalizeMedia(dto.media);
+    for (const item of media) {
+      await this.catalogClient.createMedia({
+        productId,
+        type: 'image',
+        url: item.url,
+        thumbnailUrl: item.thumbnailUrl || item.url,
+        altText: item.altText || dto.title,
+        title: item.title || item.altText || dto.title,
+        position: item.position,
+        isPrimary: item.position === 0,
+      }, authorization);
+    }
+  }
+
+  private normalizeMedia(media?: any[]) {
+    return (Array.isArray(media) ? media : [])
+      .filter((item) => item && typeof item.url === 'string' && /^https?:\/\//i.test(item.url))
+      .slice(0, BAZOS_MEDIA_LIMIT)
+      .map((item, index) => ({
+        id: item.id || item.url,
+        url: item.url.trim(),
+        thumbnailUrl: item.thumbnailUrl || item.url,
+        altText: item.altText || item.title || '',
+        title: item.title || item.altText || '',
+        position: Number.isFinite(Number(item.position)) ? Number(item.position) : index,
+      }));
   }
 
   private mergeSeoData(existing: any, dto: CreateBazosAdDraftDto) {

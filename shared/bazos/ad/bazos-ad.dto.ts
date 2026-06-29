@@ -1,7 +1,9 @@
-import { IsString, IsNotEmpty, IsOptional, IsNumber, IsUUID, Length, Min, IsIn, IsArray, ValidateNested, IsUrl, IsBoolean } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsNumber, IsUUID, Length, Min, IsIn, IsArray, ValidateNested, IsUrl, IsBoolean, ArrayMaxSize } from 'class-validator';
 import { Type } from 'class-transformer';
 
 const PRICE_OPTIONS = ['fixed_price', 'dohodou', 'nabidnete', 'nerozhoduje', 'v_textu', 'zdarma'] as const;
+const BAZOS_MEDIA_LIMIT = 20;
+const BAZOS_DESCRIPTION_MAX_LENGTH = 5000;
 
 
 export class BazosMediaOverrideDto {
@@ -49,6 +51,7 @@ export class CreateBazosAdDraftDto {
 
   @IsOptional()
   @IsString()
+  @Length(0, BAZOS_DESCRIPTION_MAX_LENGTH)
   description?: string;
 
   @IsNumber()
@@ -81,12 +84,41 @@ export class CreateBazosAdDraftDto {
   stockQuantity?: number;
 
   @IsOptional()
+  @IsString()
+  @Length(0, 200)
+  brand?: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(0, 200)
+  manufacturer?: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(0, 64)
+  ean?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  weightKg?: number;
+
+  @IsOptional()
+  dimensionsCm?: {
+    length?: number;
+    width?: number;
+    height?: number;
+  };
+
+  @IsOptional()
   @IsBoolean()
   saveToCatalog?: boolean;
 
 
   @IsOptional()
   @IsArray()
+  @ArrayMaxSize(BAZOS_MEDIA_LIMIT)
   @ValidateNested({ each: true })
   @Type(() => BazosMediaOverrideDto)
   media?: BazosMediaOverrideDto[];
@@ -106,6 +138,7 @@ export class CreateBazosAdDraftFromCatalogDto {
 
   @IsOptional()
   @IsString()
+  @Length(0, BAZOS_DESCRIPTION_MAX_LENGTH)
   description?: string;
 
   @IsNumber()
@@ -138,9 +171,38 @@ export class CreateBazosAdDraftFromCatalogDto {
   @Type(() => Number)
   stockQuantity?: number;
 
+  @IsOptional()
+  @IsString()
+  @Length(0, 200)
+  brand?: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(0, 200)
+  manufacturer?: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(0, 64)
+  ean?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  weightKg?: number;
+
+  @IsOptional()
+  dimensionsCm?: {
+    length?: number;
+    width?: number;
+    height?: number;
+  };
+
 
   @IsOptional()
   @IsArray()
+  @ArrayMaxSize(BAZOS_MEDIA_LIMIT)
   @ValidateNested({ each: true })
   @Type(() => BazosMediaOverrideDto)
   media?: BazosMediaOverrideDto[];
@@ -154,6 +216,7 @@ export class UpdateBazosAdDraftDto {
 
   @IsOptional()
   @IsString()
+  @Length(0, BAZOS_DESCRIPTION_MAX_LENGTH)
   description?: string;
 
   @IsOptional()
@@ -186,9 +249,38 @@ export class UpdateBazosAdDraftDto {
   @Min(0)
   stockQuantity?: number;
 
+  @IsOptional()
+  @IsString()
+  @Length(0, 200)
+  brand?: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(0, 200)
+  manufacturer?: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(0, 64)
+  ean?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  weightKg?: number;
+
+  @IsOptional()
+  dimensionsCm?: {
+    length?: number;
+    width?: number;
+    height?: number;
+  };
+
 
   @IsOptional()
   @IsArray()
+  @ArrayMaxSize(BAZOS_MEDIA_LIMIT)
   @ValidateNested({ each: true })
   @Type(() => BazosMediaOverrideDto)
   media?: BazosMediaOverrideDto[];

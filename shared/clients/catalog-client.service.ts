@@ -123,6 +123,50 @@ export class CatalogClientService {
     }
   }
 
+
+  /**
+   * Upload product media file to catalog storage
+   */
+  async uploadMedia(file: any, data: { productId: string; altText?: string; position?: number; isPrimary?: boolean }, authorization?: string): Promise<any> {
+    try {
+      const formData = new (globalThis as any).FormData();
+      const blob = new (globalThis as any).Blob([file.buffer], { type: file.mimetype || 'application/octet-stream' });
+      formData.append('file', blob, file.originalname || 'bazos-photo.jpg');
+      formData.append('productId', data.productId);
+      if (data.altText) formData.append('altText', data.altText);
+      if (Number.isFinite(data.position)) formData.append('position', String(data.position));
+      if (data.isPrimary !== undefined) formData.append('isPrimary', String(Boolean(data.isPrimary)));
+      const response = await firstValueFrom(
+        this.httpService.post(`${this.baseUrl}/api/media/upload`, formData, this.authOptions(authorization))
+      );
+      return response.data.data;
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      this.logger.warn(`Failed to upload product media: ${errorMessage}`, 'CatalogClient');
+      if (errorStack) this.logger.warn(errorStack, 'CatalogClient');
+      return null;
+    }
+  }
+
+  /**
+   * Create external media reference for product
+   */
+  async createMedia(mediaData: any, authorization?: string): Promise<any> {
+    try {
+      const response = await firstValueFrom(
+        this.httpService.post(`${this.baseUrl}/api/media`, mediaData, this.authOptions(authorization))
+      );
+      return response.data.data;
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      this.logger.warn(`Failed to create product media reference: ${errorMessage}`, 'CatalogClient');
+      if (errorStack) this.logger.warn(errorStack, 'CatalogClient');
+      return null;
+    }
+  }
+
   /**
    * Get product pricing
    */

@@ -1142,6 +1142,33 @@ button, input { font: inherit; }
   color: var(--ink);
   line-height: 1.5;
 }
+.manual-media-panel {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+.manual-media-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+.manual-media-preview {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 10px;
+}
+.manual-media-preview img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
 .media-picker {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
@@ -1323,6 +1350,9 @@ export const appScript = `
   let currentUser = null;
   let publishWorkerBusy = false;
   let publishWorkerTimer = null;
+  const BAZOS_TITLE_MAX_LENGTH = 500;
+  const BAZOS_DESCRIPTION_MAX_LENGTH = 5000;
+  const BAZOS_MEDIA_LIMIT = 20;
   const BAZOS_RUBRICS = [{"slug":"auto","label":"Auto","categories":[{"name":"Alfa Romeo"},{"name":"Audi"},{"name":"BMW"},{"name":"Citroën"},{"name":"Dacia"},{"name":"Fiat"},{"name":"Ford"},{"name":"Honda"},{"name":"Hyundai"},{"name":"Chevrolet"},{"name":"Kia"},{"name":"Mazda"},{"name":"Mercedes-Benz"},{"name":"Mitsubishi"},{"name":"Nissan"},{"name":"Opel"},{"name":"Peugeot"},{"name":"Renault"},{"name":"Seat"},{"name":"Suzuki"},{"name":"Škoda"},{"name":"Toyota"},{"name":"Volkswagen"},{"name":"Volvo"},{"name":"Ostatní značky"},{"name":"Autorádia"},{"name":"GPS navigace"},{"name":"Havarovaná auta"},{"name":"Náhradní díly"},{"name":"Pneumatiky, kola"},{"name":"Příslušenství"},{"name":"Tuning"},{"name":"Veteráni"},{"name":"Autobusy"},{"name":"Dodávky"},{"name":"Mikrobusy"},{"name":"Karavany, obytná auta"},{"name":"Nákladní auta"},{"name":"Pick-up"},{"name":"Vozíky, přívěsy"},{"name":"Stroje"},{"name":"Ostatní"},{"name":"Havarovaná"},{"name":"Náhradní díly"},{"name":"Motorky, Skútry"}]},{"slug":"deti","label":"Děti","categories":[{"name":"Autosedačky"},{"name":"Baby monitory, chůvičky"},{"name":"Dětská literatura"},{"name":"Hračky"},{"name":"Hlídání dětí"},{"name":"Chodítka a hopsadla"},{"name":"Kočárky"},{"name":"Kojenecké potřeby"},{"name":"Kola"},{"name":"Lego"},{"name":"Nábytek pro děti"},{"name":"Nosítka"},{"name":"Odrážedla"},{"name":"Sedačky na kolo"},{"name":"Sportovní potřeby"},{"name":"Školní potřeby"},{"name":"Ostatní"},{"name":"Body, dupačky a overaly"},{"name":"Bundy a kabátky"},{"name":"Čepice a kloboučky"},{"name":"Kalhoty, kraťasy a tepláky"},{"name":"Kombinézy"},{"name":"Komplety"},{"name":"Mikiny a svetry"},{"name":"Obuv"},{"name":"Plavky"},{"name":"Ponožky a punčocháče"},{"name":"Pyžámka a župánky"},{"name":"Rukavice a šály"},{"name":"Spodní prádlo"},{"name":"Sukýnky a šatičky"},{"name":"Těhotenské oblečení"},{"name":"Trička a košile"},{"name":"Ostatní oblečení"}]},{"slug":"dum","label":"Dům a zahrada","categories":[{"name":"Bazény"},{"name":"Čerpadla"},{"name":"Dveře, vrata"},{"name":"Klimatizace"},{"name":"Kotle, Kamna, Bojlery"},{"name":"Malotraktory, Kultivátory"},{"name":"Míchačky"},{"name":"Nářadí"},{"name":"Okna"},{"name":"Pily"},{"name":"Radiátory"},{"name":"Rostliny"},{"name":"Sekačky"},{"name":"Sněžná technika"},{"name":"Stavební materiál"},{"name":"Vybavení dílen"},{"name":"Vysavače/Foukače"},{"name":"Zahradní grily"},{"name":"Zahradní nábytek"},{"name":"Zahradní technika"},{"name":"Ostatní"}]},{"slug":"elektro","label":"Elektro","categories":[{"name":"Digestoře"},{"name":"Ledničky"},{"name":"Mikrovlnné trouby"},{"name":"Mrazáky"},{"name":"Myčky"},{"name":"Pračky"},{"name":"Sporáky"},{"name":"Sušičky"},{"name":"Ostatní - bílá"},{"name":"Autorádia"},{"name":"Domácí kina"},{"name":"Fotoaparáty"},{"name":"GPS navigace"},{"name":"Hifi systémy, Rádia"},{"name":"Hudební nástroje"},{"name":"Projektory"},{"name":"Repro soustavy"},{"name":"Sluchátka"},{"name":"Televizory"},{"name":"Video, DVD přehrávače"},{"name":"Videokamery"},{"name":"Zesilovače"},{"name":"Ostatní audio video"},{"name":"Epilátory, Depilátory"},{"name":"Fény, Kulmy"},{"name":"Holící strojky"},{"name":"Kávovary"},{"name":"Nabíječky baterií"},{"name":"Ruční šlehače, Mixéry"},{"name":"Svítidla, Lampy"},{"name":"Šicí stroje"},{"name":"Vysavače"},{"name":"Vysílačky"},{"name":"Zvlhčovače vzduchu"},{"name":"Žehličky"},{"name":"Ostatní drobné"}]},{"slug":"foto","label":"Foto","categories":[{"name":"Analogové fotoaparáty"},{"name":"Digitální fotoaparáty"},{"name":"Drony"},{"name":"Videokamery"},{"name":"Zrcadlovky"},{"name":"Baterie"},{"name":"Blesky a osvětlení"},{"name":"Brašny a pouzdra"},{"name":"Datové kabely"},{"name":"Filtry"},{"name":"Nabíječky baterií"},{"name":"Objektivy"},{"name":"Paměťové karty"},{"name":"Stativy"},{"name":"Ostatní"}]},{"slug":"hudba","label":"Hudba","categories":[{"name":"Bicí nástroje"},{"name":"Dechové nástroje"},{"name":"Klávesové nástroje"},{"name":"Smyčcové nástroje"},{"name":"Strunné nástroje"},{"name":"Ostatní nástroje"},{"name":"DVD, CD, MC, LP"},{"name":"Hudebníci a skupiny"},{"name":"Koncerty"},{"name":"Noty, texty"},{"name":"Světelná technika"},{"name":"Vstupenky"},{"name":"Výuka hudby"},{"name":"Zkušebny"},{"name":"Zvuková technika"},{"name":"Ostatní"}]},{"slug":"knihy","label":"Knihy","categories":[{"name":"Beletrie"},{"name":"Detektivky, thrillery"},{"name":"Historické romány"},{"name":"Humor"},{"name":"Knihy pro ženy"},{"name":"Komiksy"},{"name":"Poezie"},{"name":"Sci-fi, Fantasy"},{"name":"Životopisy"},{"name":"Pro nejmenší"},{"name":"Pro děti"},{"name":"Pro mládež"},{"name":"Cestování, mapy"},{"name":"Dítě, rodina a vztahy"},{"name":"Encyklopedie"},{"name":"Esoterika"},{"name":"Hobby, odborné knihy"},{"name":"Kuchařky"},{"name":"Počítačová literatura"},{"name":"Rozvoj osobnosti"},{"name":"Učebnice, skripta - ZŠ"},{"name":"Učebnice, skripta - SŠ"},{"name":"Učebnice, skripta - VŠ"},{"name":"Učebnice, skripta - Jazykové"},{"name":"Zdravý životní styl"},{"name":"Cizojazyčná literatura"},{"name":"Časopisy"},{"name":"Ostatní"}]},{"slug":"mobil","label":"Mobily","categories":[{"name":"Apple"},{"name":"Google"},{"name":"Huawei, Honor"},{"name":"Motorola, Lenovo"},{"name":"Nokia, Microsoft"},{"name":"Realme"},{"name":"Samsung"},{"name":"Sony"},{"name":"Xiaomi"},{"name":"Ostatní značky"},{"name":"Baterie"},{"name":"Bezdrátové telefony"},{"name":"Datové kabely"},{"name":"Faxy"},{"name":"GPS navigace"},{"name":"Headsety"},{"name":"HF Sady do auta"},{"name":"Chytré hodinky"},{"name":"Kryty"},{"name":"Nabíječky"},{"name":"Paměťové karty"},{"name":"Stolní telefony"},{"name":"Ostatní"}]},{"slug":"motorky","label":"Motorky","categories":[{"name":"Cestovní motocykly"},{"name":"Čtyřkolky"},{"name":"Chopper"},{"name":"Enduro"},{"name":"Minibike"},{"name":"Mopedy"},{"name":"Silniční motocykly"},{"name":"Skútry"},{"name":"Skútry vodní"},{"name":"Skútry sněžné"},{"name":"Tříkolky"},{"name":"Veteráni"},{"name":"Náhradní díly"},{"name":"Oblečení, obuv, helmy"},{"name":"Ostatní"}]},{"slug":"nabytek","label":"Nábytek","categories":[{"name":"Dětský nábytek"},{"name":"Dveře, vrata"},{"name":"Jídelní kouty"},{"name":"Knihovny"},{"name":"Koberce a podlah. krytina"},{"name":"Koupelny"},{"name":"Křesla a gauče"},{"name":"Kuchyně"},{"name":"Lampy, osvětlení"},{"name":"Ložnice"},{"name":"Matrace"},{"name":"Obývací stěny"},{"name":"Postele"},{"name":"Sedací soupravy"},{"name":"Skříně"},{"name":"Stoly"},{"name":"Zahradní nábytek"},{"name":"Židle"},{"name":"Doplňky"},{"name":"Ostatní nábytek"}]},{"slug":"obleceni","label":"Oblečení","categories":[{"name":"Bundy a Kabáty"},{"name":"Čepice a Šátky"},{"name":"Džíny"},{"name":"Halenky"},{"name":"Kalhoty"},{"name":"Košile"},{"name":"Kožené oděvy"},{"name":"Mikiny"},{"name":"Obleky a Saka"},{"name":"Plavky"},{"name":"Rukavice a Šály"},{"name":"Spodní prádlo"},{"name":"Sportovní oblečení"},{"name":"Sukně"},{"name":"Svatební šaty"},{"name":"Svetry"},{"name":"Šaty, Kostýmky"},{"name":"Šortky"},{"name":"Těhotenské oblečení"},{"name":"Termo prádlo"},{"name":"Trička, Tílka"},{"name":"Batohy, Kufry"},{"name":"Boty"},{"name":"Doplňky"},{"name":"Hodinky"},{"name":"Kabelky"},{"name":"Šperky"},{"name":"Ostatní"}]},{"slug":"pc","label":"PC","categories":[{"name":"DVD, Blu-ray mechaniky"},{"name":"Fotoaparáty"},{"name":"GPS navigace"},{"name":"Grafické karty"},{"name":"Hard disky, SSD"},{"name":"Herní konzole"},{"name":"Herní zařízení"},{"name":"Hry"},{"name":"Chladiče"},{"name":"Klávesnice"},{"name":"Kopírovací stroje"},{"name":"LCD monitory"},{"name":"Mobilní telefony"},{"name":"Modemy"},{"name":"Myši"},{"name":"Notebooky"},{"name":"Paměti"},{"name":"PC, Počítače"},{"name":"Procesory"},{"name":"Síťové prvky"},{"name":"Scanery"},{"name":"Skříně, zdroje"},{"name":"Software"},{"name":"Spotřební materiál"},{"name":"Tablety, E-čtečky"},{"name":"Tiskárny"},{"name":"Wireless, WiFi"},{"name":"Základní desky"},{"name":"Záložní zdroje"},{"name":"Zvukové karty"},{"name":"Ostatní"}]},{"slug":"prace","label":"Práce","categories":[{"name":"Administrativa"},{"name":"Chemie a potravinářství"},{"name":"Doprava a logistika"},{"name":"Finance a ekonomika"},{"name":"IT a telekomunikace"},{"name":"Marketing a reklama"},{"name":"Management"},{"name":"Obchod a prodej"},{"name":"Obrana a bezpečnost"},{"name":"Pohostinství a ubytování"},{"name":"Práce v domácnosti"},{"name":"Právo, legislativa"},{"name":"Průmysl a výroba"},{"name":"Řemeslné práce"},{"name":"Servis a služby"},{"name":"Stavebnictví"},{"name":"Technika a energetika"},{"name":"Tisk a polygrafie"},{"name":"Výzkum a vývoj"},{"name":"Vzdělávání a personalistika"},{"name":"Zdravotnictví"},{"name":"Zemědělství"},{"name":"Brigády"},{"name":"Ostatní"}]},{"slug":"reality","label":"Reality","categories":[{"name":"Prodej"},{"name":"Byty"},{"name":"Domy"},{"name":"Nové projekty"},{"name":"Garáže"},{"name":"Hotely, penziony, restaurace"},{"name":"Chalupy, Chaty"},{"name":"Kanceláře"},{"name":"Obchodní prostory"},{"name":"Pozemky"},{"name":"Sklady"},{"name":"Zahrady"},{"name":"Ostatní"},{"name":"Pronájem"},{"name":"Byty"},{"name":"Domy"},{"name":"Nové projekty"},{"name":"Podnájem, spolubydlící"},{"name":"Garáže"},{"name":"Hotely, penziony, restaurace"},{"name":"Ubytování"},{"name":"Kanceláře"},{"name":"Obchodní prostory"},{"name":"Pozemky"},{"name":"Sklady"},{"name":"Zahrady"},{"name":"Ostatní"}]},{"slug":"sluzby","label":"Služby","categories":[{"name":"Auto Moto"},{"name":"Cestování"},{"name":"Domácí práce"},{"name":"Esoterika"},{"name":"Hlídání dětí"},{"name":"IT, webdesign"},{"name":"Koně - služby"},{"name":"Kurzy a školení"},{"name":"Opravy, servis"},{"name":"Pořádání akcí"},{"name":"Právo a bezpečnost"},{"name":"Překladatelství"},{"name":"Přeprava a Stěhování"},{"name":"Půjčovny"},{"name":"Realitní služby"},{"name":"Reklama na auto"},{"name":"Reklamní plochy ostatní"},{"name":"Řemeslné a stavební práce"},{"name":"Služby pro zvířata"},{"name":"Tvůrčí služby"},{"name":"Ubytování"},{"name":"Účetnictví, poradenství"},{"name":"Úklid"},{"name":"Výroba"},{"name":"Výuka, doučování"},{"name":"Výuka hudby"},{"name":"Zdraví a krása"},{"name":"Zprostředkovatelské služby"},{"name":"Ostatní"}]},{"slug":"sport","label":"Sport","categories":[{"name":"Fitness, jogging"},{"name":"Golf"},{"name":"Fotbal"},{"name":"In-lines, Skateboarding"},{"name":"Kempink"},{"name":"Letectví"},{"name":"Míčové hry"},{"name":"Myslivost, lov"},{"name":"Paintball"},{"name":"Rybaření"},{"name":"Společenské hry"},{"name":"Tenis, squash, badminton"},{"name":"Turistika, horolezectví"},{"name":"Vodní sporty, potápění"},{"name":"Vše ostatní"},{"name":"Dětská kola"},{"name":"Koloběžky"},{"name":"Horská kola"},{"name":"Elektrokola"},{"name":"Silniční kola"},{"name":"Součástky a díly"},{"name":"Ostatní cyklistika"},{"name":"Běžkování"},{"name":"Lyžování"},{"name":"Skialpy"},{"name":"Snowboarding"},{"name":"Hokej, bruslení"},{"name":"Ostatní zimní"}]},{"slug":"stroje","label":"Stroje","categories":[{"name":"Čerpadla"},{"name":"Čistící stroje"},{"name":"Dřevoobráběcí stroje"},{"name":"Generátory"},{"name":"Historické stroje"},{"name":"Komunální technika"},{"name":"Kovoobráběcí stroje"},{"name":"Lesní technika"},{"name":"Motory"},{"name":"Potravinářské stroje"},{"name":"Skladová technika"},{"name":"Stavební stroje"},{"name":"Textilní stroje"},{"name":"Tiskařské stroje"},{"name":"Vybavení provozoven"},{"name":"Výrobní linky"},{"name":"Zemědělská technika"},{"name":"Náhradní díly"},{"name":"Ostatní"}]},{"slug":"vstupenky","label":"Vstupenky","categories":[{"name":"Dálniční známky"},{"name":"Dárkové poukazy"},{"name":"Jízdenky"},{"name":"Letenky"},{"name":"Permanentky"},{"name":"Divadlo"},{"name":"Festivaly"},{"name":"Hudba, Koncerty"},{"name":"Pro děti"},{"name":"Společenské akce"},{"name":"Sport"},{"name":"Výstavy"},{"name":"Ostatní"}]},{"slug":"zvirata","label":"Zvířata","categories":[{"name":"Akvarijní ryby"},{"name":"Drobní savci"},{"name":"Kočky"},{"name":"Koně"},{"name":"Koně - potřeby"},{"name":"Koně - služby"},{"name":"Psi"},{"name":"Ptactvo"},{"name":"Terarijní zvířata"},{"name":"Ostatní domácí"},{"name":"Krytí"},{"name":"Ztraceni a nalezeni"},{"name":"Chovatelské potřeby"},{"name":"Služby pro zvířata"},{"name":"Drůbež"},{"name":"Králíci"},{"name":"Ovce a kozy"},{"name":"Prasata"},{"name":"Skot"},{"name":"Ostatní hospodářská"}]},{"slug":"ostatni","label":"Ostatní","categories":[{"name":"Mince, bankovky"},{"name":"Modelářství"},{"name":"Potraviny"},{"name":"Sběratelství"},{"name":"Sklo, keramika"},{"name":"Starožitnosti"},{"name":"Šperky, hodinky"},{"name":"Umělecké předměty"},{"name":"Zdraví a krása"},{"name":"Známky, pohlednice"},{"name":"Ostatní"}]}];
   const BAZOS_PRICE_OPTIONS = [
     { value: 'fixed_price', label: 'Zadat cenu' },
@@ -1366,6 +1396,23 @@ export const appScript = `
   }
 
   const headers = () => ({ 'Authorization': 'Bearer ' + token(), 'Content-Type': 'application/json' });
+
+  async function requestForm(path, formData) {
+    const response = await fetch(path, { method: 'POST', headers: { 'Authorization': 'Bearer ' + token() }, body: formData });
+    if (response.status === 401) {
+      localStorage.removeItem(tokenKey);
+      localStorage.removeItem(refreshTokenKey);
+      if (mode === 'client') startHostedAuth('login');
+      else showAuth();
+      throw new Error('Relace vypršela. Přihlaste se prosím znovu.');
+    }
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      const raw = body.message || body.error?.message || 'Požadavek selhal';
+      throw new Error(Array.isArray(raw) ? raw.join(', ') : raw);
+    }
+    return response.json();
+  }
 
   async function request(path, options) {
     const response = await fetch(path, Object.assign({ headers: headers() }, options || {}));
@@ -2064,6 +2111,67 @@ export const appScript = `
     }
   }
 
+
+  function trimToLimit(value, limit) {
+    return String(value || '').trim().slice(0, limit);
+  }
+
+  function manualMediaItems(form) {
+    const seen = new Set();
+    return Array.from(form.querySelectorAll('[data-manual-media-url]'))
+      .map((input) => String(input.value || '').trim())
+      .filter((url) => {
+        if (!/^https?:\/\//i.test(url) || seen.has(url)) return false;
+        seen.add(url);
+        return true;
+      })
+      .slice(0, BAZOS_MEDIA_LIMIT)
+      .map((url, index) => ({
+        id: url,
+        url,
+        thumbnailUrl: url,
+        altText: 'Bazoš foto ' + (index + 1),
+        title: 'Bazoš foto ' + (index + 1),
+        position: index,
+      }));
+  }
+
+  function updateManualMediaPreview(form) {
+    const media = manualMediaItems(form);
+    const counter = form.querySelector('[data-manual-media-counter]');
+    const preview = form.querySelector('[data-manual-media-preview]');
+    const addButton = form.querySelector('[data-add-manual-media]');
+    if (counter) counter.textContent = media.length + ' / ' + BAZOS_MEDIA_LIMIT;
+    if (addButton) addButton.disabled = form.querySelectorAll('[data-manual-media-url]').length >= BAZOS_MEDIA_LIMIT;
+    if (preview) {
+      preview.innerHTML = media.map((item) => '<img src="' + escapeHtml(item.url) + '" alt="' + escapeHtml(item.altText) + '">').join('');
+    }
+  }
+
+  function addManualMediaRow(form, value) {
+    const list = form.querySelector('[data-manual-media-list]');
+    if (!list || list.querySelectorAll('[data-manual-media-url]').length >= BAZOS_MEDIA_LIMIT) return;
+    const row = document.createElement('div');
+    row.className = 'manual-media-row';
+    row.innerHTML = '<input data-manual-media-url type="url" inputmode="url" placeholder="https://..." value="' + escapeHtml(value || '') + '">' +
+      '<button class="button button-secondary" data-remove-manual-media type="button">Odebrat</button>';
+    list.appendChild(row);
+    row.querySelector('[data-manual-media-url]')?.addEventListener('input', () => updateManualMediaPreview(form));
+    row.querySelector('[data-remove-manual-media]')?.addEventListener('click', () => {
+      row.remove();
+      if (!list.querySelector('[data-manual-media-url]')) addManualMediaRow(form, '');
+      updateManualMediaPreview(form);
+    });
+    updateManualMediaPreview(form);
+  }
+
+  function bindManualPublishControls(form) {
+    if (!form) return;
+    form.querySelector('[data-add-manual-media]')?.addEventListener('click', () => addManualMediaRow(form, ''));
+    addManualMediaRow(form, '');
+    updateManualMediaPreview(form);
+  }
+
   async function enqueuePublish(id) {
     const confirmed = window.confirm('Potvrďte, že jste ručně zkontrolovali duplicitu a obsah inzerátu. Žádost se odešle pouze do hlídané fronty a backend znovu vyhodnotí pravidla.');
     if (!confirmed) return;
@@ -2082,21 +2190,43 @@ export const appScript = `
     const data = Object.fromEntries(new FormData(form).entries());
     const payload = {
       identityId: data.identityId,
-      title: data.title,
-      description: data.description || undefined,
+      title: trimToLimit(data.title, BAZOS_TITLE_MAX_LENGTH),
+      description: trimToLimit(data.description, BAZOS_DESCRIPTION_MAX_LENGTH) || undefined,
+      brand: trimToLimit(data.brand, 200) || undefined,
+      manufacturer: trimToLimit(data.manufacturer, 200) || undefined,
+      ean: trimToLimit(data.ean, 64) || undefined,
       price: Number(data.price || 0),
       priceOption: data.priceOption || 'fixed_price',
       rubric: data.rubric || undefined,
       category: data.category || undefined,
       location: data.location || undefined,
       stockQuantity: 1,
-      saveToCatalog: data.saveToCatalog === 'on',
+      weightKg: data.weightKg ? Number(data.weightKg) : undefined,
+      dimensionsCm: (data.lengthCm || data.widthCm || data.heightCm) ? {
+        length: data.lengthCm ? Number(data.lengthCm) : undefined,
+        width: data.widthCm ? Number(data.widthCm) : undefined,
+        height: data.heightCm ? Number(data.heightCm) : undefined,
+      } : undefined,
+      saveToCatalog: true,
+      media: manualMediaItems(form),
     };
+    const photoFiles = Array.from(form.querySelector('[data-manual-photo-files]')?.files || []).slice(0, BAZOS_MEDIA_LIMIT - payload.media.length);
+    if (!payload.media.length && !photoFiles.length) {
+      const formMessage = content.querySelector('[data-form-message]');
+      if (formMessage) formMessage.innerHTML = settingsErrorMarkup('Přidejte alespoň jednu fotku. Bazoš publikace a katalogový produkt vyžadují media.');
+      return;
+    }
     try {
-      const draft = await request('/api/bazos/ads', { method: 'POST', body: JSON.stringify(payload) });
-      if (data.enqueue === 'on') {
-        await request('/api/bazos/ads/' + encodeURIComponent(draft.id) + '/publish', { method: 'POST', body: JSON.stringify(manualEvidence()) });
+      let draft;
+      if (photoFiles.length) {
+        const formData = new FormData();
+        formData.append('payload', JSON.stringify(payload));
+        photoFiles.forEach((file) => formData.append('photos', file));
+        draft = await requestForm('/api/bazos/ads/with-photos', formData);
+      } else {
+        draft = await request('/api/bazos/ads', { method: 'POST', body: JSON.stringify(payload) });
       }
+      await request('/api/bazos/ads/' + encodeURIComponent(draft.id) + '/publish', { method: 'POST', body: JSON.stringify(manualEvidence()) });
       activeView = 'details';
       syncActiveTabs();
       await renderClient();
@@ -2385,15 +2515,24 @@ export const appScript = `
       '<label>Rubrika<select name="rubric" data-bazos-rubric required>' + rubricOptions('auto') + '</select></label>' +
       '<label>Kategorie Bazos.cz<select name="category" data-bazos-category required>' + categoryOptions('auto', '') + '</select></label>' +
       '<div class="category-suggestions wide" data-category-suggestions></div>' +
-      '<label class="wide">Název<input name="title" maxlength="500" required></label>' +
-      '<label class="wide">Popis<textarea name="description"></textarea></label>' +
+      '<label class="wide">Název<input name="title" minlength="5" maxlength="' + BAZOS_TITLE_MAX_LENGTH + '" required></label>' +
+      '<label class="wide">Popis<textarea name="description" maxlength="' + BAZOS_DESCRIPTION_MAX_LENGTH + '" required></textarea><small class="card-note">Max ' + BAZOS_DESCRIPTION_MAX_LENGTH + ' znaků.</small></label>' +
       '<label>Lokalita<input name="location" maxlength="200"></label>' +
-      '<label class="check-row"><input name="enqueue" type="checkbox"><span>Publikovat inzerát na Bazoš přes hlídanou frontu. Potvrzuji ruční kontrolu duplicity a obsahu.</span></label>' +
-      '<label class="check-row"><input name="saveToCatalog" type="checkbox"><span>Přidat tento inzerát do katalogu produktů. Pokud podobný produkt existuje, použije se jako Bazoš verze.</span></label>' +
+      '<label>Značka<input name="brand" maxlength="200"></label>' +
+      '<label>Výrobce<input name="manufacturer" maxlength="200"></label>' +
+      '<label>EAN<input name="ean" maxlength="64"></label>' +
+      '<label>Hmotnost kg<input name="weightKg" type="number" min="0" step="0.01"></label>' +
+      '<label>Délka cm<input name="lengthCm" type="number" min="0" step="0.1"></label>' +
+      '<label>Šířka cm<input name="widthCm" type="number" min="0" step="0.1"></label>' +
+      '<label>Výška cm<input name="heightCm" type="number" min="0" step="0.1"></label>' +
+      '<div class="wide manual-media-panel"><div><strong>Fotky pro Bazoš</strong><small class="card-note">Alespoň 1, maximálně ' + BAZOS_MEDIA_LIMIT + '. Nahrajte soubory nebo vložte veřejné HTTPS/HTTP URL obrázků; stejné fotky se uloží i k produktu v katalogu.</small></div><label>Upload fotek<input data-manual-photo-files name="photos" type="file" accept="image/*" multiple></label><div data-manual-media-list></div><div class="row-actions"><button class="button button-secondary" data-add-manual-media type="button">Přidat URL fotku</button><span class="card-note" data-manual-media-counter>0 / ' + BAZOS_MEDIA_LIMIT + '</span></div><div class="manual-media-preview" data-manual-media-preview></div></div>' +
+      '<label class="check-row"><input name="enqueue" type="checkbox" checked disabled><span>Publikovat inzerát na Bazoš přes hlídanou frontu. Potvrzuji ruční kontrolu duplicity a obsahu.</span></label>' +
+      '<label class="check-row"><input name="saveToCatalog" type="checkbox" checked disabled><span>Přidat tento inzerát do katalogu produktů. Pokud podobný produkt existuje, použije se jako Bazoš verze.</span></label>' +
       '</div><p class="form-message" data-form-message></p><button class="button button-primary" type="submit">Vytvořit inzerát</button></form>';
     const form = document.getElementById('draft-form');
     bindBazosCategoryControls(form);
     bindIdentityDefaults(form, data.identities);
+    bindManualPublishControls(form);
     form.addEventListener('submit', createDraft);
   }
 
@@ -2465,6 +2604,9 @@ export const appScript = `
     const selectedMediaUrls = () => Array.from(document.querySelectorAll('[data-media-choice]:checked')).map((input) => String(input.value || '').trim()).filter(Boolean);
     const selectedIdentityId = () => document.getElementById('catalog-draft-form')?.elements.identityId?.value || data.identities[0]?.id || '';
 
+    let catalogSearchTimer = null;
+    let catalogSearchRequestId = 0;
+
     async function loadProducts(search) {
       const query = new URLSearchParams({ limit: '20', activeOnly: 'true' });
       if (catalogProductId && !search) query.set('productId', catalogProductId);
@@ -2473,6 +2615,14 @@ export const appScript = `
       if (catalog.error) throw new Error(catalog.error);
       products = asArray(catalog, ['items', 'products', 'data']);
       selected = products[0] || null;
+    }
+
+    async function runCatalogSearch(search, focusSearch) {
+      const requestId = ++catalogSearchRequestId;
+      prepared = null;
+      await loadProducts(search);
+      if (requestId !== catalogSearchRequestId) return;
+      draw(search, focusSearch);
     }
 
     function renderPreview() {
@@ -2512,18 +2662,33 @@ export const appScript = `
       form.elements.location.value = draft.location || identityDefaultLocation(findIdentity(data.identities, form.elements.identityId?.value)) || '';
     }
 
-    function draw(searchValue) {
+    function draw(searchValue, focusSearch) {
       const options = data.identities.length ? renderIdentityOptions(data.identities) : '';
       const media = normalizeMedia(prepared?.draft?.media?.length ? prepared.draft.media : productMedia(selected));
       const mediaPicker = media.length ? '<div class="wide"><label>Fotky pro Bazoš</label><div class="media-picker">' + media.map((item, index) => '<div class="media-choice"><label><input data-media-choice type="checkbox" value="' + escapeHtml(item.url) + '"' + (prepared?.draft?.media?.length || index < 5 ? ' checked' : '') + '><img src="' + escapeHtml(item.thumbnailUrl || item.url) + '" alt="' + escapeHtml(item.altText || item.title || 'Foto') + '"><span>' + cell(item.title || item.altText || ('Foto ' + (index + 1))) + '</span></label></div>').join('') + '</div></div>' : '<p class="form-message wide">Katalog nevrátil žádné produktové fotky pro tento produkt.</p>';
-      content.innerHTML = '<div class="catalog-flow"><div class="data-panel flow-column"><h2>Katalog</h2><div class="search-row"><input class="input" id="catalog-search" value="' + cell(searchValue || '') + '" placeholder="Hledat produkt podle názvu, SKU nebo značky"><button class="button button-secondary" id="catalog-search-button" type="button">Hledat</button></div><div class="product-list">' +
+      content.innerHTML = '<div class="catalog-flow"><div class="data-panel flow-column"><h2>Katalog</h2><div class="search-row"><input class="input" id="catalog-search" value="' + escapeHtml(searchValue || '') + '" placeholder="Hledat produkt podle názvu, SKU nebo značky"><button class="button button-secondary" id="catalog-search-button" type="button">Hledat</button></div><div class="product-list">' +
         products.map((product, index) => '<button class="product-option' + (product === selected ? ' active' : '') + '" type="button" data-product-index="' + index + '"><span class="product-thumb"></span><span><strong>' + cell(productTitle(product)) + '</strong><small class="card-note">' + cell(product.sku || product.id) + '</small></span></button>').join('') +
         '</div></div><div class="flow-column"><form class="form-panel panel-stack" id="catalog-draft-form"><div><h2>Publikovat z katalogu</h2><p class="card-note">Produkt se nejdříve převede do Bazoš konceptu. Teprve po náhledu a schválení se odešle do hlídané publikační fronty.</p></div><div class="form-grid"><label>Účet / telefon<select name="identityId" required>' + options + '</select></label><label>Cena v Kč<input name="price" type="number" min="0" step="1" required></label><label>Volba ceny<select name="priceOption">' + priceOptionOptions('fixed_price') + '</select></label><label>Rubrika<select name="rubric" data-bazos-rubric required>' + rubricOptions('auto') + '</select></label><label>Kategorie Bazos.cz<select name="category" data-bazos-category required>' + categoryOptions('auto', '') + '</select></label><div class="category-suggestions wide" data-category-suggestions></div><label class="wide">Název<input name="title" maxlength="500" required></label><label class="wide">Popis<textarea name="description"></textarea></label>' + mediaPicker + '<label>Lokalita<input name="location" maxlength="200"></label></div><p class="form-message" data-form-message></p><button class="button button-primary" type="submit">Sformovat inzerát</button></form>' + renderPreview() + '</div></div>';
       fillForm(selected);
-      document.getElementById('catalog-search-button')?.addEventListener('click', async () => {
-        prepared = null;
-        await loadProducts(document.getElementById('catalog-search').value.trim());
-        draw(document.getElementById('catalog-search').value.trim());
+      const searchInput = document.getElementById('catalog-search');
+      if (focusSearch && searchInput) {
+        searchInput.focus();
+        searchInput.setSelectionRange(searchInput.value.length, searchInput.value.length);
+      }
+      searchInput?.addEventListener('input', () => {
+        window.clearTimeout(catalogSearchTimer);
+        const value = searchInput.value.trim();
+        catalogSearchTimer = window.setTimeout(() => runCatalogSearch(value, true).catch((error) => {
+          const formMessage = content.querySelector('[data-form-message]');
+          if (formMessage) formMessage.innerHTML = settingsErrorMarkup(error.message || 'Vyhledávání v katalogu selhalo.');
+        }), 250);
+      });
+      document.getElementById('catalog-search-button')?.addEventListener('click', () => {
+        window.clearTimeout(catalogSearchTimer);
+        runCatalogSearch(document.getElementById('catalog-search').value.trim(), true).catch((error) => {
+          const formMessage = content.querySelector('[data-form-message]');
+          if (formMessage) formMessage.innerHTML = settingsErrorMarkup(error.message || 'Vyhledávání v katalogu selhalo.');
+        });
       });
       content.querySelectorAll('[data-product-index]').forEach((button) => button.addEventListener('click', () => {
         selected = products[Number(button.dataset.productIndex)];

@@ -9,7 +9,10 @@ import {
   Query,
   Request,
   UseGuards,
+  UploadedFiles,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FilesInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { BazosAdService } from './bazos-ad.service';
 import { CreateBazosAdDraftDto, CreateBazosAdDraftFromCatalogDto, UpdateBazosAdDraftDto } from './bazos-ad.dto';
@@ -27,6 +30,18 @@ export class BazosAdController {
   @Post()
   createDraft(@Request() req, @Body() dto: CreateBazosAdDraftDto, @Headers('authorization') authorization?: string) {
     return this.adService.createDraft(req.user.id, dto, authorization);
+  }
+
+  @Post('with-photos')
+  @UseInterceptors(FilesInterceptor('photos', 20, { limits: { fileSize: 25 * 1024 * 1024 } }))
+  createDraftWithPhotos(
+    @Request() req,
+    @Body('payload') payload: string,
+    @UploadedFiles() photos: any[],
+    @Headers('authorization') authorization?: string,
+  ) {
+    const dto = JSON.parse(payload || '{}') as CreateBazosAdDraftDto;
+    return this.adService.createDraftWithUploadedMedia(req.user.id, dto, photos || [], authorization);
   }
 
   @Post('from-catalog')

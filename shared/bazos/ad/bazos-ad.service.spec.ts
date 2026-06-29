@@ -278,6 +278,7 @@ describe('BazosAdService pending Bazos updates', () => {
       createProduct: jest.fn().mockResolvedValue({ id: 'catalog-product-1', title: 'Manual catalog item', tags: [] }),
       getProductById: jest.fn().mockResolvedValue({ id: 'catalog-product-1', title: 'Manual catalog item', tags: [] }),
       updateProduct: jest.fn().mockResolvedValue({ id: 'catalog-product-1' }),
+      createMedia: jest.fn().mockResolvedValue({ id: 'media-1' }),
     } as any;
     const service = new BazosAdService(prisma, makeLogger(), { evaluate: jest.fn() } as any, catalog);
 
@@ -288,14 +289,28 @@ describe('BazosAdService pending Bazos updates', () => {
       price: 990,
       category: 'ostatni',
       saveToCatalog: true,
+      media: [{ url: 'https://cdn.example.test/manual-catalog-item.jpg', thumbnailUrl: 'https://cdn.example.test/manual-catalog-item-thumb.jpg' }],
     }, 'Bearer user-token');
 
     expect(catalog.createProduct).toHaveBeenCalledWith(expect.objectContaining({
       title: 'Manual catalog item',
       tags: expect.arrayContaining(['bazos', 'bazos-draft']),
     }), 'Bearer user-token');
+    expect(catalog.createMedia).toHaveBeenCalledWith(expect.objectContaining({
+      productId: 'catalog-product-1',
+      type: 'image',
+      url: 'https://cdn.example.test/manual-catalog-item.jpg',
+      isPrimary: true,
+    }), 'Bearer user-token');
     expect(prisma.bazosAd.create).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({ productId: 'catalog-product-1' }),
+      data: expect.objectContaining({
+        productId: 'catalog-product-1',
+        lastPolicyCheck: expect.objectContaining({
+          draftOptions: expect.objectContaining({
+            media: expect.arrayContaining([expect.objectContaining({ url: 'https://cdn.example.test/manual-catalog-item.jpg' })]),
+          }),
+        }),
+      }),
     }));
     expect(catalog.updateProduct).toHaveBeenLastCalledWith(
       'catalog-product-1',
@@ -303,6 +318,29 @@ describe('BazosAdService pending Bazos updates', () => {
       'Bearer user-token',
     );
     expect(result.productId).toBe('catalog-product-1');
+  });
+
+  it('rejects manual Bazoš draft creation without at least one photo URL', async () => {
+    const prisma = {
+      bazosIdentity: {
+        findFirst: jest.fn().mockResolvedValue({ ...identity, accountId: 'account-1' }),
+      },
+      bazosAd: {
+        create: jest.fn(),
+      },
+    } as any;
+    const service = new BazosAdService(prisma, makeLogger(), { evaluate: jest.fn() } as any);
+
+    await expect(service.createDraft('user-1', {
+      identityId: identity.id,
+      title: 'Manual item without media',
+      description: 'Bazoš description',
+      price: 990,
+      category: 'ostatni',
+      saveToCatalog: true,
+    })).rejects.toThrow('At least one photo URL is required before creating a Bazos ad');
+
+    expect(prisma.bazosAd.create).not.toHaveBeenCalled();
   });
 
   it('parses the public Bazoš listing date format', () => {
