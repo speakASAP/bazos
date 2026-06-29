@@ -166,7 +166,7 @@ export class BazosAdService {
     });
     const identityIds = identitiesForUser.map((i) => i.id);
 
-    return this.prisma.bazosAd.findMany({
+    const ads = await this.prisma.bazosAd.findMany({
       where: {
         identityId: { in: query.identityId ? [query.identityId] : identityIds },
         ...(query.isActive !== undefined ? { isActive: query.isActive } : {}),
@@ -180,12 +180,86 @@ export class BazosAdService {
       },
       orderBy: { createdAt: 'desc' },
     });
+    return this.resolvePendingBazosUpdates(ads);
   }
 
   async findById(id: string, userId: string) {
-    return this.findByIdForUser(id, userId);
+    const ad = await this.findByIdForUser(id, userId);
+    return this.resolvePendingBazosUpdate(ad);
   }
 
+  private async resolvePendingBazosUpdate(ad: any) {
+    const pending = ad?.lastPolicyCheck?.pendingBazosUpdate;
+    if (!pending?.required || !pending?.savedAt || !ad?.bazosAdId) return ad;
+
+    const externalUpdatedAt = await this.fetchBazosPublicUpdatedAt(ad).catch((error) => {
+      this.logger.warn('Unable to verify public Bazos update timestamp', { adId: ad.id, bazosAdId: ad.bazosAdId, error: error?.message || String(error) });
+      return null;
+    });
+    if (!this.isExternalUpdateFreshEnough(pending.savedAt, externalUpdatedAt)) return ad;
+
+    const { pendingBazosUpdate, ...rest } = ad.lastPolicyCheck || {};
+    return this.prisma.bazosAd.update({
+      where: { id: ad.id },
+      data: {
+        lastPolicyCheck: {
+          ...rest,
+          bazosUpdateVerifiedAt: new Date().toISOString(),
+          bazosPublicUpdatedAt: externalUpdatedAt?.toISOString(),
+          previousPendingBazosUpdate: pendingBazosUpdate,
+        } as any,
+      },
+    });
+  }
+
+  private async resolvePendingBazosUpdates(ads: any[]) {
+    return Promise.all(ads.map((ad) => this.resolvePendingBazosUpdate(ad)));
+  }
+
+  private isExternalUpdateFreshEnough(savedAtValue: string, externalUpdatedAt: Date | null) {
+    const savedAt = new Date(savedAtValue);
+    if (!externalUpdatedAt || Number.isNaN(savedAt.getTime())) return false;
+    const savedDate = Date.UTC(savedAt.getUTCFullYear(), savedAt.getUTCMonth(), savedAt.getUTCDate());
+    const externalDate = Date.UTC(externalUpdatedAt.getUTCFullYear(), externalUpdatedAt.getUTCMonth(), externalUpdatedAt.getUTCDate());
+    return externalDate >= savedDate;
+  }
+
+  private async fetchBazosPublicUpdatedAt(ad: any): Promise<Date | null> {
+    const publicUrl = this.bazosPublicUrl(ad);
+    if (!publicUrl) return null;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    try {
+      const response = await fetch(publicUrl, {
+        signal: controller.signal,
+        headers: { 'user-agent': 'Mozilla/5.0 Bazos-Service/1.0' },
+      });
+      if (!response.ok) return null;
+      return this.parseBazosUpdatedDate(await response.text());
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  private bazosPublicUrl(ad: any) {
+    const raw = String(ad?.bazosAdId || '').trim();
+    if (!raw) return '';
+    if (/^https?:\/\//i.test(raw)) return raw.replace('/smazat/', '/inzerat/');
+    const match = raw.match(/[0-9]{5,}/);
+    if (!match) return '';
+    return `https://www.bazos.cz/inzerat/${encodeURIComponent(match[0])}/`;
+  }
+
+  private parseBazosUpdatedDate(html: string): Date | null {
+    const text = html.replace(/&nbsp;/g, ' ');
+    const match = text.match(/\b(\d{1,2})\.(\d{1,2})\.\s*(\d{4})\b/);
+    if (!match) return null;
+    const day = Number(match[1]);
+    const month = Number(match[2]);
+    const year = Number(match[3]);
+    if (!day || !month || !year) return null;
+    return new Date(Date.UTC(year, month - 1, day));
+  }
 
   private buildDraftOptions(rubric?: string, priceOption?: string, media?: any[]) {
     return {
