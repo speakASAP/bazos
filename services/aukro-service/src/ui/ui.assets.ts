@@ -2194,7 +2194,7 @@ export const appScript = `
     return Array.from(form.querySelectorAll('[data-manual-media-url]'))
       .map((input) => String(input.value || '').trim())
       .filter((url) => {
-        if (!/^https?:\/\//i.test(url) || seen.has(url)) return false;
+        if (!/^https?:\\/\\//i.test(url) || seen.has(url)) return false;
         seen.add(url);
         return true;
       })
