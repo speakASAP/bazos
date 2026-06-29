@@ -5,7 +5,7 @@ id: BAZOS-IMPLEMENTATION-STATE
 status: approved
 owner: project owner
 created: 2026-06-12
-last_updated: 2026-06-13
+last_updated: 2026-06-29
 completeness_level: complete
 ```
 
@@ -24,6 +24,8 @@ completeness_level: complete
 - Process gates: `docs/process/OPERATIONAL_GATES.md`
 - Commit policy: every coding goal must finish with committed changes or a recorded no-commit reason
 - Pre-coding policy: coding is blocked until goal impact, execution plan, pre-coding readiness gate, validation path, and invariant/data/contract/replay declarations exist
+
+2026-06-29: Bazos Warehouse stock authority gate completed in source on `main`. Publish policy now blocks queue/claim paths when a draft has no Catalog product ID, Warehouse route evidence is missing, or Warehouse available stock is zero/unavailable; local Bazos `stockQuantity` is not treated as sellable truth. Intent chain: Vision -> preserve Warehouse as stock authority; Goal Impact -> reduce Bazos oversell risk; System/Feature/Task -> Bazos publish policy gate; Execution Plan/Coding Prompt -> delegated remote-only stock-safety task; Code -> `PublishPolicyService` Warehouse gate; Validation -> focused policy spec pass, `git diff --check` pass, shared build pass, shared tests pass, root tests pass.
 
 ## Goal Roadmap
 

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { LoggerService } from '../../logger/logger.service';
+import { WarehouseClientService } from '../../clients/warehouse-client.service';
 import {
   IDENTITY_STATUS,
   REVIEW_STATE,
@@ -49,6 +50,7 @@ export class PublishPolicyService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly logger: LoggerService,
+    private readonly warehouseClient?: WarehouseClientService,
   ) {}
 
   /**
@@ -64,9 +66,10 @@ export class PublishPolicyService {
    *  6. now >= identity.nextPublishNotBefore
    *  7. now - category.lastPublishedAt >= 24h
    *  8. No local active duplicate for product/identity
-   *  9. No likely public Bazos duplicate
-   * 10. Category mapping exists and is not blocked
-   * 11. Content policy validation passes
+   *  9. Warehouse availability for the linked catalog product is known and > 0
+   * 10. No likely public Bazos duplicate
+   * 11. Category mapping exists and is not blocked
+   * 12. Content policy validation passes
    */
   async evaluate(input: PolicyCheckInput): Promise<PolicyEvaluationResult> {
     const now = new Date();
@@ -171,7 +174,10 @@ export class PublishPolicyService {
       }
     }
 
-    // Gate 9 — public duplicate evidence must exist, be trusted, and be clean.
+    // Gate 9 — Warehouse remains the stock authority. Local draft stock is never sellable truth.
+    await this.evaluateWarehouseAvailability(input.productId, failures);
+
+    // Gate 10 — public duplicate evidence must exist, be trusted, and be clean.
     if (!input.publicDuplicateCheck) {
       failures.push({
         gate: POLICY_GATE.PUBLIC_DUPLICATE_CHECK_MISSING,
@@ -194,7 +200,7 @@ export class PublishPolicyService {
       });
     }
 
-    // Gate 10 — category mapping must exist and be active
+    // Gate 11 — category mapping must exist and be active
     const categoryMapping = await this.prisma.bazosCategory.findFirst({
       where: { bazosCategory: input.bazosCategory, isActive: true },
     });
@@ -205,7 +211,7 @@ export class PublishPolicyService {
       });
     }
 
-    // Gate 11 — content policy evidence must exist, be trusted, and pass.
+    // Gate 12 — content policy evidence must exist, be trusted, and pass.
     if (!input.contentPolicy) {
       failures.push({
         gate: POLICY_GATE.CONTENT_POLICY_NOT_VALIDATED,
@@ -250,6 +256,53 @@ export class PublishPolicyService {
   selectPacingDelaySeconds(): number {
     const range = PACING_MAX_SECONDS - PACING_MIN_SECONDS;
     return Math.floor(Math.random() * (range + 1)) + PACING_MIN_SECONDS;
+  }
+
+
+  private async evaluateWarehouseAvailability(productId: string | undefined, failures: PolicyGateFailure[]) {
+    if (!productId) {
+      failures.push({
+        gate: POLICY_GATE.WAREHOUSE_STOCK_UNAVAILABLE,
+        message: 'Catalog product ID is required before Warehouse stock can authorize Bazos publishing',
+      });
+      return;
+    }
+
+    if (!this.warehouseClient) {
+      failures.push({
+        gate: POLICY_GATE.WAREHOUSE_STOCK_UNAVAILABLE,
+        message: 'Warehouse availability client is not configured for Bazos publish policy evaluation',
+      });
+      return;
+    }
+
+    try {
+      const [stockRows, totalAvailable] = await Promise.all([
+        this.warehouseClient.getStockByProduct(productId),
+        this.warehouseClient.getTotalAvailable(productId),
+      ]);
+      const hasRouteEvidence = Array.isArray(stockRows) && stockRows.length > 0;
+      const available = Number(totalAvailable);
+      if (!hasRouteEvidence) {
+        failures.push({
+          gate: POLICY_GATE.WAREHOUSE_STOCK_UNAVAILABLE,
+          message: `Warehouse route evidence is missing for product ${productId}`,
+        });
+        return;
+      }
+      if (!Number.isFinite(available) || available <= 0) {
+        failures.push({
+          gate: POLICY_GATE.WAREHOUSE_STOCK_UNAVAILABLE,
+          message: `Warehouse available stock for product ${productId} is ${Number.isFinite(available) ? available : 'unknown'}`,
+        });
+      }
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      failures.push({
+        gate: POLICY_GATE.WAREHOUSE_STOCK_UNAVAILABLE,
+        message: `Warehouse availability check failed for product ${productId}: ${errorMessage}`,
+      });
+    }
   }
 
   private buildResult(failures: PolicyGateFailure[], evaluatedAt: Date): PolicyEvaluationResult {

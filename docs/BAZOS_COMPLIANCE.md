@@ -90,11 +90,13 @@ Required backend gates before publish:
 5. now >= identity.nextPublishNotBefore.
 6. now - category.lastPublishedAt >= 24h.
 7. No local active duplicate for product/identity.
-8. No likely public Bazos duplicate.
-9. Category mapping exists and is allowed.
-10. Content policy validation passes.
+8. Warehouse availability and route evidence exists for the linked Catalog product, and available stock is greater than zero.
+9. No likely public Bazos duplicate.
+10. Category mapping exists and is allowed.
+11. Content policy validation passes.
 
 The publish endpoint must return a policy failure response instead of attempting browser submission when any gate fails.
+Warehouse is the stock authority. Bazos draft `stockQuantity` is display/cache state only and must not be used as sellable truth for queueing or publishing.
 
 ## Required Challenge States
 

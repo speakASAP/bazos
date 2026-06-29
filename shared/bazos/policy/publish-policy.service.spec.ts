@@ -37,6 +37,17 @@ function makeLogger() {
   return { log: jest.fn(), warn: jest.fn(), error: jest.fn() } as any;
 }
 
+function makeWarehouse(overrides: Partial<{ stockRows: any[]; totalAvailable: number }> = {}) {
+  return {
+    getStockByProduct: jest.fn().mockResolvedValue(overrides.stockRows ?? [{ warehouseId: 'warehouse-1', available: 3 }]),
+    getTotalAvailable: jest.fn().mockResolvedValue(overrides.totalAvailable ?? 3),
+  } as any;
+}
+
+function makePolicyService(prisma: any, warehouse = makeWarehouse()) {
+  return new PublishPolicyService(prisma, makeLogger(), warehouse);
+}
+
 function baseIdentity(overrides: Partial<any> = {}): any {
   return {
     id: 'identity-1',
@@ -63,7 +74,7 @@ describe('PublishPolicyService', () => {
   describe('Gate 1 — identity.status must be verified', () => {
     it('blocks when status is draft', async () => {
       const prisma = makePrismaStub({ identity: baseIdentity({ status: IDENTITY_STATUS.DRAFT }) });
-      const svc = new PublishPolicyService(prisma, makeLogger());
+      const svc = makePolicyService(prisma);
       const result = await svc.evaluate(input);
       expect(result.allowed).toBe(false);
       expect(result.failures.some((f) => f.gate === POLICY_GATE.IDENTITY_NOT_VERIFIED)).toBe(true);
@@ -71,14 +82,14 @@ describe('PublishPolicyService', () => {
 
     it('allows when status is verified (all other conditions clear)', async () => {
       const prisma = makePrismaStub({ identity: baseIdentity() });
-      const svc = new PublishPolicyService(prisma, makeLogger());
+      const svc = makePolicyService(prisma);
       const result = await svc.evaluate(input);
       expect(result.allowed).toBe(true);
     });
 
     it('blocks when identity is not found', async () => {
       const prisma = makePrismaStub({ identity: null });
-      const svc = new PublishPolicyService(prisma, makeLogger());
+      const svc = makePolicyService(prisma);
       const result = await svc.evaluate(input);
       expect(result.allowed).toBe(false);
       expect(result.failures[0].gate).toBe(POLICY_GATE.IDENTITY_NOT_VERIFIED);
@@ -94,7 +105,7 @@ describe('PublishPolicyService', () => {
       REVIEW_STATE.BLOCKED_BY_BAZOS,
     ])('blocks when reviewState is %s', async (reviewState) => {
       const prisma = makePrismaStub({ identity: baseIdentity({ reviewState }) });
-      const svc = new PublishPolicyService(prisma, makeLogger());
+      const svc = makePolicyService(prisma);
       const result = await svc.evaluate(input);
       expect(result.allowed).toBe(false);
       expect(result.failures.some((f) => f.gate === POLICY_GATE.IDENTITY_REVIEW_BLOCKED)).toBe(true);
@@ -105,7 +116,7 @@ describe('PublishPolicyService', () => {
     it('blocks when verification has expired', async () => {
       const expired = new Date(Date.now() - 1000);
       const prisma = makePrismaStub({ identity: baseIdentity({ verificationExpiresAt: expired }) });
-      const svc = new PublishPolicyService(prisma, makeLogger());
+      const svc = makePolicyService(prisma);
       const result = await svc.evaluate(input);
       expect(result.allowed).toBe(false);
       expect(result.failures.some((f) => f.gate === POLICY_GATE.IDENTITY_VERIFICATION_EXPIRED)).toBe(true);
@@ -114,7 +125,7 @@ describe('PublishPolicyService', () => {
     it('allows when verificationExpiresAt is in the future', async () => {
       const future = new Date(Date.now() + 86400_000);
       const prisma = makePrismaStub({ identity: baseIdentity({ verificationExpiresAt: future }) });
-      const svc = new PublishPolicyService(prisma, makeLogger());
+      const svc = makePolicyService(prisma);
       const result = await svc.evaluate(input);
       expect(result.allowed).toBe(true);
     });
@@ -127,7 +138,7 @@ describe('PublishPolicyService', () => {
       SESSION_STATE.CHALLENGE,
     ])('blocks when sessionState is %s', async (sessionState) => {
       const prisma = makePrismaStub({ identity: baseIdentity({ sessionState }) });
-      const svc = new PublishPolicyService(prisma, makeLogger());
+      const svc = makePolicyService(prisma);
       const result = await svc.evaluate(input);
       expect(result.allowed).toBe(false);
       expect(result.failures.some((f) => f.gate === POLICY_GATE.IDENTITY_SESSION_NOT_ACTIVE)).toBe(true);
@@ -137,7 +148,7 @@ describe('PublishPolicyService', () => {
   describe('Gate 5 — active ad cap', () => {
     it('blocks when activeAdCount >= 50', async () => {
       const prisma = makePrismaStub({ identity: baseIdentity({ activeAdCount: MAX_ACTIVE_ADS }) });
-      const svc = new PublishPolicyService(prisma, makeLogger());
+      const svc = makePolicyService(prisma);
       const result = await svc.evaluate(input);
       expect(result.allowed).toBe(false);
       expect(result.failures.some((f) => f.gate === POLICY_GATE.ACTIVE_AD_CAP_REACHED)).toBe(true);
@@ -145,7 +156,7 @@ describe('PublishPolicyService', () => {
 
     it('allows at 49 active ads', async () => {
       const prisma = makePrismaStub({ identity: baseIdentity({ activeAdCount: MAX_ACTIVE_ADS - 1 }) });
-      const svc = new PublishPolicyService(prisma, makeLogger());
+      const svc = makePolicyService(prisma);
       const result = await svc.evaluate(input);
       expect(result.allowed).toBe(true);
     });
@@ -155,7 +166,7 @@ describe('PublishPolicyService', () => {
     it('blocks when nextPublishNotBefore is in the future', async () => {
       const future = new Date(Date.now() + 90_000);
       const prisma = makePrismaStub({ identity: baseIdentity({ nextPublishNotBefore: future }) });
-      const svc = new PublishPolicyService(prisma, makeLogger());
+      const svc = makePolicyService(prisma);
       const result = await svc.evaluate(input);
       expect(result.allowed).toBe(false);
       expect(result.failures.some((f) => f.gate === POLICY_GATE.PACING_TOO_SOON)).toBe(true);
@@ -165,7 +176,7 @@ describe('PublishPolicyService', () => {
     it('allows when nextPublishNotBefore is in the past', async () => {
       const past = new Date(Date.now() - 1000);
       const prisma = makePrismaStub({ identity: baseIdentity({ nextPublishNotBefore: past }) });
-      const svc = new PublishPolicyService(prisma, makeLogger());
+      const svc = makePolicyService(prisma);
       const result = await svc.evaluate(input);
       expect(result.allowed).toBe(true);
     });
@@ -178,7 +189,7 @@ describe('PublishPolicyService', () => {
         categoryCadences: [{ bazosCategory: 'elektro', lastPublishedAt: recentPublish }],
       });
       const prisma = makePrismaStub({ identity });
-      const svc = new PublishPolicyService(prisma, makeLogger());
+      const svc = makePolicyService(prisma);
       const result = await svc.evaluate(input);
       expect(result.allowed).toBe(false);
       expect(result.failures.some((f) => f.gate === POLICY_GATE.CATEGORY_COOLDOWN)).toBe(true);
@@ -190,7 +201,7 @@ describe('PublishPolicyService', () => {
         categoryCadences: [{ bazosCategory: 'elektro', lastPublishedAt: oldPublish }],
       });
       const prisma = makePrismaStub({ identity });
-      const svc = new PublishPolicyService(prisma, makeLogger());
+      const svc = makePolicyService(prisma);
       const result = await svc.evaluate(input);
       expect(result.allowed).toBe(true);
     });
@@ -202,7 +213,7 @@ describe('PublishPolicyService', () => {
         identity: baseIdentity(),
         duplicateAd: { id: 'existing-ad' },
       });
-      const svc = new PublishPolicyService(prisma, makeLogger());
+      const svc = makePolicyService(prisma);
       const result = await svc.evaluate(input);
       expect(result.allowed).toBe(false);
       expect(result.failures.some((f) => f.gate === POLICY_GATE.LOCAL_DUPLICATE)).toBe(true);
@@ -210,7 +221,7 @@ describe('PublishPolicyService', () => {
 
     it('excludes the current draft from local duplicate detection', async () => {
       const prisma = makePrismaStub({ identity: baseIdentity(), duplicateAd: null });
-      const svc = new PublishPolicyService(prisma, makeLogger());
+      const svc = makePolicyService(prisma);
       const result = await svc.evaluate({ ...input, adId: 'current-ad' });
       expect(result.allowed).toBe(true);
       expect(prisma.bazosAd.findFirst).toHaveBeenCalledWith(
@@ -223,10 +234,36 @@ describe('PublishPolicyService', () => {
     });
   });
 
-  describe('Gate 9 — public duplicate evidence', () => {
+  describe('Gate 9 — Warehouse stock authority', () => {
+    it('blocks publishing when the draft has no catalog product ID for Warehouse evidence', async () => {
+      const prisma = makePrismaStub({ identity: baseIdentity() });
+      const svc = makePolicyService(prisma);
+      const result = await svc.evaluate({ ...input, productId: undefined });
+      expect(result.allowed).toBe(false);
+      expect(result.failures.some((f) => f.gate === POLICY_GATE.WAREHOUSE_STOCK_UNAVAILABLE)).toBe(true);
+    });
+
+    it('blocks publishing when Warehouse route evidence is missing', async () => {
+      const prisma = makePrismaStub({ identity: baseIdentity() });
+      const svc = makePolicyService(prisma, makeWarehouse({ stockRows: [], totalAvailable: 3 }));
+      const result = await svc.evaluate(input);
+      expect(result.allowed).toBe(false);
+      expect(result.failures.some((f) => f.gate === POLICY_GATE.WAREHOUSE_STOCK_UNAVAILABLE)).toBe(true);
+    });
+
+    it('blocks publishing when Warehouse availability is zero', async () => {
+      const prisma = makePrismaStub({ identity: baseIdentity() });
+      const svc = makePolicyService(prisma, makeWarehouse({ totalAvailable: 0 }));
+      const result = await svc.evaluate(input);
+      expect(result.allowed).toBe(false);
+      expect(result.failures.some((f) => f.gate === POLICY_GATE.WAREHOUSE_STOCK_UNAVAILABLE)).toBe(true);
+    });
+  });
+
+  describe('Gate 10 — public duplicate evidence', () => {
     it('blocks when public duplicate evidence is missing', async () => {
       const prisma = makePrismaStub({ identity: baseIdentity() });
-      const svc = new PublishPolicyService(prisma, makeLogger());
+      const svc = makePolicyService(prisma);
       const result = await svc.evaluate({
         identityId: input.identityId,
         bazosCategory: input.bazosCategory,
@@ -239,7 +276,7 @@ describe('PublishPolicyService', () => {
 
     it('blocks when public duplicate evidence is stale', async () => {
       const prisma = makePrismaStub({ identity: baseIdentity() });
-      const svc = new PublishPolicyService(prisma, makeLogger());
+      const svc = makePolicyService(prisma);
       const result = await svc.evaluate({
         ...input,
         publicDuplicateCheck: { checkedAt: new Date(Date.now() - 2 * 60 * 60 * 1000), source: 'manual_review' as const, likelyDuplicate: false },
@@ -250,7 +287,7 @@ describe('PublishPolicyService', () => {
 
     it('blocks when public duplicate evidence is not from a trusted source', async () => {
       const prisma = makePrismaStub({ identity: baseIdentity() });
-      const svc = new PublishPolicyService(prisma, makeLogger());
+      const svc = makePolicyService(prisma);
       const result = await svc.evaluate({
         ...input,
         publicDuplicateCheck: { checkedAt: new Date(), likelyDuplicate: false } as any,
@@ -261,7 +298,7 @@ describe('PublishPolicyService', () => {
 
     it('blocks when public duplicate evidence has an invalid timestamp', async () => {
       const prisma = makePrismaStub({ identity: baseIdentity() });
-      const svc = new PublishPolicyService(prisma, makeLogger());
+      const svc = makePolicyService(prisma);
       const result = await svc.evaluate({
         ...input,
         publicDuplicateCheck: { checkedAt: new Date('bad-date'), source: 'manual_review', likelyDuplicate: false },
@@ -272,7 +309,7 @@ describe('PublishPolicyService', () => {
 
     it('blocks when public duplicate evidence reports a likely duplicate', async () => {
       const prisma = makePrismaStub({ identity: baseIdentity() });
-      const svc = new PublishPolicyService(prisma, makeLogger());
+      const svc = makePolicyService(prisma);
       const result = await svc.evaluate({
         ...input,
         publicDuplicateCheck: { checkedAt: new Date(), source: 'manual_review' as const, likelyDuplicate: true, reason: 'matching public listing' },
@@ -282,10 +319,10 @@ describe('PublishPolicyService', () => {
     });
   });
 
-  describe('Gate 10 — content policy evidence', () => {
+  describe('Gate 12 — content policy evidence', () => {
     it('blocks when content policy evidence is missing', async () => {
       const prisma = makePrismaStub({ identity: baseIdentity() });
-      const svc = new PublishPolicyService(prisma, makeLogger());
+      const svc = makePolicyService(prisma);
       const result = await svc.evaluate({
         identityId: input.identityId,
         bazosCategory: input.bazosCategory,
@@ -298,7 +335,7 @@ describe('PublishPolicyService', () => {
 
     it('blocks when content policy evidence is stale', async () => {
       const prisma = makePrismaStub({ identity: baseIdentity() });
-      const svc = new PublishPolicyService(prisma, makeLogger());
+      const svc = makePolicyService(prisma);
       const result = await svc.evaluate({
         ...input,
         contentPolicy: { checkedAt: new Date(Date.now() - 2 * 60 * 60 * 1000), source: 'manual_review' as const, passed: true },
@@ -309,7 +346,7 @@ describe('PublishPolicyService', () => {
 
     it('blocks when content policy evidence is not from a trusted source', async () => {
       const prisma = makePrismaStub({ identity: baseIdentity() });
-      const svc = new PublishPolicyService(prisma, makeLogger());
+      const svc = makePolicyService(prisma);
       const result = await svc.evaluate({
         ...input,
         contentPolicy: { checkedAt: new Date(), passed: true } as any,
@@ -320,7 +357,7 @@ describe('PublishPolicyService', () => {
 
     it('blocks when content policy validation fails', async () => {
       const prisma = makePrismaStub({ identity: baseIdentity() });
-      const svc = new PublishPolicyService(prisma, makeLogger());
+      const svc = makePolicyService(prisma);
       const result = await svc.evaluate({
         ...input,
         contentPolicy: { checkedAt: new Date(), source: 'manual_review' as const, passed: false, reason: 'forbidden content' },
@@ -333,7 +370,7 @@ describe('PublishPolicyService', () => {
   describe('Gate 11 — category mapping', () => {
     it('blocks when category mapping is missing', async () => {
       const prisma = makePrismaStub({ identity: baseIdentity(), categoryMapping: null });
-      const svc = new PublishPolicyService(prisma, makeLogger());
+      const svc = makePolicyService(prisma);
       const result = await svc.evaluate(input);
       expect(result.allowed).toBe(false);
       expect(result.failures.some((f) => f.gate === POLICY_GATE.CATEGORY_MISSING_OR_BLOCKED)).toBe(true);
@@ -342,7 +379,7 @@ describe('PublishPolicyService', () => {
 
   describe('pacing delay selection', () => {
     it('always returns a value in [60..180]', () => {
-      const svc = new PublishPolicyService({} as any, makeLogger());
+      const svc = makePolicyService({} as any);
       for (let i = 0; i < 200; i++) {
         const delay = svc.selectPacingDelaySeconds();
         expect(delay).toBeGreaterThanOrEqual(PACING_MIN_SECONDS);
@@ -352,7 +389,7 @@ describe('PublishPolicyService', () => {
 
     it('returns selectedPacingDelaySeconds when policy allows', async () => {
       const prisma = makePrismaStub({ identity: baseIdentity() });
-      const svc = new PublishPolicyService(prisma, makeLogger());
+      const svc = makePolicyService(prisma);
       const result = await svc.evaluate(input);
       expect(result.allowed).toBe(true);
       expect(result.selectedPacingDelaySeconds).toBeGreaterThanOrEqual(PACING_MIN_SECONDS);
@@ -361,7 +398,7 @@ describe('PublishPolicyService', () => {
 
     it('does not return selectedPacingDelaySeconds when policy blocks', async () => {
       const prisma = makePrismaStub({ identity: baseIdentity({ status: IDENTITY_STATUS.DRAFT }) });
-      const svc = new PublishPolicyService(prisma, makeLogger());
+      const svc = makePolicyService(prisma);
       const result = await svc.evaluate(input);
       expect(result.allowed).toBe(false);
       expect(result.selectedPacingDelaySeconds).toBeUndefined();
@@ -377,7 +414,7 @@ describe('PublishPolicyService', () => {
           activeAdCount: MAX_ACTIVE_ADS,
         }),
       });
-      const svc = new PublishPolicyService(prisma, makeLogger());
+      const svc = makePolicyService(prisma);
       const result = await svc.evaluate(input);
       expect(result.allowed).toBe(false);
       const gates = result.failures.map((f) => f.gate);
