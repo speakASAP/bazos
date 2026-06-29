@@ -2082,7 +2082,6 @@ export const appScript = `
     const data = Object.fromEntries(new FormData(form).entries());
     const payload = {
       identityId: data.identityId,
-      productId: data.productId || undefined,
       title: data.title,
       description: data.description || undefined,
       price: Number(data.price || 0),
@@ -2090,7 +2089,8 @@ export const appScript = `
       rubric: data.rubric || undefined,
       category: data.category || undefined,
       location: data.location || undefined,
-      stockQuantity: data.stockQuantity ? Number(data.stockQuantity) : 0,
+      stockQuantity: 1,
+      saveToCatalog: data.saveToCatalog === 'on',
     };
     try {
       const draft = await request('/api/bazos/ads', { method: 'POST', body: JSON.stringify(payload) });
@@ -2244,7 +2244,7 @@ export const appScript = `
       ], identityRows, 'Pro tento účet zatím není připojena žádná Bazoš identita.', settingsLink('Připojit')) +
       '</div><div class="data-panel"><h2>Moje inzeráty v přehledu</h2>' +
       tableOnly([
-        { label: 'Inzerát', render: (r) => '<button class="link-button" data-open-ad="' + cell(r.id) + '" type="button"><strong>' + cell(r.title || r.name || r.productName || r.id) + '</strong></button><small class="card-note">' + cell(r.category || r.categoryName || r.bazosCategory || r.productId || '') + '</small>' },
+        { label: 'Inzerát', render: (r) => '<button class="link-button" data-open-ad="' + cell(r.id) + '" type="button"><strong>' + cell(r.title || r.name || r.productName || r.id) + '</strong></button><small class="card-note">' + cell(r.category || r.categoryName || r.bazosCategory || '') + '</small>' },
         { label: 'Stav', render: (r) => '<span class="status ' + statusClass(r.publishStatus || r.status || r.bazosStatus) + '">' + statusLabel(r.publishStatus || r.status || r.bazosStatus || 'draft') + '</span>' },
         { label: 'Odkaz', render: (r) => bazosAdUrl(r) ? '<a class="table-link" href="' + escapeHtml(bazosAdUrl(r)) + '" target="_blank" rel="noopener">Zobrazit na Bazoši</a>' : '<button class="link-button" data-nav-view="details" type="button">Otevřít v mých inzerátech</button>' },
       ], recentAds, 'Pro tento účet nebyly vráceny žádné inzeráty.') +
@@ -2256,7 +2256,7 @@ export const appScript = `
 
   function renderDetails(data) {
     content.innerHTML = refreshSummaryMarkup(data.refreshSummary) + table([
-      { label: 'Inzerát', render: (r) => '<button class="link-button" data-open-ad="' + cell(r.id) + '" type="button"><strong>' + cell(r.title || r.name || r.productName || r.id) + '</strong></button><small class="card-note">' + cell(r.productId || r.sku || '') + '</small>' },
+      { label: 'Inzerát', render: (r) => '<button class="link-button" data-open-ad="' + cell(r.id) + '" type="button"><strong>' + cell(r.title || r.name || r.productName || r.id) + '</strong></button><small class="card-note">' + cell(r.category || r.categoryName || r.bazosCategory || '') + '</small>' },
       { label: 'Stav na Bazoši', render: (r) => '<span class="status ' + statusClass(r.status || r.bazosStatus || r.publishStatus) + '">' + statusLabel(r.status || r.bazosStatus || r.publishStatus || 'draft') + '</span>' },
       { label: 'Kategorie', render: (r) => cell(r.category || r.categoryName || r.bazosCategory) },
       { label: 'Odkaz', render: (r) => bazosAdUrl(r) ? '<a class="table-link" href="' + escapeHtml(bazosAdUrl(r)) + '" target="_blank" rel="noopener">Zobrazit</a>' : cell('Zatím bez Bazoš ID') },
@@ -2289,7 +2289,6 @@ export const appScript = `
       '<label class="wide">Název<input name="title" maxlength="500" required value="' + escapeHtml(ad.title || '') + '"' + (editable ? '' : ' disabled') + '></label>' +
       '<label class="wide">Popis<textarea name="description"' + (editable ? '' : ' disabled') + '>' + escapeHtml(ad.description || '') + '</textarea></label>' +
       '<label>Lokalita<input name="location" maxlength="200" value="' + escapeHtml(ad.location || '') + '"' + (editable ? '' : ' disabled') + '></label>' +
-      '<label>Sklad<input name="stockQuantity" type="number" min="0" step="1" value="' + escapeHtml(ad.stockQuantity ?? 0) + '"' + (editable ? '' : ' disabled') + '></label>' +
       '</div><p class="form-message" data-form-message></p><div class="row-actions"><button class="button button-secondary" data-back-details type="button">Zpět na moje inzeráty</button>' + (editable ? '<button class="button button-primary" type="submit">' + (published ? 'Uložit a otevřít Upravit/Vymazat' : 'Uložit změny') + '</button>' : '') + publishButton + '</div></form>';
     const form = document.getElementById('edit-draft-form');
     bindBazosCategoryControls(form);
@@ -2322,7 +2321,7 @@ export const appScript = `
       rubric: values.rubric || inferRubricForCategory(values.category),
       category: values.category || undefined,
       location: values.location || undefined,
-      stockQuantity: values.stockQuantity ? Number(values.stockQuantity) : 0,
+      stockQuantity: values.stockQuantity ? Number(values.stockQuantity) : undefined,
       media: originalOptions.media || [],
     };
   }
@@ -2379,7 +2378,7 @@ export const appScript = `
       bindContentNavButtons();
       return;
     }
-    content.innerHTML = '<form class="form-panel panel-stack" id="draft-form"><div><h2>Nový inzerát pro Bazos.cz</h2><p class="card-note">Vyberte ověřenou identitu, vyplňte inzerát a případně ho zařaďte do hlídané publikační fronty.</p></div><div class="form-grid">' +
+    content.innerHTML = '<form class="form-panel panel-stack" id="draft-form"><div><h2>Nový inzerát pro Bazos.cz</h2><p class="card-note">Vyberte ověřenou identitu, vyplňte inzerát a zvolte, jestli se má uložit do katalogu nebo poslat do hlídané publikační fronty.</p></div><div class="form-grid">' +
       '<label>Účet / telefon<select name="identityId" required>' + renderIdentityOptions(data.identities) + '</select></label>' +
       '<label>Cena v Kč<input name="price" type="number" min="0" step="1" required></label>' +
       '<label>Volba ceny<select name="priceOption">' + priceOptionOptions('fixed_price') + '</select></label>' +
@@ -2389,9 +2388,8 @@ export const appScript = `
       '<label class="wide">Název<input name="title" maxlength="500" required></label>' +
       '<label class="wide">Popis<textarea name="description"></textarea></label>' +
       '<label>Lokalita<input name="location" maxlength="200"></label>' +
-      '<label>Produkt ID<input name="productId" placeholder="volitelné UUID"></label>' +
-      '<label>Sklad<input name="stockQuantity" type="number" min="0" step="1" value="0"></label>' +
-      '<label class="check-row"><input name="enqueue" type="checkbox"><span>Po vytvoření rovnou odeslat do fronty. Potvrzuji ruční kontrolu duplicity a obsahu.</span></label>' +
+      '<label class="check-row"><input name="enqueue" type="checkbox"><span>Publikovat inzerát na Bazoš přes hlídanou frontu. Potvrzuji ruční kontrolu duplicity a obsahu.</span></label>' +
+      '<label class="check-row"><input name="saveToCatalog" type="checkbox"><span>Přidat tento inzerát do katalogu produktů. Pokud podobný produkt existuje, použije se jako Bazoš verze.</span></label>' +
       '</div><p class="form-message" data-form-message></p><button class="button button-primary" type="submit">Vytvořit inzerát</button></form>';
     const form = document.getElementById('draft-form');
     bindBazosCategoryControls(form);

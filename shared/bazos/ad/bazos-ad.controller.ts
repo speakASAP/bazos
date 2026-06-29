@@ -5,6 +5,7 @@ import {
   Param,
   Patch,
   Post,
+  Headers,
   Query,
   Request,
   UseGuards,
@@ -24,8 +25,8 @@ export class BazosAdController {
   ) {}
 
   @Post()
-  createDraft(@Request() req, @Body() dto: CreateBazosAdDraftDto) {
-    return this.adService.createDraft(req.user.id, dto);
+  createDraft(@Request() req, @Body() dto: CreateBazosAdDraftDto, @Headers('authorization') authorization?: string) {
+    return this.adService.createDraft(req.user.id, dto, authorization);
   }
 
   @Post('from-catalog')

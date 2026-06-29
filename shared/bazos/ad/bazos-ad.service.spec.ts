@@ -255,6 +255,56 @@ describe('BazosAdService pending Bazos updates', () => {
     }));
   });
 
+
+  it('creates a catalog product and links a manual Bazoš draft when requested', async () => {
+    const createdAd = {
+      id: 'manual-ad-1',
+      identityId: identity.id,
+      productId: 'catalog-product-1',
+      title: 'Manual catalog item',
+      price: 990,
+      publishStatus: 'draft',
+    };
+    const prisma = {
+      bazosIdentity: {
+        findFirst: jest.fn().mockResolvedValue({ ...identity, accountId: 'account-1' }),
+      },
+      bazosAd: {
+        create: jest.fn().mockResolvedValue(createdAd),
+      },
+    } as any;
+    const catalog = {
+      searchProducts: jest.fn().mockResolvedValue({ items: [], total: 0, page: 1, limit: 10 }),
+      createProduct: jest.fn().mockResolvedValue({ id: 'catalog-product-1', title: 'Manual catalog item', tags: [] }),
+      getProductById: jest.fn().mockResolvedValue({ id: 'catalog-product-1', title: 'Manual catalog item', tags: [] }),
+      updateProduct: jest.fn().mockResolvedValue({ id: 'catalog-product-1' }),
+    } as any;
+    const service = new BazosAdService(prisma, makeLogger(), { evaluate: jest.fn() } as any, catalog);
+
+    const result = await service.createDraft('user-1', {
+      identityId: identity.id,
+      title: 'Manual catalog item',
+      description: 'Bazoš description',
+      price: 990,
+      category: 'ostatni',
+      saveToCatalog: true,
+    }, 'Bearer user-token');
+
+    expect(catalog.createProduct).toHaveBeenCalledWith(expect.objectContaining({
+      title: 'Manual catalog item',
+      tags: expect.arrayContaining(['bazos', 'bazos-draft']),
+    }), 'Bearer user-token');
+    expect(prisma.bazosAd.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ productId: 'catalog-product-1' }),
+    }));
+    expect(catalog.updateProduct).toHaveBeenLastCalledWith(
+      'catalog-product-1',
+      expect.objectContaining({ tags: expect.arrayContaining(['bazos-ad:manual-ad-1']) }),
+      'Bearer user-token',
+    );
+    expect(result.productId).toBe('catalog-product-1');
+  });
+
   it('parses the public Bazoš listing date format', () => {
     const service = makeService(makePrisma()) as any;
 

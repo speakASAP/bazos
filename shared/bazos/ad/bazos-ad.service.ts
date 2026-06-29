@@ -4,8 +4,10 @@ import { LoggerService } from '../../logger/logger.service';
 import { PublishPolicyService } from '../policy/publish-policy.service';
 import { CreateBazosAdDraftDto, CreateBazosAdDraftFromCatalogDto, UpdateBazosAdDraftDto } from './bazos-ad.dto';
 import { REVIEW_STATE } from '../identity/bazos-identity.types';
+import { CatalogClientService } from '../../clients/catalog-client.service';
 
 const DEFAULT_BAZOS_LISTING_LIFETIME_DAYS = 30;
+const BAZOS_CATALOG_TAGS = ['bazos', 'bazos-draft'];
 
 @Injectable()
 export class BazosAdService {
@@ -13,13 +15,14 @@ export class BazosAdService {
     private readonly prisma: PrismaService,
     private readonly logger: LoggerService,
     private readonly policy: PublishPolicyService,
+    private readonly catalogClient?: CatalogClientService,
   ) {}
 
   /**
    * Create a local ad draft. No Bazos submission happens here.
    * The identityId must belong to an identity owned by the requesting user.
    */
-  async createDraft(userId: string, dto: CreateBazosAdDraftDto) {
+  async createDraft(userId: string, dto: CreateBazosAdDraftDto, authorization?: string) {
     const identity = await this.prisma.bazosIdentity.findFirst({
       where: { id: dto.identityId, userId },
     });
@@ -30,11 +33,13 @@ export class BazosAdService {
       throw new BadRequestException('Identity must be linked to a Bazos account before creating ads');
     }
 
+    const productId = dto.productId || (dto.saveToCatalog ? await this.ensureCatalogProduct(dto, authorization) : null);
+
     const ad = await this.prisma.bazosAd.create({
       data: {
         accountId: identity.accountId,
         identityId: dto.identityId,
-        productId: dto.productId || null,
+        productId,
         title: dto.title,
         description: dto.description || null,
         price: dto.price,
@@ -46,11 +51,15 @@ export class BazosAdService {
       },
     });
 
+    if (dto.saveToCatalog && productId) {
+      await this.attachBazosDraftTag(productId, ad.id, authorization);
+    }
+
     this.logger.log('Bazos ad draft created', { adId: ad.id, identityId: dto.identityId, userId });
     return ad;
   }
 
-  async createDraftFromCatalog(userId: string, dto: CreateBazosAdDraftFromCatalogDto) {
+  async createDraftFromCatalog(userId: string, dto: CreateBazosAdDraftFromCatalogDto, authorization?: string) {
     return this.createDraft(userId, {
       identityId: dto.identityId,
       productId: dto.productId,
@@ -63,7 +72,98 @@ export class BazosAdService {
       location: dto.location,
       stockQuantity: dto.stockQuantity ?? 0,
       media: dto.media,
-    });
+    }, authorization);
+  }
+
+  private async ensureCatalogProduct(dto: CreateBazosAdDraftDto, authorization?: string): Promise<string> {
+    if (!this.catalogClient) {
+      throw new BadRequestException('Catalog integration is not available for Bazos draft creation');
+    }
+
+    const existing = await this.findSimilarCatalogProduct(dto.title);
+    if (existing?.id) {
+      await this.markCatalogProductAsBazosVersion(existing, dto, authorization);
+      return existing.id;
+    }
+
+    const product = await this.catalogClient.createProduct(this.catalogPayload(dto), authorization);
+    if (!product?.id) {
+      throw new BadRequestException('Catalog product was not created for this Bazos ad');
+    }
+    return product.id;
+  }
+
+  private async findSimilarCatalogProduct(title: string): Promise<any | null> {
+    if (!this.catalogClient) return null;
+    const normalizedTitle = this.normalizeCatalogText(title);
+    const result = await this.catalogClient.searchProducts({ search: title, isActive: true, limit: 10 });
+    return (result.items || []).find((product) => {
+      const candidate = this.normalizeCatalogText(product?.title);
+      return candidate === normalizedTitle || candidate.includes(normalizedTitle) || normalizedTitle.includes(candidate);
+    }) || null;
+  }
+
+  private async markCatalogProductAsBazosVersion(product: any, dto: CreateBazosAdDraftDto, authorization?: string) {
+    if (!this.catalogClient || !product?.id) return;
+    await this.catalogClient.updateProduct(product.id, {
+      tags: this.mergeTags(product.tags, BAZOS_CATALOG_TAGS),
+      seoData: this.mergeSeoData(product.seoData, dto),
+    }, authorization);
+  }
+
+  private async attachBazosDraftTag(productId: string, adId: string, authorization?: string) {
+    if (!this.catalogClient) return;
+    try {
+      const product = await this.catalogClient.getProductById(productId);
+      await this.catalogClient.updateProduct(productId, {
+        tags: this.mergeTags(product?.tags, [...BAZOS_CATALOG_TAGS, `bazos-ad:${adId}`]),
+        seoData: {
+          ...(product?.seoData || {}),
+          metaTitle: product?.seoData?.metaTitle || product?.title,
+          keywords: this.mergeTags(product?.seoData?.keywords, ['bazos', `bazos-ad:${adId}`]),
+        },
+      }, authorization);
+    } catch (error: any) {
+      this.logger.warn('Bazos draft was created but catalog product tagging failed', {
+        productId,
+        adId,
+        error: error?.message || String(error),
+      });
+    }
+  }
+
+  private catalogPayload(dto: CreateBazosAdDraftDto) {
+    return {
+      sku: this.bazosCatalogSku(dto.title),
+      title: dto.title,
+      description: dto.description || undefined,
+      isActive: true,
+      lifecycle: 'active',
+      tags: BAZOS_CATALOG_TAGS,
+      seoData: this.mergeSeoData(null, dto),
+    };
+  }
+
+  private mergeSeoData(existing: any, dto: CreateBazosAdDraftDto) {
+    return {
+      ...(existing || {}),
+      metaTitle: existing?.metaTitle || dto.title,
+      metaDescription: existing?.metaDescription || dto.description || undefined,
+      keywords: this.mergeTags(existing?.keywords, ['bazos', 'bazos-version', dto.category].filter(Boolean) as string[]),
+    };
+  }
+
+  private mergeTags(existing: unknown, additions: string[]) {
+    return Array.from(new Set([...(Array.isArray(existing) ? existing.map(String) : []), ...additions].filter(Boolean)));
+  }
+
+  private normalizeCatalogText(value: unknown) {
+    return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  }
+
+  private bazosCatalogSku(title: string) {
+    const slug = this.normalizeCatalogText(title).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 48) || 'inzerat';
+    return `BAZOS-${slug}-${Date.now().toString(36)}`;
   }
 
   /**

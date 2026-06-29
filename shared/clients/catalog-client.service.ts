@@ -92,10 +92,10 @@ export class CatalogClientService {
   /**
    * Create product in catalog
    */
-  async createProduct(productData: any): Promise<any> {
+  async createProduct(productData: any, authorization?: string): Promise<any> {
     try {
       const response = await firstValueFrom(
-        this.httpService.post(`${this.baseUrl}/api/products`, productData)
+        this.httpService.post(`${this.baseUrl}/api/products`, productData, this.authOptions(authorization))
       );
       return response.data.data;
     } catch (error: unknown) {
@@ -109,10 +109,10 @@ export class CatalogClientService {
   /**
    * Update product in catalog
    */
-  async updateProduct(productId: string, productData: any): Promise<any> {
+  async updateProduct(productId: string, productData: any, authorization?: string): Promise<any> {
     try {
       const response = await firstValueFrom(
-        this.httpService.put(`${this.baseUrl}/api/products/${productId}`, productData)
+        this.httpService.put(`${this.baseUrl}/api/products/${productId}`, productData, this.authOptions(authorization))
       );
       return response.data.data;
     } catch (error: unknown) {
@@ -151,6 +151,13 @@ export class CatalogClientService {
       this.logger.warn(`Media not found for product ${productId}`, 'CatalogClient');
       return [];
     }
+  }
+
+  private authOptions(authorization?: string) {
+    if (!authorization) return undefined;
+    return {
+      headers: { Authorization: authorization },
+    };
   }
 }
 

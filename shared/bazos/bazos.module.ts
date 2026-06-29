@@ -14,9 +14,10 @@ import { BazosCatalogSellActionService } from './catalog/bazos-catalog-sell-acti
 import { BazosCatalogSellActionController } from './catalog/bazos-catalog-sell-action.controller';
 import { BazosMonitoringService } from './monitoring/bazos-monitoring.service';
 import { BazosMonitoringController } from './monitoring/bazos-monitoring.controller';
+import { ClientsModule } from '../clients/clients.module';
 
 @Module({
-  imports: [PrismaModule, LoggerModule, AuthModule],
+  imports: [PrismaModule, LoggerModule, AuthModule, ClientsModule],
   providers: [
     BazosIdentityService,
     PublishPolicyService,

@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsOptional, IsNumber, IsUUID, Length, Min, IsIn, IsArray, ValidateNested, IsUrl } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsNumber, IsUUID, Length, Min, IsIn, IsArray, ValidateNested, IsUrl, IsBoolean } from 'class-validator';
 import { Type } from 'class-transformer';
 
 const PRICE_OPTIONS = ['fixed_price', 'dohodou', 'nabidnete', 'nerozhoduje', 'v_textu', 'zdarma'] as const;
@@ -79,6 +79,10 @@ export class CreateBazosAdDraftDto {
   @IsNumber()
   @Min(0)
   stockQuantity?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  saveToCatalog?: boolean;
 
 
   @IsOptional()
