@@ -864,6 +864,27 @@ button, input { font: inherit; }
   background: #fff;
   padding: 18px;
 }
+.stat-card-button {
+  width: 100%;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.stat-card-button:hover,
+.stat-card-button:focus-visible {
+  border-color: var(--red);
+  box-shadow: 0 0 0 2px rgba(255, 102, 0, 0.14);
+  outline: 0;
+}
+.panel-heading-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.panel-heading-actions h2 { margin: 0; }
 .stat-card span {
   color: var(--muted);
   font-size: 13px;
@@ -1362,6 +1383,8 @@ export const appScript = `
   const refresh = document.getElementById('refresh');
   const catalogProductId = new URLSearchParams(window.location.search).get('productId')?.trim() || '';
   let activeView = initialView();
+  let clientAdFilter = 'all';
+  let selectedIdentityId = null;
   let currentUser = null;
   let publishWorkerBusy = false;
   let publishWorkerTimer = null;
@@ -1509,8 +1532,16 @@ export const appScript = `
     return cell(value);
   }
 
-  function stat(label, value, note) {
-    return '<article class="stat-card"><span>' + escapeHtml(label) + '</span><strong>' + cell(value) + '</strong>' + (note ? '<small>' + cell(note) + '</small>' : '') + '</article>';
+  function stat(label, value, note, action) {
+    const body = '<span>' + escapeHtml(label) + '</span><strong>' + cell(value) + '</strong>' + (note ? '<small>' + cell(note) + '</small>' : '');
+    if (!action) return '<article class="stat-card">' + body + '</article>';
+    const attrs = [
+      'class="stat-card stat-card-button"',
+      'type="button"',
+      'data-nav-view="' + escapeHtml(action.view || 'overview') + '"',
+    ];
+    if (action.filter) attrs.push('data-ad-filter="' + escapeHtml(action.filter) + '"');
+    return '<button ' + attrs.join(' ') + '>' + body + '</button>';
   }
 
   function table(headers, rows, emptyText, emptyAction) {
@@ -1529,11 +1560,12 @@ export const appScript = `
 
   const asArray = (value, keys) => Array.isArray(value) ? value : keys.reduce((items, key) => items.length ? items : (Array.isArray(value?.[key]) ? value[key] : []), []);
   const isVerified = (identity) => String(identity?.status || '').toLowerCase() === 'verified';
-  const hasActiveSession = (identity) => String(identity?.sessionState || '').toLowerCase() === 'active';
+  const hasActiveSession = (identity) => ['active', 'ready'].includes(String(identity?.sessionState || '').toLowerCase());
   const isReviewClear = (identity) => !identity?.reviewState || String(identity.reviewState).toLowerCase() === 'clear';
   const hasLinkedAccount = (identity) => Boolean(identity?.accountId);
   const hasLinkedBazosIdentity = (data) => Array.isArray(data?.identities) && data.identities.length > 0;
   const isPublishableIdentity = (identity, ads) => hasLinkedAccount(identity) && isVerified(identity) && hasActiveSession(identity) && isReviewClear(identity) && (Array.isArray(ads) ? identityActiveCount(identity, ads) : Number(identity?.activeAdCount || 0)) < 50;
+  const identityReadyLabel = (identity, ads) => isPublishableIdentity(identity, ads) ? 'Ověřeno a aktivní' : 'Vyžaduje zásah';
 
   function connectionWizardKey() {
     const email = String(currentUser?.email || 'anonymous').trim().toLowerCase();
@@ -1768,6 +1800,30 @@ export const appScript = `
       identitiesError: identitiesResult.error,
       queue: asArray(queueResult, ['items', 'attempts', 'queue']),
     };
+  }
+
+  function adQueued(data, ad) {
+    const id = String(ad?.id || '');
+    return asArray(data, ['queue']).some((item) => String(item?.adId || item?.ad?.id || '') === id && String(item.status || '').toLowerCase().includes('queued'));
+  }
+
+  function adMatchesClientFilter(ad, data, filter) {
+    const status = statusClass(ad.publishStatus || ad.status || ad.bazosStatus);
+    if (filter === 'active') return isActiveAd(ad);
+    if (filter === 'review') return status === 'risk';
+    if (filter === 'queued') return adQueued(data, ad);
+    if (filter === 'published') return isPublishedAd(ad);
+    return true;
+  }
+
+  function detailsFilterLabel(filter) {
+    const labels = {
+      active: 'Aktivní na Bazoši',
+      review: 'Vyžaduje kontrolu',
+      queued: 'Ve frontě',
+      published: 'Publikované',
+    };
+    return labels[filter] || 'Všechny inzeráty';
   }
 
   function accountSummary(identities, ads, queue) {
@@ -2427,7 +2483,7 @@ export const appScript = `
     const formMessage = form.querySelector('[data-form-message]');
     try {
       if (formMessage) formMessage.textContent = 'Ukládají se změny...';
-      await request('/api/bazos/identities/' + encodeURIComponent(identityId), { method: 'PATCH', body: JSON.stringify(updateIdentityPayload(Object.fromEntries(new FormData(form).entries()))) });
+      await request('/api/bazos/identities/' + encodeURIComponent(identityId), { method: 'PUT', body: JSON.stringify(updateIdentityPayload(Object.fromEntries(new FormData(form).entries()))) });
       editingIdentityId = null;
       await renderClient();
     } catch (error) {
@@ -2451,35 +2507,38 @@ export const appScript = `
     content.innerHTML =
       '<div class="summary-grid overview-stats">' +
       stat('Stav přihlášení', 'Přihlášeno', 'Alfares Auth relace je aktivní') +
-      stat('Ověřené identity', summary.publishable.length + ' / ' + data.identities.length, identitiesNeedingReview ? identitiesNeedingReview + ' vyžaduje kontrolu' : 'Telefon a relace připraveny') +
-      stat('Zbývá vložit', summary.capacityRemaining, summary.capacityUsed + ' z ' + summary.capacityTotal + ' aktivních míst použito') +
-      stat('Tento měsíc', summary.monthCreated, summary.monthPublished + ' publikováno') +
-      stat('Celkem inzerátů', data.ads.length, summary.publishedAds + ' publikováno') +
-      stat('Aktivní na Bazoši', summary.activeAds, 'Limit je 50 aktivních na ověřenou identitu') +
-      stat('Vyžaduje kontrolu', data.ads.filter((ad) => statusClass(ad.publishStatus || ad.status || ad.bazosStatus) === 'risk').length, 'Blokované stavy nebo výzvy k ručnímu zásahu') +
-      stat('Ve frontě', summary.queued, 'Hlídané publikování čeká na pravidla a cadence') +
-      '</div><div class="overview-actions"><button class="button button-primary" data-nav-view="publish" type="button">Přidat inzerát</button><button class="button button-secondary" data-nav-view="details" type="button">Otevřít moje inzeráty</button>' + (!hasLinkedBazosIdentity(data) ? settingsLink('Připojit účet Bazoš', 'button button-primary') : '') + '</div>' +
+      stat('Ověřené identity', summary.publishable.length + ' / ' + data.identities.length, identitiesNeedingReview ? identitiesNeedingReview + ' vyžaduje kontrolu' : 'Telefon a relace aktivní', { view: 'account' }) +
+      stat('Zbývá vložit', summary.capacityRemaining, summary.capacityUsed + ' z ' + summary.capacityTotal + ' aktivních míst použito', { view: 'publish' }) +
+      stat('Tento měsíc', summary.monthCreated, summary.monthPublished + ' publikováno', { view: 'details', filter: 'published' }) +
+      stat('Celkem inzerátů', data.ads.length, summary.publishedAds + ' publikováno', { view: 'details', filter: 'all' }) +
+      stat('Aktivní na Bazoši', summary.activeAds, 'Limit je 50 aktivních na ověřenou identitu', { view: 'details', filter: 'active' }) +
+      stat('Vyžaduje kontrolu', data.ads.filter((ad) => statusClass(ad.publishStatus || ad.status || ad.bazosStatus) === 'risk').length, 'Blokované stavy nebo výzvy k ručnímu zásahu', { view: 'details', filter: 'review' }) +
+      stat('Ve frontě', summary.queued, 'Hlídané publikování čeká na pravidla a cadence', { view: 'details', filter: 'queued' }) +
+      '</div><div class="overview-actions"><button class="button button-primary" data-nav-view="publish" type="button">Přidat inzerát</button><button class="button button-secondary" data-nav-view="details" data-ad-filter="all" type="button">Otevřít moje inzeráty</button><button class="button button-secondary" data-nav-view="account" type="button">Otevřít identity</button><button class="button button-secondary" data-open-bulk-identities type="button">+ Přidat identitu</button></div>' +
       '<div class="overview-grid">' +
-      '<div class="data-panel"><h2>Moje identity na Bazoši</h2>' +
+      '<div class="data-panel"><div class="panel-heading-actions"><h2>Moje identity na Bazoši</h2><button class="button button-secondary" data-open-bulk-identities type="button">+ Přidat identitu</button></div>' +
       tableOnly([
-        { label: 'Identita', render: (r) => '<strong>' + cell(r.displayName || r.contactName || r.id) + '</strong><small class="card-note">Telefon: ' + (isVerified(r) ? 'ověřen' : 'neověřen') + '</small>' },
-        { label: 'Bazoš stav', render: (r) => '<span class="status ' + (isPublishableIdentity(r, data.ads) ? 'ok' : 'risk') + '">' + (isPublishableIdentity(r, data.ads) ? 'Připraveno' : 'Vyžaduje zásah') + '</span><small class="card-note">' + statusLabel(r.status) + ' / ' + statusLabel(r.sessionState) + ' / ' + statusLabel(r.reviewState || 'clear') + '</small>' },
+        { label: 'Identita', render: (r) => '<button class="link-button" data-view-identity="' + cell(r.id) + '" type="button"><strong>' + cell(r.displayName || r.contactName || r.id) + '</strong></button><small class="card-note">Telefon: ' + (isVerified(r) ? 'ověřen' : 'neověřen') + '</small>' },
+        { label: 'Bazoš stav', render: (r) => '<span class="status ' + (isPublishableIdentity(r, data.ads) ? 'ok' : 'risk') + '">' + identityReadyLabel(r, data.ads) + '</span><small class="card-note">' + statusLabel(r.status) + ' / ' + statusLabel(r.sessionState) + ' / ' + statusLabel(r.reviewState || 'clear') + '</small>' },
         { label: 'Kapacita', render: (r) => '<strong>' + cell(r.remaining) + '</strong><small class="card-note">zbývá z 50, aktivní ' + cell(r.activeCount) + '</small>' },
-      ], identityRows, 'Pro tento účet zatím není připojena žádná Bazoš identita.', settingsLink('Připojit')) +
-      '</div><div class="data-panel"><h2>Moje inzeráty v přehledu</h2>' +
+      ], identityRows, 'Pro tento účet zatím není připojena žádná Bazoš identita.', '<button class="button button-primary" data-open-bulk-identities type="button">Přidat identitu</button>') +
+      '</div><div class="data-panel"><div class="panel-heading-actions"><h2>Moje inzeráty v přehledu</h2><button class="button button-secondary" data-nav-view="publish" type="button">+ Přidat inzerát</button></div>' +
       tableOnly([
         { label: 'Inzerát', render: (r) => '<button class="link-button" data-open-ad="' + cell(r.id) + '" type="button"><strong>' + cell(r.title || r.name || r.productName || r.id) + '</strong></button><small class="card-note">' + cell(r.category || r.categoryName || r.bazosCategory || '') + '</small>' },
         { label: 'Stav', render: (r) => '<span class="status ' + statusClass(r.publishStatus || r.status || r.bazosStatus) + '">' + statusLabel(r.publishStatus || r.status || r.bazosStatus || 'draft') + '</span>' },
-        { label: 'Odkaz', render: (r) => bazosAdUrl(r) ? '<a class="table-link" href="' + escapeHtml(bazosAdUrl(r)) + '" target="_blank" rel="noopener">Zobrazit na Bazoši</a>' : '<button class="link-button" data-nav-view="details" type="button">Otevřít v mých inzerátech</button>' },
+        { label: 'Odkaz', render: (r) => bazosAdUrl(r) ? '<a class="table-link" href="' + escapeHtml(bazosAdUrl(r)) + '" target="_blank" rel="noopener">Zobrazit na Bazoši</a>' : '<button class="link-button" data-nav-view="details" data-ad-filter="all" type="button">Otevřít v mých inzerátech</button>' },
       ], recentAds, 'Pro tento účet nebyly vráceny žádné inzeráty.') +
       '</div></div>';
     bindContentNavButtons();
     content.querySelectorAll('[data-open-ad]').forEach((button) => button.addEventListener('click', () => openDraftDetails(button.dataset.openAd)));
+    content.querySelectorAll('[data-view-identity]').forEach((button) => button.addEventListener('click', () => { selectedIdentityId = button.dataset.viewIdentity; activeView = 'account'; syncActiveTabs(); renderClient(); }));
+    content.querySelectorAll('[data-open-bulk-identities]').forEach((button) => button.addEventListener('click', () => { accountBulkOpen = true; selectedIdentityId = null; activeView = 'account'; syncActiveTabs(); renderClient(); }));
     bindIdentityWizardButtons();
   }
 
   function renderDetails(data) {
-    content.innerHTML = refreshSummaryMarkup(data.refreshSummary) + table([
+    const rows = data.ads.filter((ad) => adMatchesClientFilter(ad, data, clientAdFilter));
+    content.innerHTML = refreshSummaryMarkup(data.refreshSummary) + '<div class="data-panel"><div class="panel-heading-actions"><h2>Moje inzeráty - ' + escapeHtml(detailsFilterLabel(clientAdFilter)) + '</h2><div class="row-actions"><button class="button button-secondary" data-nav-view="details" data-ad-filter="all" type="button">Vše</button><button class="button button-primary" data-nav-view="publish" type="button">+ Přidat inzerát</button></div></div>' + tableOnly([
       { label: 'Inzerát', render: (r) => '<button class="link-button" data-open-ad="' + cell(r.id) + '" type="button"><strong>' + cell(r.title || r.name || r.productName || r.id) + '</strong></button><small class="card-note">' + cell(r.category || r.categoryName || r.bazosCategory || '') + '</small>' },
       { label: 'Stav na Bazoši', render: (r) => '<span class="status ' + statusClass(r.status || r.bazosStatus || r.publishStatus) + '">' + statusLabel(r.status || r.bazosStatus || r.publishStatus || 'draft') + '</span>' },
       { label: 'Kategorie', render: (r) => cell(r.category || r.categoryName || r.bazosCategory) },
@@ -2487,7 +2546,8 @@ export const appScript = `
       { label: 'Aktualizováno', render: (r) => cell(r.updatedAt || r.createdAt) },
       { label: 'Kontroly', render: (r) => policySummaryChips(r) },
       { label: 'Akce', render: (r) => publishActionMarkup(r, data.queue) },
-    ], data.ads, 'Pro tento účet nebyly vráceny žádné inzeráty.');
+    ], rows, 'Pro zvolený filtr nejsou žádné inzeráty.') + '</div>';
+    bindContentNavButtons();
     content.querySelectorAll('[data-open-ad], [data-edit-ad]').forEach((button) => button.addEventListener('click', () => openDraftDetails(button.dataset.openAd || button.dataset.editAd)));
     content.querySelectorAll('[data-publish]').forEach((button) => button.addEventListener('click', () => enqueuePublish(button.dataset.publish)));
     content.querySelectorAll('[data-open-bazos-manage]').forEach((button) => button.addEventListener('click', () => openBazosManageWithPreparedData(button.dataset.openBazosManage)));
@@ -2635,6 +2695,17 @@ export const appScript = `
     return '<form class="form-panel panel-stack" id="bulk-identity-form"><div><h2>Přidat více Bazoš účtů</h2><div class="bulk-account-help card-note"><span>Každý řádek je jeden účet. Formát: <code>telefon; název; kontaktní jméno; kontaktní telefon; PSČ; lokalita; poznámka</code>.</span><span>Stačí vyplnit telefon; ostatní údaje můžete doplnit později přes Upravit.</span></div></div><label class="wide">Účty<textarea name="bulkIdentities" rows="6" placeholder="+420777000001; Bazoš účet - motodíly; Jan Novák; +420777000001; 11000; Praha; hlavní účet"></textarea></label><p class="form-message" data-form-message></p><div class="row-actions"><button class="button button-primary" type="submit">Uložit účty</button><button class="button button-secondary" data-close-bulk-identities type="button">Zavřít</button></div></form>';
   }
 
+  function identityDetailMarkup(identity, data) {
+    if (!identity) return '';
+    const activeCount = identityActiveCount(identity, data.ads);
+    return '<div class="data-panel panel-stack"><div class="panel-heading-actions"><h2>' + cell(identity.displayName || identity.contactName || identity.phoneNumber || identity.id) + '</h2><div class="row-actions"><button class="button button-primary" data-edit-identity="' + cell(identity.id) + '" type="button">Upravit</button><button class="button button-secondary" data-clear-identity-detail type="button">Zpět na seznam</button></div></div><div class="summary-grid">' +
+      stat('Stav identity', identityReadyLabel(identity, data.ads), statusLabel(identity.status) + ' / ' + statusLabel(identity.sessionState) + ' / ' + statusLabel(identity.reviewState || 'clear')) +
+      stat('Aktivní inzeráty', activeCount, 'Limit 50 na identitu') +
+      stat('Zbývá vložit', Math.max(50 - activeCount, 0), 'Dle aktuálního přehledu') +
+      stat('Platnost ověření', identity.verificationExpiresAt || 'neuloženo') +
+      '</div>' + identitySavedFields(identity) + '<div><h3>Ověření a relace</h3>' + verificationActions(identity) + '</div></div>';
+  }
+
   function identityEditFormMarkup(identity) {
     if (!identity) return '';
     return '<form class="form-panel panel-stack" id="identity-edit-form"><div><h2>Upravit Bazoš účet</h2><p class="card-note">Telefon se nemění. Pro jiný telefon přidejte novou identitu a dokončete ověření.</p></div><div class="form-grid">' +
@@ -2652,7 +2723,9 @@ export const appScript = `
     content.querySelector('[data-open-bulk-identities]')?.addEventListener('click', () => { accountBulkOpen = true; editingIdentityId = null; renderAccount(data); });
     content.querySelector('[data-close-bulk-identities]')?.addEventListener('click', () => { accountBulkOpen = false; renderAccount(data); });
     content.querySelector('#bulk-identity-form')?.addEventListener('submit', createBulkIdentities);
-    content.querySelectorAll('[data-edit-identity]').forEach((button) => button.addEventListener('click', () => { editingIdentityId = button.dataset.editIdentity; accountBulkOpen = false; renderAccount(data); }));
+    content.querySelectorAll('[data-view-identity]').forEach((button) => button.addEventListener('click', () => { selectedIdentityId = button.dataset.viewIdentity; editingIdentityId = null; accountBulkOpen = false; renderAccount(data); }));
+    content.querySelectorAll('[data-edit-identity]').forEach((button) => button.addEventListener('click', () => { editingIdentityId = button.dataset.editIdentity; selectedIdentityId = button.dataset.editIdentity; accountBulkOpen = false; renderAccount(data); }));
+    content.querySelector('[data-clear-identity-detail]')?.addEventListener('click', () => { selectedIdentityId = null; editingIdentityId = null; renderAccount(data); });
     content.querySelector('[data-cancel-identity-edit]')?.addEventListener('click', () => { editingIdentityId = null; renderAccount(data); });
     const editForm = content.querySelector('#identity-edit-form');
     if (editForm && editingIdentityId) editForm.addEventListener('submit', (event) => saveIdentityEdit(event, editingIdentityId));
@@ -2666,6 +2739,7 @@ export const appScript = `
       remaining: isVerified(identity) ? Math.max(50 - identityActiveCount(identity, data.ads), 0) : 0,
       canPublish: isPublishableIdentity(identity, data.ads),
     }));
+    const selectedIdentity = data.identities.find((identity) => identity.id === selectedIdentityId);
     const editingIdentity = data.identities.find((identity) => identity.id === editingIdentityId);
     content.innerHTML = '<div class="summary-grid">' +
       stat('Bazoš identity', data.identities.length) +
@@ -2673,14 +2747,14 @@ export const appScript = `
       stat('Aktivní relace', data.identities.filter(hasActiveSession).length) +
       stat('Může publikovat', summary.publishable.length) +
       '</div><div class="account-tools"><div class="row-actions"><button class="button button-primary" data-open-bulk-identities type="button">Přidat Bazoš účty</button><button class="button button-secondary" data-nav-view="publish" type="button">Publikovat přes účet</button><button class="button button-secondary" data-nav-view="settings" type="button">Jednotlivé nastavení</button></div>' +
-      accountBulkFormMarkup() + identityEditFormMarkup(editingIdentity) + '</div>' + table([
-        { label: 'Účet', render: (r) => '<strong>' + cell(r.displayName || r.phoneNumber) + '</strong><small class="card-note">Propojení účtu: ' + (hasLinkedAccount(r) ? 'propojeno' : 'čeká na dokončení') + '</small>' },
+      accountBulkFormMarkup() + identityDetailMarkup(selectedIdentity, data) + identityEditFormMarkup(editingIdentity) + '</div>' + table([
+        { label: 'Účet', render: (r) => '<button class="link-button" data-view-identity="' + cell(r.id) + '" type="button"><strong>' + cell(r.displayName || r.phoneNumber) + '</strong></button><small class="card-note">Propojení účtu: ' + (hasLinkedAccount(r) ? 'propojeno' : 'čeká na dokončení') + '</small>' },
         { label: 'Telefon', render: (r) => '<span class="status ' + (isVerified(r) ? 'ok' : 'risk') + '">' + statusLabel(r.status) + '</span><small class="card-note">' + cell(r.phoneNumber) + '</small>' },
         { label: 'Relace', render: (r) => '<span class="status ' + statusClass(r.sessionState) + '">' + statusLabel(r.sessionState) + '</span>' },
-        { label: 'Publikování', render: (r) => '<span class="status ' + (r.canPublish ? 'ok' : 'risk') + '">' + (r.canPublish ? 'Může publikovat' : 'Nelze publikovat') + '</span><small class="card-note">Aktivní: ' + cell(r.activeCount) + ' / 50, zbývá ' + cell(r.remaining) + '</small>' },
+        { label: 'Publikování', render: (r) => '<span class="status ' + (r.canPublish ? 'ok' : 'risk') + '">' + (r.canPublish ? 'Ověřeno a aktivní' : 'Nelze publikovat') + '</span><small class="card-note">Aktivní: ' + cell(r.activeCount) + ' / 50, zbývá ' + cell(r.remaining) + '</small>' },
         { label: 'Kontrola', render: (r) => '<span class="status ' + statusClass(r.reviewState) + '">' + statusLabel(r.reviewState || 'clear') + '</span><small class="card-note">Platnost: ' + cell(r.verificationExpiresAt) + '</small>' },
         { label: 'Ověření', render: (r) => verificationActions(r) },
-        { label: 'Akce', render: (r) => '<div class="row-actions"><button class="button button-secondary" data-edit-identity="' + cell(r.id) + '" type="button">Upravit</button><button class="button button-secondary" data-nav-view="publish" type="button">Publikovat</button></div>' },
+        { label: 'Akce', render: (r) => '<div class="row-actions"><button class="button button-secondary" data-view-identity="' + cell(r.id) + '" type="button">Detail</button><button class="button button-secondary" data-edit-identity="' + cell(r.id) + '" type="button">Upravit</button><button class="button button-secondary" data-nav-view="publish" type="button">Publikovat</button></div>' },
       ], identityRows, 'Pro účet nejsou nastavené žádné Bazos identity.', '<div class="row-actions" style="justify-content:center;margin-top:14px"><button class="button button-primary" data-open-bulk-identities type="button">Přidat Bazoš účty</button></div>');
     bindVerificationButtons();
     bindAccountIdentityButtons(data);
@@ -2915,8 +2989,14 @@ export const appScript = `
     maybeStartPublishWorker(data);
   }
 
-  function navigateTo(view) {
+  function navigateTo(view, options) {
     activeView = view;
+    if (options?.adFilter) clientAdFilter = options.adFilter;
+    else if (view !== 'details') clientAdFilter = 'all';
+    if (view !== 'account') {
+      selectedIdentityId = null;
+      editingIdentityId = null;
+    }
     const hash = activeView === 'settings' ? 'bazos-settings' : activeView;
     if (mode === 'client') window.history.replaceState(null, document.title, '/client#' + hash);
     syncActiveTabs();
@@ -2929,7 +3009,7 @@ export const appScript = `
       button.dataset.navBound = 'true';
       button.addEventListener('click', (event) => {
         event.preventDefault();
-        navigateTo(button.dataset.navView || button.dataset.sidebarView);
+        navigateTo(button.dataset.navView || button.dataset.sidebarView, { adFilter: button.dataset.adFilter });
       });
     });
   }
@@ -2996,6 +3076,11 @@ export const appScript = `
   document.querySelectorAll('.tab').forEach((tab) => {
     tab.addEventListener('click', () => {
       activeView = tab.dataset.view;
+      if (activeView !== 'details') clientAdFilter = 'all';
+      if (activeView !== 'account') {
+        selectedIdentityId = null;
+        editingIdentityId = null;
+      }
       if (window.location.hash) window.history.replaceState(null, document.title, mode === 'admin' ? '/admin' : '/client');
       syncActiveTabs();
       render();
