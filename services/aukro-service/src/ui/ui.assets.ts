@@ -2432,7 +2432,7 @@ export const appScript = `
   }
 
   function parseBulkIdentityRows(value) {
-    return String(value || '').split(/\n+/).map((line) => line.trim()).filter(Boolean).map((line) => {
+    return String(value || '').split(/\\n+/).map((line) => line.trim()).filter(Boolean).map((line) => {
       const parts = line.split(/[;\t,]/).map((part) => part.trim());
       const phoneNumber = parts[0] || '';
       return identityFormPayload({
