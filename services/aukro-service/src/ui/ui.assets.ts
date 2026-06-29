@@ -1890,7 +1890,7 @@ export const appScript = `
   }
 
   function externalBazosNotice() {
-    return '<p class="form-message">Změny uložené tady jsou výchozí údaje pro nové koncepty v Alfares. Pokud jste stejný telefon, lokalitu nebo kontaktní údaje změnili na Bazoš.cz, aktualizujte je také přímo na Bazoš.cz.</p>';
+    return '<p class="form-message">Změny uložené tady jsou výchozí údaje pro nové koncepty v Alfares.</p>';
   }
 
   function settingsLink(label, className) {
@@ -2695,6 +2695,17 @@ export const appScript = `
     return '<form class="form-panel panel-stack" id="bulk-identity-form"><div><h2>Přidat více Bazoš účtů</h2><div class="bulk-account-help card-note"><span>Každý řádek je jeden účet. Formát: <code>telefon; název; kontaktní jméno; kontaktní telefon; PSČ; lokalita; poznámka</code>.</span><span>Stačí vyplnit telefon; ostatní údaje můžete doplnit později přes Upravit.</span></div></div><label class="wide">Účty<textarea name="bulkIdentities" rows="6" placeholder="+420777000001; Bazoš účet - motodíly; Jan Novák; +420777000001; 11000; Praha; hlavní účet"></textarea></label><p class="form-message" data-form-message></p><div class="row-actions"><button class="button button-primary" type="submit">Uložit účty</button><button class="button button-secondary" data-close-bulk-identities type="button">Zavřít</button></div></form>';
   }
 
+  function identityAdsMarkup(identity, data) {
+    const rows = Array.isArray(data.ads) ? data.ads.filter((ad) => String(ad.identityId || '') === String(identity.id || '')) : [];
+    return '<div><div class="panel-heading-actions"><h3>Inzeráty pro tento účet</h3><button class="button button-secondary" data-nav-view="details" data-ad-filter="all" type="button">Otevřít všechny inzeráty</button></div>' + tableOnly([
+      { label: 'Inzerát', render: (r) => '<button class="link-button" data-open-ad="' + cell(r.id) + '" type="button"><strong>' + cell(r.title || r.name || r.productName || r.id) + '</strong></button><small class="card-note">' + cell(r.category || r.categoryName || r.bazosCategory || '') + '</small>' },
+      { label: 'Stav', render: (r) => '<span class="status ' + statusClass(r.publishStatus || r.status || r.bazosStatus) + '">' + statusLabel(r.publishStatus || r.status || r.bazosStatus || 'draft') + '</span>' },
+      { label: 'Odkaz', render: (r) => bazosAdUrl(r) ? '<a class="table-link" href="' + escapeHtml(bazosAdUrl(r)) + '" target="_blank" rel="noopener">Zobrazit na Bazoši</a>' : cell('Zatím bez Bazoš ID') },
+      { label: 'Aktualizováno', render: (r) => cell(r.updatedAt || r.createdAt) },
+      { label: 'Akce', render: (r) => publishActionMarkup(r, data.queue) },
+    ], rows, 'Pro tento účet zatím nejsou navázané žádné inzeráty.') + '</div>';
+  }
+
   function identityDetailMarkup(identity, data) {
     if (!identity) return '';
     const activeCount = identityActiveCount(identity, data.ads);
@@ -2703,7 +2714,7 @@ export const appScript = `
       stat('Aktivní inzeráty', activeCount, 'Limit 50 na identitu') +
       stat('Zbývá vložit', Math.max(50 - activeCount, 0), 'Dle aktuálního přehledu') +
       stat('Platnost ověření', identity.verificationExpiresAt || 'neuloženo') +
-      '</div>' + identitySavedFields(identity) + '<div><h3>Ověření a relace</h3>' + verificationActions(identity) + '</div></div>';
+      '</div>' + identitySavedFields(identity) + '<div><h3>Ověření a relace</h3>' + verificationActions(identity) + '</div>' + identityAdsMarkup(identity, data) + '</div>';
   }
 
   function identityEditFormMarkup(identity) {
@@ -2727,6 +2738,11 @@ export const appScript = `
     content.querySelectorAll('[data-edit-identity]').forEach((button) => button.addEventListener('click', () => { editingIdentityId = button.dataset.editIdentity; selectedIdentityId = button.dataset.editIdentity; accountBulkOpen = false; renderAccount(data); }));
     content.querySelector('[data-clear-identity-detail]')?.addEventListener('click', () => { selectedIdentityId = null; editingIdentityId = null; renderAccount(data); });
     content.querySelector('[data-cancel-identity-edit]')?.addEventListener('click', () => { editingIdentityId = null; renderAccount(data); });
+    content.querySelectorAll('[data-open-ad], [data-edit-ad]').forEach((button) => button.addEventListener('click', () => openDraftDetails(button.dataset.openAd || button.dataset.editAd)));
+    content.querySelectorAll('[data-publish]').forEach((button) => button.addEventListener('click', () => enqueuePublish(button.dataset.publish)));
+    content.querySelectorAll('[data-open-bazos-manage]').forEach((button) => button.addEventListener('click', () => openBazosManageWithPreparedData(button.dataset.openBazosManage)));
+    content.querySelectorAll('[data-claim-attempt]').forEach((button) => button.addEventListener('click', () => claimDueAttempt(button.dataset.claimAttempt)));
+    content.querySelectorAll('[data-open-submission]').forEach((button) => button.addEventListener('click', () => openSubmission(button.dataset.openSubmission)));
     const editForm = content.querySelector('#identity-edit-form');
     if (editForm && editingIdentityId) editForm.addEventListener('submit', (event) => saveIdentityEdit(event, editingIdentityId));
   }
@@ -2762,7 +2778,7 @@ export const appScript = `
   }
 
   function renderSettings(data) {
-    content.innerHTML = '<div class="account-grid"><form class="form-panel panel-stack" id="identity-form"><div><h2>Nastavení Bazos.cz</h2><p class="card-note">Přidejte telefon a údaje prodejce. Interní ID Bazoš účtu není potřeba hledat ani vyplňovat; systém ho doplní při propojení účtu. Ověření telefonu a relace se dokončuje ručně přes Bazos.cz.</p>' + externalBazosNotice() + '</div><div class="form-grid">' +
+    content.innerHTML = '<div class="account-grid"><form class="form-panel panel-stack" id="identity-form"><div><h2>Nastavení Bazos.cz</h2><p class="card-note">Přidejte telefon a údaje prodejce. Ověření telefonu a relace se dokončuje ručně přes Bazos.cz.</p>' + externalBazosNotice() + '</div><div class="form-grid">' +
       '<label>Telefon<input name="phoneNumber" minlength="9" maxlength="20" required></label>' +
       '<label>Název pro přehled<input name="displayName" maxlength="200" placeholder="např. Bazoš účet - motodíly" required></label>' +
       '<label>Kontaktní jméno<input name="contactName" maxlength="200"></label>' +
@@ -2770,7 +2786,7 @@ export const appScript = `
       '<label>PSČ<input name="defaultZip" maxlength="20"></label>' +
       '<label>Lokalita<input name="defaultLocation" maxlength="200"></label>' +
       '<label class="wide">Popis účtu<textarea name="notes" placeholder="např. prodej motodílů, knih nebo sezónního zboží"></textarea></label>' +
-      '</div><p class="form-message" data-form-message></p><button class="button button-primary" type="submit">Uložit nastavení</button></form><div class="data-panel"><h2>Co musí být splněno</h2><div class="gate-grid"><div class="gate-item"><strong>Telefon</strong>ověřený</div><div class="gate-item"><strong>Relace</strong>aktivní</div><div class="gate-item"><strong>Kontrola</strong>bez blokace</div><div class="gate-item"><strong>Účet</strong>propojený systémem</div><div class="gate-item"><strong>Limit</strong>méně než 50 aktivních inzerátů</div></div></div></div>' +
+      '</div><p class="form-message" data-form-message></p><button class="button button-primary" type="submit">Uložit nastavení</button></form><div class="data-panel"><h2>Co musí být splněno</h2><div class="gate-grid"><div class="gate-item"><strong>Telefon</strong><span class="status ok">Ověřený</span></div><div class="gate-item"><strong>Relace</strong><span class="status ok">Aktivní</span></div><div class="gate-item"><strong>Kontrola</strong><span class="status ok">Bez blokace</span></div><div class="gate-item"><strong>Účet</strong><span class="status ok">Propojený systémem</span></div><div class="gate-item"><strong>Limit</strong><span class="status ok">Méně než 50 aktivních inzerátů</span></div></div></div></div>' +
       table([
         { label: 'Identita', render: (r) => '<strong>' + cell(r.displayName || r.phoneNumber) + '</strong><small class="card-note">Účet Alfares: ' + cell(currentUser?.email || 'není k dispozici') + '</small>' },
         { label: 'Uložené údaje', render: (r) => identitySavedFields(r) },
