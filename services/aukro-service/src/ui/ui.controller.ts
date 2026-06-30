@@ -1,4 +1,4 @@
-import { Controller, ForbiddenException, Get, Query, Request, Res, UnauthorizedException, UseGuards } from '@nestjs/common';
+import { Controller, ForbiddenException, Get, Param, Query, Request, Res, UnauthorizedException, UseGuards } from '@nestjs/common';
 import { AuthService, CatalogClientService, JwtAuthGuard } from '@bazos/shared';
 import { appScript, appStyles, renderAppPage, renderAuthCallbackPage, renderLandingPage } from './ui.assets';
 
@@ -78,6 +78,17 @@ export class UiController {
     });
   }
 
+
+
+  @Get('ui/catalog/products/:productId/content-preview')
+  @UseGuards(JwtAuthGuard)
+  async catalogProductContentPreview(@Param('productId') productId: string, @Request() req: any) {
+    const cleanProductId = productId?.trim();
+    if (!cleanProductId) return { preview: null };
+
+    const preview = await this.catalogClient.getProductContentPreview(cleanProductId, 'bazos', req.headers.authorization);
+    return { preview };
+  }
 
   @Get('ui/auth/me')
   async me(@Request() req: any, @Query('mode') mode?: string) {

@@ -36,6 +36,35 @@ export class CatalogClientService {
   }
 
   /**
+   * Get marketplace-ready canonical content preview for a product
+   */
+  async getProductContentPreview(productId: string, marketplace: string, authorization?: string): Promise<any | null> {
+    const cleanProductId = productId.trim();
+    const cleanMarketplace = marketplace.trim();
+    if (!cleanProductId || !cleanMarketplace) return null;
+
+    try {
+      const response = await firstValueFrom(
+        this.httpService.get(
+          `${this.baseUrl}/api/products/${encodeURIComponent(cleanProductId)}/content-previews/${encodeURIComponent(cleanMarketplace)}`,
+          this.authOptions(authorization),
+        )
+      );
+      if (!response.data?.success || !response.data?.data) {
+        return null;
+      }
+      return response.data.data;
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.warn(
+        `Content preview not found for product ${cleanProductId} marketplace ${cleanMarketplace}: ${errorMessage}`,
+        'CatalogClient',
+      );
+      return null;
+    }
+  }
+
+  /**
    * Get product by SKU
    */
   async getProductBySku(sku: string): Promise<any> {

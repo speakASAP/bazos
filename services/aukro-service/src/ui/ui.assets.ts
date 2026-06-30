@@ -7,7 +7,7 @@ const pageShell = (title: string, body: string) => `<!doctype html>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${title}</title>
   <meta name="description" content="Služba AlfaRes Bazoš pomáhá prodejcům připravovat, sledovat a spravovat inzeráty na Bazoš.cz v souladu s pravidly.">
-  <link rel="stylesheet" href="/ui/app.css?v=settings-defaults-20260629">
+  <link rel="stylesheet" href="/ui/app.css?v=content-preview-20260630">
 </head>
 <body>
 ${body}
@@ -247,7 +247,7 @@ export const renderAppPage = (mode: AppMode) => {
         </section>
       </main>
     </div>
-    <script src="/ui/app.js?v=active-status-20260629"></script>`,
+    <script src="/ui/app.js?v=content-preview-20260630"></script>`,
   );
 };
 
@@ -1177,6 +1177,19 @@ button, input { font: inherit; }
   white-space: pre-wrap;
   color: var(--ink);
   line-height: 1.5;
+}
+.preview-source {
+  display: grid;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+.preview-source strong {
+  color: var(--ink);
+}
+.preview-warning {
+  color: #8a4b00;
 }
 .manual-media-panel {
   display: grid;
@@ -2805,6 +2818,9 @@ export const appScript = `
     let prepared = null;
     let products = [];
     let selected = null;
+    let contentPreview = null;
+    let contentPreviewError = null;
+    let contentPreviewRequestId = 0;
 
     const productPrice = (product) => {
       const pricing = Array.isArray(product?.pricing) ? product.pricing[0] : product?.pricing;
@@ -2818,6 +2834,12 @@ export const appScript = `
     const productTitle = (product) => product?.name || product?.title || product?.sku || product?.id || '';
     const productMedia = (product) => asArray(product, ['media']).filter((item) => String(item?.type || 'image').toLowerCase() === 'image' && item?.url).sort((a, b) => Number(Boolean(b.isPrimary)) - Number(Boolean(a.isPrimary)) || Number(a.position || 0) - Number(b.position || 0));
     const normalizeMedia = (items) => asArray({ items }, ['items']).filter((item) => item?.url).slice(0, 20).map((item, index) => ({ id: item.id || item.url, url: item.url, thumbnailUrl: item.thumbnailUrl || item.url, altText: item.altText || item.title || '', title: item.title || item.altText || '', position: Number(item.position ?? index) }));
+    const previewContent = () => contentPreview?.content || {};
+    const previewSource = () => contentPreview?.source || {};
+    const previewTitle = (product) => previewContent().title || productTitle(product);
+    const previewDescription = (product) => previewContent().plainText || productDescription(product);
+    const previewLabel = () => contentPreview?.label || contentPreview?.marketplace || 'Bazoš';
+    const previewWarnings = () => Array.isArray(contentPreview?.warnings) ? contentPreview.warnings.filter(Boolean) : [];
     const selectedMediaUrls = () => Array.from(document.querySelectorAll('[data-media-choice]:checked')).map((input) => String(input.value || '').trim()).filter(Boolean);
     const selectedIdentityId = () => document.getElementById('catalog-draft-form')?.elements.identityId?.value || data.identities[0]?.id || '';
 
@@ -2832,6 +2854,22 @@ export const appScript = `
       if (catalog.error) throw new Error(catalog.error);
       products = asArray(catalog, ['items', 'products', 'data']);
       selected = products[0] || null;
+      await loadSelectedPreview();
+    }
+
+    async function loadSelectedPreview() {
+      contentPreview = null;
+      contentPreviewError = null;
+      const requestId = ++contentPreviewRequestId;
+      if (!selected?.id) return;
+
+      const response = await request('/ui/catalog/products/' + encodeURIComponent(selected.id) + '/content-preview').catch((error) => ({ error: error.message }));
+      if (requestId !== contentPreviewRequestId) return;
+      if (response.error) {
+        contentPreviewError = response.error;
+        return;
+      }
+      contentPreview = response.preview || null;
     }
 
     async function runCatalogSearch(search, focusSearch) {
@@ -2840,6 +2878,25 @@ export const appScript = `
       await loadProducts(search);
       if (requestId !== catalogSearchRequestId) return;
       draw(search, focusSearch);
+    }
+
+    function renderContentPreviewSource() {
+      if (contentPreviewError) {
+        return '<div class="preview-source preview-warning">Kanonický obsah není dostupný: ' + cell(contentPreviewError) + '</div>';
+      }
+      if (!contentPreview) return '';
+
+      const source = previewSource();
+      const sourceBits = [
+        source.canonicalDocumentVersion ? 'Verze dokumentu: ' + source.canonicalDocumentVersion : '',
+        source.generatedAt ? 'Vygenerováno: ' + source.generatedAt : '',
+        source.legacyDescriptionFallback ? 'Použit fallback katalogového popisu' : '',
+      ].filter(Boolean);
+      const warnings = previewWarnings();
+      return '<div class="preview-source"><strong>Kanonický obsah: ' + cell(previewLabel()) + '</strong>' +
+        (sourceBits.length ? '<span>' + sourceBits.map(cell).join(', ') + '</span>' : '') +
+        (warnings.length ? '<span class="preview-warning">' + warnings.map(cell).join(', ') + '</span>' : '') +
+        '</div>';
     }
 
     function renderPreview() {
@@ -2868,8 +2925,12 @@ export const appScript = `
       const form = document.getElementById('catalog-draft-form');
       if (!form || !product) return;
       const draft = prepared?.draft || {};
-      form.elements.title.value = draft.title || productTitle(product);
-      form.elements.description.value = draft.description || productDescription(product);
+      const canonicalTitle = trimToLimit(previewTitle(product), BAZOS_TITLE_MAX_LENGTH);
+      const canonicalDescription = trimToLimit(previewDescription(product), BAZOS_DESCRIPTION_MAX_LENGTH);
+      form.elements.title.value = draft.title || canonicalTitle;
+      form.elements.description.value = draft.description || canonicalDescription;
+      form.elements.description.dataset.canonicalDescription = canonicalDescription;
+      form.elements.description.dataset.userEdited = 'false';
       const category = draft.category || productCategory(product);
       form.elements.price.value = draft.price ?? productPrice(product);
       form.elements.rubric.value = draft.rubric || inferRubricForCategory(category);
@@ -2884,8 +2945,8 @@ export const appScript = `
       const media = normalizeMedia(prepared?.draft?.media?.length ? prepared.draft.media : productMedia(selected));
       const mediaPicker = media.length ? '<div class="wide"><label>Fotky pro Bazoš</label><div class="media-picker">' + media.map((item, index) => '<div class="media-choice"><label><input data-media-choice type="checkbox" value="' + escapeHtml(item.url) + '"' + (prepared?.draft?.media?.length || index < 5 ? ' checked' : '') + '><img src="' + escapeHtml(item.thumbnailUrl || item.url) + '" alt="' + escapeHtml(item.altText || item.title || 'Foto') + '"><span>' + cell(item.title || item.altText || ('Foto ' + (index + 1))) + '</span></label></div>').join('') + '</div></div>' : '<p class="form-message wide">Katalog nevrátil žádné produktové fotky pro tento produkt.</p>';
       content.innerHTML = '<div class="catalog-flow"><div class="data-panel flow-column"><h2>Katalog</h2><div class="search-row"><input class="input" id="catalog-search" value="' + escapeHtml(searchValue || '') + '" placeholder="Hledat produkt podle názvu, SKU nebo značky"><button class="button button-secondary" id="catalog-search-button" type="button">Hledat</button></div><div class="product-list">' +
-        products.map((product, index) => '<button class="product-option' + (product === selected ? ' active' : '') + '" type="button" data-product-index="' + index + '"><span class="product-thumb"></span><span><strong>' + cell(productTitle(product)) + '</strong><small class="card-note">' + cell(product.sku || product.id) + '</small></span></button>').join('') +
-        '</div></div><div class="flow-column"><form class="form-panel panel-stack" id="catalog-draft-form"><div><h2>Publikovat z katalogu</h2><p class="card-note">Produkt se nejdříve převede do Bazoš konceptu. Teprve po náhledu a schválení se odešle do hlídané publikační fronty.</p></div><div class="form-grid"><label>Účet / telefon<select name="identityId" required>' + options + '</select></label><label>Cena v Kč<input name="price" type="number" min="0" step="1" required></label><label>Volba ceny<select name="priceOption">' + priceOptionOptions('fixed_price') + '</select></label><label>Rubrika<select name="rubric" data-bazos-rubric required>' + rubricOptions('auto') + '</select></label><label>Kategorie Bazos.cz<select name="category" data-bazos-category required>' + categoryOptions('auto', '') + '</select></label><div class="category-suggestions wide" data-category-suggestions></div><label class="wide">Název<input name="title" maxlength="500" required></label><label class="wide">Popis<textarea name="description"></textarea></label>' + mediaPicker + '<label>Lokalita<input name="location" maxlength="200"></label></div><p class="form-message" data-form-message></p><button class="button button-primary" type="submit">Sformovat inzerát</button></form>' + renderPreview() + '</div></div>';
+        products.map((product, index) => '<button class="product-option' + (product === selected ? ' active' : '') + '" type="button" data-product-index="' + index + '"><span class="product-thumb"></span><span><strong>' + cell(product === selected ? previewTitle(product) : productTitle(product)) + '</strong><small class="card-note">' + cell(product.sku || product.id) + '</small>' + (product === selected && contentPreview ? '<small class="card-note">Kanonický obsah: ' + cell(previewLabel()) + '</small>' : '') + '</span></button>').join('') +
+        '</div></div><div class="flow-column"><form class="form-panel panel-stack" id="catalog-draft-form"><div><h2>Publikovat z katalogu</h2><p class="card-note">Produkt se nejdříve převede do Bazoš konceptu. Teprve po náhledu a schválení se odešle do hlídané publikační fronty.</p>' + renderContentPreviewSource() + '</div><div class="form-grid"><label>Účet / telefon<select name="identityId" required>' + options + '</select></label><label>Cena v Kč<input name="price" type="number" min="0" step="1" required></label><label>Volba ceny<select name="priceOption">' + priceOptionOptions('fixed_price') + '</select></label><label>Rubrika<select name="rubric" data-bazos-rubric required>' + rubricOptions('auto') + '</select></label><label>Kategorie Bazos.cz<select name="category" data-bazos-category required>' + categoryOptions('auto', '') + '</select></label><div class="category-suggestions wide" data-category-suggestions></div><label class="wide">Název<input name="title" maxlength="500" required></label><label class="wide">Popis<textarea name="description" maxlength="' + BAZOS_DESCRIPTION_MAX_LENGTH + '"></textarea></label>' + mediaPicker + '<label>Lokalita<input name="location" maxlength="200"></label></div><p class="form-message" data-form-message></p><button class="button button-primary" type="submit">Sformovat inzerát</button></form>' + renderPreview() + '</div></div>';
       fillForm(selected);
       const searchInput = document.getElementById('catalog-search');
       if (focusSearch && searchInput) {
@@ -2907,14 +2968,19 @@ export const appScript = `
           if (formMessage) formMessage.innerHTML = settingsErrorMarkup(error.message || 'Vyhledávání v katalogu selhalo.');
         });
       });
-      content.querySelectorAll('[data-product-index]').forEach((button) => button.addEventListener('click', () => {
+      content.querySelectorAll('[data-product-index]').forEach((button) => button.addEventListener('click', async () => {
         selected = products[Number(button.dataset.productIndex)];
         prepared = null;
-        draw(document.getElementById('catalog-search')?.value || '');
+        const searchValue = document.getElementById('catalog-search')?.value || '';
+        await loadSelectedPreview();
+        draw(searchValue);
       }));
       const form = document.getElementById('catalog-draft-form');
       bindBazosCategoryControls(form);
       bindIdentityDefaults(form, data.identities);
+      form?.elements.description?.addEventListener('input', () => {
+        form.elements.description.dataset.userEdited = 'true';
+      });
       form?.addEventListener('submit', prepare);
       document.getElementById('catalog-confirm')?.addEventListener('click', confirm);
       content.querySelector('[data-policy]')?.addEventListener('click', () => policyCheck(prepared?.draft?.id));
@@ -2925,13 +2991,17 @@ export const appScript = `
       if (!selected) return;
       const form = event.currentTarget;
       const values = Object.fromEntries(new FormData(form).entries());
+      const descriptionInput = form.elements.description;
+      const descriptionWasEdited = descriptionInput?.dataset?.userEdited === 'true';
+      const canonicalDescription = descriptionInput?.dataset?.canonicalDescription || '';
+      const descriptionForPrepare = descriptionWasEdited ? values.description : (values.description || canonicalDescription);
       try {
         prepared = await request('/api/bazos/catalog/products/' + encodeURIComponent(selected.id) + '/sell-action', {
           method: 'POST',
           body: JSON.stringify({
             identityId: values.identityId,
-            title: values.title,
-            description: values.description || undefined,
+            title: trimToLimit(values.title, BAZOS_TITLE_MAX_LENGTH),
+            description: trimToLimit(descriptionForPrepare, BAZOS_DESCRIPTION_MAX_LENGTH) || undefined,
             price: Number(values.price || 0),
             priceOption: values.priceOption || 'fixed_price',
             rubric: values.rubric || inferRubricForCategory(values.category),
