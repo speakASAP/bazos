@@ -63,3 +63,11 @@ Status: validated in source
 - `npm --prefix shared test` - PASS, 7 suites, 111 tests.
 - `npm test` - PASS, 7 suites, 111 tests.
 - `npm --prefix services/aukro-service run build` - PASS.
+
+### Deployment Attempt
+
+- Commit `d05c4eb` was pushed to `origin/main` and `./scripts/deploy.sh` built/pushed `localhost:5000/bazos-service:d05c4eb` with digest `sha256:f65f892175b10868dc835a3bb4fa424f793ae811d3659eb5083f101c56fdd0e5`.
+- Kubernetes deployment template now references `localhost:5000/bazos-service:d05c4eb`.
+- Rollout did not complete: new pod stayed `ContainerCreating` before application startup, with `FailedCreatePodSandBox` / reserved sandbox-name errors from kubelet/containerd.
+- Live `https://bazos.alfares.cz/health` remained healthy from old pod image `localhost:5000/bazos-service:b15681c` during the blocked rollout.
+- Cluster evidence showed unrelated pods (`flipflop-*`, `warehouse-reservation-expiry-*`, `domain-research-*`, `marathon-*`) failing with the same sandbox creation/reservation class, so this is classified as platform/runtime rollout blocker rather than Bazos application startup failure.
