@@ -28,7 +28,7 @@ Multi-container service (Kubernetes `statex-apps`):
 
 ## Events
 
-Subscribes to `stock.updated` (RabbitMQ) → update/pause ads for out-of-stock items.
+Subscribes to Warehouse `stock.updated` and `stock.out` (RabbitMQ). `stock.updated` projects Warehouse `available` into linked Bazos ad stock cache; `stock.out` forces local quantity `0` and removes the ad from the service sale surface with `isActive=false` / `publishStatus=deleted`. Warehouse is never mutated by this handler.
 
 ## Secrets
 

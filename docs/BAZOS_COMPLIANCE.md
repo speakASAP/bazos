@@ -98,6 +98,8 @@ Required backend gates before publish:
 The publish endpoint must return a policy failure response instead of attempting browser submission when any gate fails.
 Warehouse is the stock authority. Bazos draft `stockQuantity` is display/cache state only and must not be used as sellable truth for queueing or publishing.
 
+Warehouse stock events must preserve the same authority boundary. `stock.updated` projects Warehouse `available` into linked Bazos ad stock cache only. `stock.out` must force local target quantity `0` and remove the ad from the service sale surface using the existing non-sellable/deleted local state. The event handler must not mutate Warehouse and must not perform unapproved server-side Bazos posting, editing, deletion, challenge bypass, or scraping actions.
+
 ## Required Challenge States
 
 Use explicit states so automation cannot silently continue:
