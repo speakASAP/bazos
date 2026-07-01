@@ -12,6 +12,7 @@
 
 ## Completed
 <!-- Coordinator-append-only -->
+- 2026-07-01 goal-17-orders-canonical-create-readiness: added accepted Orders internal auth headers and fail-closed `warehouseId` guard for Bazos canonical create; kept true live Bazos webhook support `[UNKNOWN: live Bazos marketplace webhook support]` and live smoke blocked by `[MISSING: Orders runtime credential/deploy gate]`.
 - 2026-06-26 goal-17-bazos-order-forwarding-follow-up: added synthetic/internal Catalog product ID order payload support while keeping true live Bazos webhook support [UNKNOWN: live Bazos marketplace webhook support].
 - 2026-06-26 goal-17-bazos-order-forwarding: blocked invalid empty-item central Orders forwarding, added BazosAd.productId item mapping when ad-line identifiers are present, and documented [MISSING: Bazos order item ingestion contract] for true webhook ingestion.
 - 2026-04-05 documentation-standard-applied

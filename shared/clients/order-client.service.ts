@@ -5,6 +5,7 @@ import { LoggerService } from '../logger/logger.service';
 
 const CREATE_ORDER_CONTRACT_VERSION = 'orders.create.v1';
 const DEFAULT_CHANNEL_ACCOUNT_ID = 'default';
+const DEFAULT_SERVICE_NAME = 'bazos-service';
 
 interface CreateCentralOrderRequest {
   externalOrderId: string;
@@ -15,6 +16,7 @@ interface CreateCentralOrderRequest {
   billingAddress?: any;
   items: Array<{
     productId: string;
+    warehouseId: string;
     sku?: string;
     title: string;
     quantity: number;
@@ -57,7 +59,7 @@ export class OrderClientService {
 
     try {
       const response = await firstValueFrom(
-        this.httpService.post(this.baseUrl + '/api/orders', payload),
+        this.httpService.post(this.baseUrl + '/api/orders', payload, this.requestOptions()),
       );
       this.logger.log('Order accepted by orders-microservice: ' + response.data.data?.id, 'OrderClient');
       return response.data.data;
@@ -75,7 +77,7 @@ export class OrderClientService {
   async updateOrderStatus(orderId: string, status: string): Promise<any> {
     try {
       const response = await firstValueFrom(
-        this.httpService.put(this.baseUrl + '/api/orders/' + orderId + '/status', { status }),
+        this.httpService.put(this.baseUrl + '/api/orders/' + orderId + '/status', { status }, this.requestOptions()),
       );
       return response.data.data;
     } catch (error: unknown) {
@@ -90,6 +92,7 @@ export class OrderClientService {
     try {
       const response = await firstValueFrom(
         this.httpService.get(this.baseUrl + '/api/orders', {
+          ...this.requestOptions(),
           params: {
             channel,
             externalOrderId,
@@ -103,6 +106,25 @@ export class OrderClientService {
       this.logger.warn('Order not found: ' + externalOrderId, 'OrderClient');
       return null;
     }
+  }
+
+  private requestOptions() {
+    const serviceName = (process.env.ORDER_SERVICE_NAME || process.env.SERVICE_NAME || DEFAULT_SERVICE_NAME).trim() || DEFAULT_SERVICE_NAME;
+    const internalToken = (
+      process.env.BAZOS_INTERNAL_SERVICE_TOKEN ||
+      process.env.ORDERS_INTERNAL_SERVICE_TOKEN ||
+      process.env.ORDER_SERVICE_INTERNAL_TOKEN ||
+      ''
+    ).trim();
+    const headers: Record<string, string> = {
+      'x-service-name': serviceName,
+    };
+
+    if (internalToken) {
+      headers['x-internal-service-token'] = internalToken;
+    }
+
+    return { headers };
   }
 
   private normalizeChannelAccountId(channelAccountId?: string): string {

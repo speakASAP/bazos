@@ -3,6 +3,7 @@ import { PrismaService, LoggerService, OrderClientService } from '@bazos/shared'
 
 const BAZOS_ORDER_ITEM_CONTRACT_MISSING = '[MISSING: Bazos order item ingestion contract]';
 const BAZOS_ORDER_ITEM_MAPPING_UNAVAILABLE = 'BAZOS_ORDER_ITEM_MAPPING_UNAVAILABLE';
+const BAZOS_ORDER_WAREHOUSE_ID_MISSING = '[MISSING: Warehouse-owned warehouseId for Bazos order item]';
 const LIVE_BAZOS_WEBHOOK_SUPPORT = '[UNKNOWN: live Bazos marketplace webhook support]';
 
 interface SourceOrderLine {
@@ -12,6 +13,11 @@ interface SourceOrderLine {
   listingId?: string;
   catalogProductId?: string;
   productId?: string;
+  warehouseId?: string;
+  warehouse?: { id?: string; warehouseId?: string };
+  stock?: { warehouseId?: string };
+  inventory?: { warehouseId?: string };
+  fulfillment?: { warehouseId?: string };
   title?: string;
   name?: string;
   sku?: string;
@@ -24,6 +30,7 @@ interface SourceOrderLine {
 
 interface CentralOrderItem {
   productId: string;
+  warehouseId: string;
   sku?: string;
   title: string;
   quantity: number;
@@ -166,12 +173,21 @@ export class OrdersService {
         );
       }
 
+      const warehouseId = this.resolveWarehouseId(line, ad);
+      if (!warehouseId) {
+        return this.unavailableItemMapping(
+          'missing warehouseId: provide Warehouse-owned warehouseId on the Bazos order item or linked ad policy metadata before forwarding to Orders',
+          BAZOS_ORDER_WAREHOUSE_ID_MISSING,
+        );
+      }
+
       const quantity = this.toPositiveNumber(line.quantity, 1);
       const unitPrice = this.resolveUnitPrice(line, ad, quantity);
       const totalPrice = this.toPositiveNumber(line.totalPrice ?? line.total, unitPrice * quantity);
 
       items.push({
         productId,
+        warehouseId,
         sku: line.sku,
         title: String(line.title || line.name || ad?.title || 'Bazos item'),
         quantity,
@@ -248,6 +264,48 @@ export class OrdersService {
     return this.prisma.bazosAd.findFirst({ where: { OR: selectors } });
   }
 
+  private resolveWarehouseId(line: SourceOrderLine, ad: any): string | undefined {
+    const policy = this.jsonObject(ad?.lastPolicyCheck);
+    const draftOptions = this.jsonObject(policy.draftOptions);
+    const warehouseStock = this.jsonObject(policy.warehouseStock);
+    const draftWarehouseStock = this.jsonObject(draftOptions.warehouseStock);
+    const warehouseRoute = this.jsonObject(policy.warehouseRoute);
+    const candidates = [
+      line.warehouseId,
+      line.warehouse?.id,
+      line.warehouse?.warehouseId,
+      line.stock?.warehouseId,
+      line.inventory?.warehouseId,
+      line.fulfillment?.warehouseId,
+      policy.warehouseId,
+      this.jsonObject(policy.warehouse).id,
+      this.jsonObject(policy.warehouse).warehouseId,
+      warehouseStock.warehouseId,
+      this.jsonObject(warehouseStock.warehouse).id,
+      this.jsonObject(warehouseStock.warehouse).warehouseId,
+      draftOptions.warehouseId,
+      this.jsonObject(draftOptions.warehouse).id,
+      this.jsonObject(draftOptions.warehouse).warehouseId,
+      draftWarehouseStock.warehouseId,
+      this.jsonObject(draftWarehouseStock.warehouse).id,
+      this.jsonObject(draftWarehouseStock.warehouse).warehouseId,
+      warehouseRoute.warehouseId,
+      this.jsonObject(warehouseRoute.warehouse).id,
+      this.jsonObject(warehouseRoute.warehouse).warehouseId,
+    ];
+
+    for (const candidate of candidates) {
+      const warehouseId = this.cleanIdentifier(candidate);
+      if (warehouseId) return warehouseId;
+    }
+
+    return undefined;
+  }
+
+  private jsonObject(value: unknown): Record<string, any> {
+    return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, any> : {};
+  }
+
   private resolveUnitPrice(line: SourceOrderLine, ad: any, quantity: number): number {
     const explicitUnitPrice = this.toPositiveNumber(line.unitPrice ?? line.price, 0);
     if (explicitUnitPrice > 0) {
@@ -287,11 +345,11 @@ export class OrdersService {
     return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
   }
 
-  private unavailableItemMapping(reason: string): ItemMappingResult {
+  private unavailableItemMapping(reason: string, missing = BAZOS_ORDER_ITEM_CONTRACT_MISSING): ItemMappingResult {
     return {
       available: false,
       reason: `${BAZOS_ORDER_ITEM_MAPPING_UNAVAILABLE}: ${reason}`,
-      missing: BAZOS_ORDER_ITEM_CONTRACT_MISSING,
+      missing,
     };
   }
 }

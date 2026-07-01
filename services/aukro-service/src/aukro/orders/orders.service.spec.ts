@@ -80,6 +80,48 @@ describe('OrdersService', () => {
     expect(result.forwarding.reason).toContain('mapped Bazos ad has no Catalog product ID');
   });
 
+  it('does not forward when the mapped item has no Warehouse-owned warehouseId', async () => {
+    const prisma = makePrisma();
+    const { service, orderClient } = makeService(prisma);
+
+    const result = await service.create({
+      accountId: 'account-1',
+      items: [{ bazosAdId: 'bazos-ad-1', quantity: 1 }],
+    }) as any;
+
+    expect(orderClient.createOrder).not.toHaveBeenCalled();
+    expect(prisma.bazosOrder.update).not.toHaveBeenCalled();
+    expect(result.forwarding).toEqual(expect.objectContaining({
+      forwarded: false,
+      available: false,
+      missing: '[MISSING: Warehouse-owned warehouseId for Bazos order item]',
+    }));
+    expect(result.forwarding.reason).toContain('missing warehouseId');
+  });
+
+  it('maps Bazos ad policy metadata warehouseId when the source line omits it', async () => {
+    const prisma = makePrisma({
+      ad: {
+        ...ad,
+        lastPolicyCheck: { draftOptions: { warehouseStock: { warehouseId: 'warehouse-from-policy' } } },
+      },
+    });
+    const { service, orderClient } = makeService(prisma);
+
+    await service.create({
+      accountId: 'account-1',
+      bazosOrderId: 'bazos-order-1',
+      items: [{ bazosAdId: 'bazos-ad-1', quantity: 1, totalPrice: 1000 }],
+    }) as any;
+
+    expect(orderClient.createOrder).toHaveBeenCalledWith(expect.objectContaining({
+      items: [expect.objectContaining({
+        productId: ad.productId,
+        warehouseId: 'warehouse-from-policy',
+      })],
+    }));
+  });
+
   it('maps Bazos ad item lines to Catalog product IDs before forwarding', async () => {
     const prisma = makePrisma();
     const { service, orderClient } = makeService(prisma);
@@ -88,7 +130,7 @@ describe('OrdersService', () => {
       accountId: 'account-1',
       bazosOrderId: 'bazos-order-1',
       total: 1000,
-      items: [{ bazosAdId: 'bazos-ad-1', quantity: 2, totalPrice: 2000 }],
+      items: [{ bazosAdId: 'bazos-ad-1', warehouseId: 'warehouse-1', quantity: 2, totalPrice: 2000 }],
     }) as any;
 
     expect(orderClient.createOrder).toHaveBeenCalledWith(expect.objectContaining({
@@ -96,6 +138,7 @@ describe('OrdersService', () => {
       channel: 'bazos',
       items: [{
         productId: ad.productId,
+        warehouseId: 'warehouse-1',
         sku: undefined,
         title: ad.title,
         quantity: 2,
@@ -121,6 +164,7 @@ describe('OrdersService', () => {
       bazosOrderId: 'synthetic-bazos-1',
       items: [{
         catalogProductId: '33333333-3333-4333-8333-333333333333',
+        warehouseId: 'warehouse-1',
         title: 'Synthetic Bazos item',
         quantity: 3,
         unitPrice: 250,
@@ -132,6 +176,7 @@ describe('OrdersService', () => {
       channel: 'bazos',
       items: [{
         productId: '33333333-3333-4333-8333-333333333333',
+        warehouseId: 'warehouse-1',
         sku: undefined,
         title: 'Synthetic Bazos item',
         quantity: 3,
@@ -154,6 +199,7 @@ describe('OrdersService', () => {
         externalOrderId: 'webhook-synthetic-1',
         items: [{
           productId: '44444444-4444-4444-8444-444444444444',
+          warehouseId: 'warehouse-1',
           quantity: 1,
           price: 499,
         }],
@@ -165,6 +211,7 @@ describe('OrdersService', () => {
       channel: 'bazos',
       items: [expect.objectContaining({
         productId: '44444444-4444-4444-8444-444444444444',
+        warehouseId: 'warehouse-1',
         quantity: 1,
         unitPrice: 499,
         totalPrice: 499,
