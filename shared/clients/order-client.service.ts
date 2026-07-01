@@ -114,6 +114,8 @@ export class OrderClientService {
       process.env.BAZOS_INTERNAL_SERVICE_TOKEN ||
       process.env.ORDERS_INTERNAL_SERVICE_TOKEN ||
       process.env.ORDER_SERVICE_INTERNAL_TOKEN ||
+      process.env.JWT_TOKEN ||
+      process.env.SERVICE_TOKEN ||
       ''
     ).trim();
     const headers: Record<string, string> = {

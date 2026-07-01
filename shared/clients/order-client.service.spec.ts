@@ -22,6 +22,8 @@ describe('OrderClientService', () => {
     delete process.env.BAZOS_INTERNAL_SERVICE_TOKEN;
     delete process.env.ORDERS_INTERNAL_SERVICE_TOKEN;
     delete process.env.ORDER_SERVICE_INTERNAL_TOKEN;
+    delete process.env.JWT_TOKEN;
+    delete process.env.SERVICE_TOKEN;
   });
 
   afterAll(() => {
@@ -73,4 +75,42 @@ describe('OrderClientService', () => {
       },
     );
   });
+  it('falls back to the Bazos runtime JWT_TOKEN used by Orders runtime aliasing', async () => {
+    process.env.ORDER_SERVICE_URL = 'http://orders.test';
+    process.env.JWT_TOKEN = 'runtime-service-token';
+    const httpService = {
+      post: jest.fn().mockReturnValue(of({ data: { data: { id: 'central-order-1' } } })),
+    } as any;
+    const service = new OrderClientService(httpService, makeLogger());
+
+    await service.createOrder({
+      externalOrderId: 'bazos-order-2',
+      channel: 'bazos',
+      items: [{
+        productId: 'catalog-product-1',
+        warehouseId: 'warehouse-1',
+        title: 'Bazos item',
+        quantity: 1,
+        unitPrice: 100,
+        totalPrice: 100,
+      }],
+      subtotal: 100,
+      shippingCost: 0,
+      taxAmount: 0,
+      total: 100,
+      currency: 'CZK',
+    });
+
+    expect(httpService.post).toHaveBeenCalledWith(
+      'http://orders.test/api/orders',
+      expect.any(Object),
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          'x-service-name': 'bazos-service',
+          'x-internal-service-token': 'runtime-service-token',
+        }),
+      }),
+    );
+  });
+
 });

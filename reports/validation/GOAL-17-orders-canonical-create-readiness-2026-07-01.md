@@ -30,7 +30,7 @@ Evidence:
 ## Implemented
 
 - `OrderClientService` now sends `x-service-name: bazos-service` and, when configured, `x-internal-service-token` from runtime env without logging token values.
-- The accepted runtime token env lookup supports `BAZOS_INTERNAL_SERVICE_TOKEN`, `ORDERS_INTERNAL_SERVICE_TOKEN`, and `ORDER_SERVICE_INTERNAL_TOKEN`.
+- The accepted runtime token env lookup supports `BAZOS_INTERNAL_SERVICE_TOKEN`, `ORDERS_INTERNAL_SERVICE_TOKEN`, `ORDER_SERVICE_INTERNAL_TOKEN`, `JWT_TOKEN`, and `SERVICE_TOKEN`; runtime key-name inspection confirmed Bazos currently exposes `JWT_TOKEN`.
 - Orders create item typing now includes required `warehouseId`.
 - Bazos order forwarding now requires a canonical Catalog `productId` and Warehouse-owned `warehouseId` before calling Orders.
 - `warehouseId` can come from the incoming order line or bounded linked-ad policy metadata such as `lastPolicyCheck.draftOptions.warehouseStock.warehouseId`.
@@ -43,7 +43,7 @@ Evidence:
 - No DB mutation or migration.
 - No deployment or push.
 - No live Bazos marketplace webhook/order support was implemented because the repo has no provider-backed Bazos marketplace order contract.
-- No live Orders create smoke was run because runtime credentials/deployment gate remain `[MISSING: Orders runtime credential/deploy gate]`.
+- No live Orders create smoke was run because Bazos deploy/live-smoke approval and a sanitized true sellable payload remain `[MISSING: Bazos deploy/live smoke approval and sanitized Orders create payload]`.
 
 ## Live Support Evidence
 
@@ -51,14 +51,21 @@ Evidence:
 - `OrdersService.handleWebhook` unwraps `order`/`payload`/raw data and returns `Synthetic/internal Bazos order ingested` with `[UNKNOWN: live Bazos marketplace webhook support]`.
 - Repo search found no Bazos provider order polling, seller-order endpoint, marketplace order item contract, or external Bazos webhook verifier beyond the synthetic/internal handler.
 
+## Runtime Credential Gate Follow-Up
+
+- Orders repo/read-only scan shows Orders-side Goal 7.2 runtime credential gate deployed in commit `342f003` and `BAZOS_INTERNAL_SERVICE_TOKEN` mapped from `secret/prod/bazos-service#JWT_TOKEN`.
+- Bazos live secret key-name inspection shows `JWT_TOKEN` is present in `bazos-service-secret`; no `BAZOS_INTERNAL_SERVICE_TOKEN` key is present on the Bazos caller side.
+- Source follow-up added `JWT_TOKEN` / `SERVICE_TOKEN` fallback to the caller header token lookup so Bazos can send the service token that Orders aliases.
+- Token values were not decoded, printed, or copied.
+
 ## Validation Commands
 
 - `cd services/aukro-service && NODE_PATH=../../shared/node_modules ../../shared/node_modules/.bin/jest --config jest.config.js src/aukro/orders/orders.service.spec.ts --runInBand` - PASS, 1 suite, 7 tests.
-- `npm --prefix shared test -- --runTestsByPath clients/order-client.service.spec.ts --runInBand` - PASS, 1 suite, 1 test.
+- `npm --prefix shared test -- --runTestsByPath clients/order-client.service.spec.ts --runInBand` - PASS, 1 suite, 2 tests.
 - `git diff --check` - PASS.
 - `npm --prefix shared run build` - PASS.
-- `npm --prefix shared test` - PASS, 8 suites, 112 tests.
-- `npm test` - PASS, 8 suites, 112 tests.
+- `npm --prefix shared test` - PASS, 8 suites, 113 tests.
+- `npm test` - PASS, 8 suites, 113 tests.
 - `npm --prefix services/aukro-service run build` - PASS.
 
 ## Bazos Compliance Check
@@ -76,7 +83,8 @@ Orders create keeps `orders.create.v1` and normalized `channelAccountId` idempot
 ## Risks And Blockers
 
 - `[UNKNOWN: live Bazos marketplace webhook support]` still blocks true live Bazos order ingestion and live provider smoke.
-- `[MISSING: Orders runtime credential/deploy gate]` still blocks production Orders create smoke until accepted service token wiring and deployment approval exist.
+- Orders-side runtime key-name presence is confirmed: Orders exposes `BAZOS_INTERNAL_SERVICE_TOKEN`, and Bazos exposes `JWT_TOKEN`; token values were not printed.
+- `[MISSING: Bazos deploy/live smoke approval and sanitized Orders create payload]` still blocks production Orders create smoke.
 - `BazosAd` has no first-class `warehouseId`; durable Warehouse route selection should be made explicit in a future schema/contract if Bazos needs ad-derived Orders forwarding without order-line `warehouseId`.
 
 ## Files Changed
@@ -96,4 +104,4 @@ No commit created in this delegated worker turn. Source is validated and intenti
 
 ## Next Action
 
-Provide or confirm the Bazos live order ingestion contract and accepted Orders runtime token/deploy gate, then commit and run a sanitized Orders create smoke.
+Provide or confirm the Bazos live order ingestion contract plus deploy/live-smoke approval and sanitized payload, then deploy and run a sanitized Orders create smoke.
