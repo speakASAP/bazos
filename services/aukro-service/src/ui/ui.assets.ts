@@ -352,6 +352,10 @@ button, input { font: inherit; }
   border: 1px solid transparent;
   font-size: 14px;
   font-weight: 750;
+  line-height: 1;
+  white-space: nowrap;
+  text-decoration: none;
+  flex: 0 0 auto;
   cursor: pointer;
 }
 .button-primary { background: var(--red); color: #fff; }
@@ -781,8 +785,14 @@ button, input { font: inherit; }
   color: #5f241f;
   line-height: 1.45;
 }
-.identity-required-banner .setup-link { margin-top: 6px; }
-.identity-required-banner .button-primary { background: var(--danger-line); }
+.identity-required-banner .setup-link {
+  margin-top: 6px;
+  white-space: nowrap;
+}
+.identity-required-banner .button-primary {
+  min-width: 190px;
+  background: var(--danger-line);
+}
 .identity-required-banner .button-primary:hover { background: #b42318; }
 .connection-modal {
   position: fixed;
@@ -969,6 +979,20 @@ button, input { font: inherit; }
 }
 .form-grid textarea { min-height: 120px; resize: vertical; }
 .form-grid .wide { grid-column: 1 / -1; }
+.field-missing {
+  color: var(--danger-text) !important;
+}
+.field-missing input,
+.field-missing select,
+.field-missing textarea {
+  border-color: var(--danger-line) !important;
+  background: #fffafa;
+  box-shadow: 0 0 0 3px rgba(180, 35, 24, 0.12);
+}
+.setup-next-step {
+  border-color: #b7dfb9;
+  background: #f4fbf4;
+}
 .category-suggestions {
   grid-column: 1 / -1;
   display: flex;
@@ -1403,6 +1427,8 @@ export const appScript = `
   let publishWorkerTimer = null;
   let accountBulkOpen = false;
   let editingIdentityId = null;
+  let pendingSettingsGuide = false;
+  const BAZOS_VERIFICATION_URL = 'https://www.bazos.cz/pridat-inzerat.php';
   const BAZOS_TITLE_MAX_LENGTH = 500;
   const BAZOS_DESCRIPTION_MAX_LENGTH = 5000;
   const BAZOS_MEDIA_LIMIT = 20;
@@ -1907,7 +1933,7 @@ export const appScript = `
   }
 
   function settingsLink(label, className) {
-    return '<a class="' + (className || 'setup-link') + '" href="#bazos-settings" data-nav-view="settings">' + escapeHtml(label || 'Nastavit') + '</a>';
+    return '<a class="' + (className || 'setup-link') + '" href="#bazos-settings" data-nav-view="settings" data-guide-bazos-settings="true">' + escapeHtml(label || 'Nastavit') + '</a>';
   }
 
   function missingSettingsMarkup(message, label) {
@@ -1947,11 +1973,11 @@ export const appScript = `
       const session = await request('/api/bazos/identities/' + encodeURIComponent(identityId) + '/verification-sessions', {
         method: 'POST',
         body: JSON.stringify({
-          verificationUrl: 'https://www.bazos.cz/pridat-inzerat.php',
+          verificationUrl: BAZOS_VERIFICATION_URL,
           notes: 'Manual seller verification started from Bazoš client UI. SMS and login stay on Bazos.cz.',
         }),
       });
-      window.open(session.verificationUrl || 'https://www.bazos.cz/pridat-inzerat.php', '_blank', 'noopener');
+      window.open(session.verificationUrl || BAZOS_VERIFICATION_URL, '_blank', 'noopener');
       await renderClient();
     } catch (error) {
       content.innerHTML = '<div class="data-panel empty-state">' + settingsErrorMarkup(error.message) + '</div>';
@@ -1994,7 +2020,7 @@ export const appScript = `
     content.querySelectorAll('[data-start-verification]').forEach((button) => button.addEventListener('click', () => startIdentityVerification(button.dataset.startVerification)));
     content.querySelectorAll('[data-complete-verification]').forEach((button) => button.addEventListener('click', () => completeManualVerification(button.dataset.completeVerification, button.dataset.sessionId)));
     content.querySelectorAll('[data-challenge-verification]').forEach((button) => button.addEventListener('click', () => markVerificationChallenge(button.dataset.challengeVerification, button.dataset.sessionId)));
-    content.querySelectorAll('[data-open-bazos]').forEach((button) => button.addEventListener('click', () => window.open(button.dataset.openBazos || 'https://www.bazos.cz/pridat-inzerat.php', '_blank', 'noopener')));
+    content.querySelectorAll('[data-open-bazos]').forEach((button) => button.addEventListener('click', () => window.open(button.dataset.openBazos || BAZOS_VERIFICATION_URL, '_blank', 'noopener')));
   }
 
 
@@ -2006,7 +2032,7 @@ export const appScript = `
       return;
     }
     identityBanner.classList.remove('hidden');
-    identityBanner.innerHTML = '<div><strong>Účet zatím není připojen k Bazoši</strong><p>Po registraci je potřeba propojit Alfares účet s jedním nebo více účty Bazoš. E-mail na Bazoši může být jiný než e-mail pro přihlášení do Alfares.</p>' + settingsLink('Připojit') + '</div>' + settingsLink('Připojit účet Bazoš', 'button button-primary');
+    identityBanner.innerHTML = '<div><strong>Účet zatím není připojen k Bazoši</strong><p>Nejdříve vyplňte Nastavení Bazos.cz: telefon, e-mail účtu Bazoš, kontaktní údaje, PSČ a lokalitu. Po uložení se otevře Bazos.cz pro ruční ověření telefonu a relace.</p>' + settingsLink('Připojit') + '</div>' + settingsLink('Připojit účet Bazoš', 'button button-primary');
     bindNavigationLinks(identityBanner);
   }
 
@@ -2015,13 +2041,13 @@ export const appScript = `
     return '<div class="connection-modal" id="connection-modal" role="dialog" aria-modal="true" aria-labelledby="connection-title">' +
       '<div class="connection-dialog"><div class="connection-dialog-header"><div><h2 id="connection-title">Připojit účet Bazoš</h2><p>Vyplňte údaje používané na Bazoši. Tím vznikne vazba mezi vaším Alfares účtem a Bazoš identitou; ověření telefonu a relace se dokončuje podle pravidel Bazoš.cz.</p></div><button class="icon-button" data-close-identity-wizard type="button" aria-label="Zavřít">×</button></div>' +
       '<form class="form-panel panel-stack" id="identity-wizard-form"><div class="connection-requirement"><strong>Přihlášení do Alfares</strong>Tento Bazoš účet bude spravovaný pod Alfares účtem: ' + cell(email || 'není k dispozici') + '.</div><div class="form-grid">' +
-      '<label class="wide">E-mail účtu Bazoš<input name="bazosEmail" type="email" maxlength="200" autocomplete="email" placeholder="prodejce@example.cz"></label>' +
+      '<label class="wide">E-mail účtu Bazoš<input name="bazosEmail" type="email" maxlength="200" autocomplete="email" placeholder="prodejce@example.cz" required></label>' +
       '<label>Telefon Bazoš<input name="phoneNumber" minlength="9" maxlength="20" autocomplete="tel" required></label>' +
       '<input type="hidden" name="displayName" value="">' +
-      '<label>Kontaktní jméno<input name="contactName" maxlength="200" autocomplete="name"></label>' +
-      '<label>Kontaktní telefon<input name="contactPhone" maxlength="50" autocomplete="tel"></label>' +
-      '<label>PSČ<input name="defaultZip" maxlength="20" autocomplete="postal-code"></label>' +
-      '<label>Lokalita<input name="defaultLocation" maxlength="200" autocomplete="address-level2"></label>' +
+      '<label>Kontaktní jméno<input name="contactName" maxlength="200" autocomplete="name" required></label>' +
+      '<label>Kontaktní telefon<input name="contactPhone" maxlength="50" autocomplete="tel" required></label>' +
+      '<label>PSČ<input name="defaultZip" maxlength="20" autocomplete="postal-code" required></label>' +
+      '<label>Lokalita<input name="defaultLocation" maxlength="200" autocomplete="address-level2" required></label>' +
       '<label class="wide">Popis účtu<textarea name="notes" placeholder="např. motodíly, knihy, sezónní zboží nebo hlavní prodejní účet"></textarea></label>' +
       '</div><p class="form-message" data-form-message></p><div class="flow-actions"><button class="button button-primary" type="submit">Uložit a připojit</button><button class="button button-secondary" data-close-identity-wizard type="button">Dokončit později</button></div></form></div></div>';
   }
@@ -2433,7 +2459,19 @@ export const appScript = `
     const payload = identityFormPayload(data);
     const formMessage = form.querySelector('[data-form-message]') || content.querySelector('[data-form-message]');
     try {
-      await request('/api/bazos/identities', { method: 'POST', body: JSON.stringify(payload) });
+      if (!form.reportValidity()) {
+        guideMissingSettingsFields(form);
+        return;
+      }
+      if (formMessage) formMessage.textContent = 'Ukládá se nastavení a připravuje se ověření na Bazos.cz...';
+      const bazosWindow = window.open('', '_blank');
+      const identity = await request('/api/bazos/identities', { method: 'POST', body: JSON.stringify(payload) });
+      const session = await startVerificationSessionForIdentity(identity.id).catch((error) => {
+        if (bazosWindow) bazosWindow.close();
+        throw error;
+      });
+      if (bazosWindow) bazosWindow.location = session.verificationUrl || BAZOS_VERIFICATION_URL;
+      else window.open(session.verificationUrl || BAZOS_VERIFICATION_URL, '_blank', 'noopener');
       sessionStorage.setItem(connectionWizardKey(), 'completed');
       closeConnectionWizard();
       accountBulkOpen = false;
@@ -2441,9 +2479,51 @@ export const appScript = `
       activeView = 'account';
       syncActiveTabs();
       await renderClient();
+      showSetupNextStep(session.verificationUrl || BAZOS_VERIFICATION_URL);
     } catch (error) {
       if (formMessage) formMessage.innerHTML = settingsErrorMarkup(error.message);
     }
+  }
+
+  async function startVerificationSessionForIdentity(identityId) {
+    return request('/api/bazos/identities/' + encodeURIComponent(identityId) + '/verification-sessions', {
+      method: 'POST',
+      body: JSON.stringify({
+        verificationUrl: BAZOS_VERIFICATION_URL,
+        notes: 'Manual seller verification started after saving Bazoš settings. SMS/login stay on Bazos.cz.',
+      }),
+    });
+  }
+
+  function showSetupNextStep(url) {
+    content.insertAdjacentHTML('afterbegin', '<div class="data-panel panel-stack setup-next-step"><div><h2>Nastavení bylo uloženo</h2><p class="card-note">Bazos.cz se otevřel v nové kartě. Tam se přihlaste nebo zaregistrujte, zadejte uložený telefon a dokončete SMS/ověření podle Bazos.cz. Po dokončení se vraťte sem a u účtu klikněte na Dokončit ruční ověření.</p></div><div class="flow-actions"><a class="button button-primary" href="' + escapeHtml(url || BAZOS_VERIFICATION_URL) + '" target="_blank" rel="noopener">Otevřít Bazos.cz</a><button class="button button-secondary" data-nav-view="account" type="button">Zobrazit účet</button></div></div>');
+    bindNavigationLinks(content);
+  }
+
+  function setupRequiredFields(form) {
+    return ['phoneNumber', 'bazosEmail', 'contactName', 'contactPhone', 'defaultZip', 'defaultLocation']
+      .map((name) => form?.elements?.[name])
+      .filter(Boolean);
+  }
+
+  function guideMissingSettingsFields(form) {
+    const fields = setupRequiredFields(form);
+    fields.forEach((field) => field.closest('label')?.classList.toggle('field-missing', !String(field.value || '').trim()));
+    const firstMissing = fields.find((field) => !String(field.value || '').trim());
+    const formMessage = form?.querySelector('[data-form-message]');
+    if (formMessage) formMessage.innerHTML = settingsErrorMarkup('Vyplňte zvýrazněná pole. Bez těchto údajů nejde účet připravit pro ověření na Bazos.cz.');
+    if (firstMissing) {
+      firstMissing.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      firstMissing.focus({ preventScroll: true });
+    }
+  }
+
+  function bindSettingsFormGuidance(form) {
+    if (!form || form.dataset.settingsGuidanceBound === 'true') return;
+    form.dataset.settingsGuidanceBound = 'true';
+    setupRequiredFields(form).forEach((field) => field.addEventListener('input', () => {
+      field.closest('label')?.classList.toggle('field-missing', !String(field.value || '').trim());
+    }));
   }
 
   function parseBulkIdentityRows(value) {
@@ -2797,13 +2877,13 @@ export const appScript = `
 
   function renderSettings(data) {
     content.innerHTML = '<div class="account-grid"><form class="form-panel panel-stack" id="identity-form"><div><h2>Nastavení Bazos.cz</h2><p class="card-note">Přidejte telefon a údaje prodejce. Ověření telefonu a relace se dokončuje ručně přes Bazos.cz.</p>' + externalBazosNotice() + '</div><div class="form-grid">' +
-      '<label>Telefon<input name="phoneNumber" minlength="9" maxlength="20" required></label>' +
-      '<label>E-mail účtu Bazoš<input name="bazosEmail" type="email" maxlength="200" placeholder="prodejce@example.cz"></label>' +
+      '<label>Telefon<input name="phoneNumber" minlength="9" maxlength="20" autocomplete="tel" required></label>' +
+      '<label>E-mail účtu Bazoš<input name="bazosEmail" type="email" maxlength="200" autocomplete="email" placeholder="prodejce@example.cz" required></label>' +
       '<label>Název pro přehled<input name="displayName" maxlength="200" placeholder="např. Bazoš účet - motodíly" required></label>' +
-      '<label>Kontaktní jméno<input name="contactName" maxlength="200"></label>' +
-      '<label>Kontaktní telefon<input name="contactPhone" maxlength="50"></label>' +
-      '<label>PSČ<input name="defaultZip" maxlength="20"></label>' +
-      '<label>Lokalita<input name="defaultLocation" maxlength="200"></label>' +
+      '<label>Kontaktní jméno<input name="contactName" maxlength="200" autocomplete="name" required></label>' +
+      '<label>Kontaktní telefon<input name="contactPhone" maxlength="50" autocomplete="tel" required></label>' +
+      '<label>PSČ<input name="defaultZip" maxlength="20" autocomplete="postal-code" required></label>' +
+      '<label>Lokalita<input name="defaultLocation" maxlength="200" autocomplete="address-level2" required></label>' +
       '<label class="wide">Popis účtu<textarea name="notes" placeholder="např. prodej motodílů, knih nebo sezónního zboží"></textarea></label>' +
       '</div><p class="form-message" data-form-message></p><button class="button button-primary" type="submit">Uložit nastavení</button></form><div class="data-panel"><h2>Co musí být splněno</h2><div class="gate-grid"><div class="gate-item"><strong>Telefon</strong><span class="status ok">Ověřený</span></div><div class="gate-item"><strong>Relace</strong><span class="status ok">Aktivní</span></div><div class="gate-item"><strong>Kontrola</strong><span class="status ok">Bez blokace</span></div><div class="gate-item"><strong>Účet</strong><span class="status ok">Propojený systémem</span></div><div class="gate-item"><strong>Limit</strong><span class="status ok">Méně než 50 aktivních inzerátů</span></div></div></div></div>' +
       table([
@@ -2814,7 +2894,13 @@ export const appScript = `
         { label: 'Může publikovat', render: (r) => '<span class="status ' + (isPublishableIdentity(r) ? 'ok' : 'risk') + '">' + (isPublishableIdentity(r) ? 'Ano' : 'Ne') + '</span><small class="card-note">' + (hasLinkedAccount(r) ? 'Účet je propojený' : 'Čeká na propojení účtu') + '</small>' },
         { label: 'Ověření', render: (r) => verificationActions(r) },
       ], data.identities, 'Zatím není uložené žádné nastavení Bazos.cz.', settingsLink('Přidat nastavení'));
-    document.getElementById('identity-form').addEventListener('submit', createIdentity);
+    const form = document.getElementById('identity-form');
+    form.addEventListener('submit', createIdentity);
+    bindSettingsFormGuidance(form);
+    if (pendingSettingsGuide) {
+      pendingSettingsGuide = false;
+      setTimeout(() => guideMissingSettingsFields(form), 0);
+    }
     bindVerificationButtons();
   }
 
@@ -3082,6 +3168,7 @@ export const appScript = `
   }
 
   function navigateTo(view, options) {
+    if (view === 'settings' && options?.guideSettings) pendingSettingsGuide = true;
     activeView = view;
     if (options?.adFilter) clientAdFilter = options.adFilter;
     else if (view !== 'details') clientAdFilter = 'all';
@@ -3101,7 +3188,7 @@ export const appScript = `
       button.dataset.navBound = 'true';
       button.addEventListener('click', (event) => {
         event.preventDefault();
-        navigateTo(button.dataset.navView || button.dataset.sidebarView, { adFilter: button.dataset.adFilter });
+        navigateTo(button.dataset.navView || button.dataset.sidebarView, { adFilter: button.dataset.adFilter, guideSettings: button.dataset.guideBazosSettings === 'true' });
       });
     });
   }
