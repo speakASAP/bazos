@@ -1,7 +1,7 @@
 # Goal 17 / Orders Goal 7.2B Bazos Canonical Create Readiness
 
 Date: 2026-07-01
-Status: validated in source, not deployed
+Status: deployed; live Orders-create smoke blocked by [MISSING: owner-approved synthetic smoke path]
 
 ## Intent Preservation Chain
 
@@ -41,9 +41,8 @@ Evidence:
 
 - No Orders repo edits.
 - No DB mutation or migration.
-- No deployment or push.
 - No live Bazos marketplace webhook/order support was implemented because the repo has no provider-backed Bazos marketplace order contract.
-- No live Orders create smoke was run because Bazos deploy/live-smoke approval and a sanitized true sellable payload remain `[MISSING: Bazos deploy/live smoke approval and sanitized Orders create payload]`.
+- No mutating live Orders create smoke was run because an owner-approved synthetic smoke path/payload remains `[MISSING: owner-approved synthetic smoke path]`.
 
 ## Live Support Evidence
 
@@ -84,8 +83,42 @@ Orders create keeps `orders.create.v1` and normalized `channelAccountId` idempot
 
 - `[UNKNOWN: live Bazos marketplace webhook support]` still blocks true live Bazos order ingestion and live provider smoke.
 - Orders-side runtime key-name presence is confirmed: Orders exposes `BAZOS_INTERNAL_SERVICE_TOKEN`, and Bazos exposes `JWT_TOKEN`; token values were not printed.
-- `[MISSING: Bazos deploy/live smoke approval and sanitized Orders create payload]` still blocks production Orders create smoke.
+- `[MISSING: owner-approved synthetic smoke path]` still blocks mutating production Orders create smoke.
 - `BazosAd` has no first-class `warehouseId`; durable Warehouse route selection should be made explicit in a future schema/contract if Bazos needs ad-derived Orders forwarding without order-line `warehouseId`.
+
+
+## Deployment Verification Follow-Up - 2026-07-01
+
+### Intent Preservation Chain
+
+Vision -> Orders remains the canonical lifecycle and statistics backbone for supported sellable channel orders.
+Goal Impact -> Bazos can safely call Orders only with accepted service-auth headers and Warehouse-owned item routing identifiers.
+System -> `bazos-service` deployed from `alfares:/home/ssf/Documents/Github/bazos-service`; `orders-microservice` remains the canonical order owner.
+Feature -> Bazos canonical Orders create caller readiness.
+Task -> verify source/runtime readiness, deploy when source was ahead of live image, and run only safe sanitized smoke.
+Execution Plan -> inspect remote head/status, verify env-name presence without values, rerun focused and bounded validation, deploy from remote repo, verify rollout and health, preserve live webhook boundary.
+Coding Prompt -> delegated Orders Goal 7.2B Bazos lane; remote-only; no Orders edits; no secret values; no production order/customer/payment data; no destructive operations.
+Code -> source already complete at `230c6b5`; this follow-up changes documentation/status evidence only.
+Validation -> focused specs, shared/root tests, builds, deploy rollout, pod env-name check, and `/health` smoke passed.
+
+### Evidence
+
+- Remote preflight before deployment: `git status --short --branch` returned clean `## main...origin/main`; head `230c6b5 fix: align Bazos Orders auth token runtime fallback`.
+- Live deployment before deployment was behind at `localhost:5000/bazos-service:10514ac`; source head was `230c6b5`.
+- Runtime env-name check printed names only: `ORDER_SERVICE_URL`, `JWT_TOKEN`, `WAREHOUSE_SERVICE_URL`, and `WAREHOUSE_SERVICE_TOKEN` were present; explicit Orders token aliases were missing, and the code falls back to `JWT_TOKEN`.
+- Validation passed: focused Bazos order service spec `1 suite, 7 tests`; focused shared Orders client spec `1 suite, 2 tests`; `git diff --check`; `npm --prefix shared run build`; `npm --prefix shared test` `8 suites, 113 tests`; `npm test` `8 suites, 113 tests`; `npm --prefix services/aukro-service run build`.
+- Deployment command: `./scripts/deploy.sh` from the remote repo. Built and pushed `localhost:5000/bazos-service:230c6b5` with digest `sha256:68fb54ffce47bbd4fe319e14929dd62e8425c845a0b8273f440e3ded436e2300`.
+- Rollout completed with `deployment/bazos-service` ready `1/1`, updated `1`, available `1`, reasons `MinimumReplicasAvailable` and `NewReplicaSetAvailable`.
+- Production smoke: `curl -fsS https://bazos.alfares.cz/health` returned `{"status":"ok","service":"bazos-service"}`.
+- Post-approval smoke confirmed current live image remains `localhost:5000/bazos-service:230c6b5`, `/health` returned `status=ok`, runtime env-name check exposes `JWT_TOKEN`, and unauthenticated `GET /orders` returned HTTP 401 `No token provided` without mutating data.
+
+### Smoke Boundary
+
+A mutating Orders-create smoke was not run. The repo has a synthetic/internal handler, but using it would create Bazos and central Orders records and no owner-approved synthetic payload/path was provided. Current blocker remains `[MISSING: owner-approved synthetic smoke path]`. True provider-backed Bazos order ingestion remains `[UNKNOWN: live Bazos marketplace webhook support]`.
+
+### Sensitive Data Check
+
+No raw token values, decoded JWTs, Bazos customer/order payloads, DB rows, production order rows, payment data, or Vault values were printed or changed.
 
 ## Files Changed
 
@@ -100,8 +133,8 @@ Orders create keeps `orders.create.v1` and normalized `channelAccountId` idempot
 
 ## Commit Or No-Commit Reason
 
-No commit created in this delegated worker turn. Source is validated and intentionally left dirty for orchestrator review/commit because live webhook support and Orders runtime/deployment gates remain unresolved.
+Source commits `70e5571` and `230c6b5` were created and pushed. Deployment/status evidence was recorded in a docs commit after rollout verification; final commit SHA is recorded in the session response.
 
 ## Next Action
 
-Provide or confirm the Bazos live order ingestion contract plus deploy/live-smoke approval and sanitized payload, then deploy and run a sanitized Orders create smoke.
+Provide an owner-approved synthetic Orders-create smoke path/payload, or a real Bazos live order ingestion contract, before running any mutating production Orders create smoke.

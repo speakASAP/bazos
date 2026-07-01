@@ -12,6 +12,7 @@
 
 ## Completed
 <!-- Coordinator-append-only -->
+- 2026-07-01 goal-17-orders-runtime-deployment-verification: deployed Bazos Orders create readiness/runtime token fallback to image `localhost:5000/bazos-service:230c6b5`; health smoke passed; mutating Orders-create smoke remains blocked by [MISSING: owner-approved synthetic smoke path] and [UNKNOWN: live Bazos marketplace webhook support].
 - 2026-07-01 goal-17-orders-token-runtime-follow-up: aligned Bazos Orders client with deployed Orders aliasing by adding caller-side `JWT_TOKEN` / `SERVICE_TOKEN` fallback; key names checked without printing secret values.
 - 2026-07-01 goal-17-orders-canonical-create-readiness: added accepted Orders internal auth headers and fail-closed `warehouseId` guard for Bazos canonical create; kept true live Bazos webhook support `[UNKNOWN: live Bazos marketplace webhook support]` and live smoke blocked by `[MISSING: Orders runtime credential/deploy gate]`.
 - 2026-06-26 goal-17-bazos-order-forwarding-follow-up: added synthetic/internal Catalog product ID order payload support while keeping true live Bazos webhook support [UNKNOWN: live Bazos marketplace webhook support].
