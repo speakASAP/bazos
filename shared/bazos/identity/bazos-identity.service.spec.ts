@@ -43,8 +43,10 @@ function makePrisma(overrides: Partial<{
       upsert: jest.fn().mockResolvedValue({}),
     },
     bazosAccount: {
-      findFirst: jest.fn().mockResolvedValue({ id: 'acc-1' }),
+      findFirst: jest.fn().mockResolvedValue({ id: 'acc-1', userId: 'user-1' }),
+      findUnique: jest.fn().mockResolvedValue({ id: 'acc-1', userId: 'user-1', isActive: true, identities: [] }),
       create: jest.fn().mockResolvedValue({ id: 'acc-created' }),
+      update: jest.fn().mockResolvedValue({ id: 'acc-1', userId: 'user-1' }),
     },
     bazosVerificationSession: {
       create: jest.fn().mockResolvedValue({ id: 'session-1' }),
@@ -76,27 +78,43 @@ describe('BazosIdentityService', () => {
       await expect(svc.create('user-1', createDto)).rejects.toBeInstanceOf(ConflictException);
     });
 
-    it('creates identity with draft status, clear reviewState, and linked account when email is known', async () => {
+    it('creates identity with draft status, clear reviewState, and linked Bazos account when Bazos email is provided', async () => {
       const prisma = makePrisma({ existing: null });
       const svc = new BazosIdentityService(prisma, makeLogger());
-      await svc.create('user-1', createDto, 'Seller@Example.cz');
+      await svc.create('user-1', { ...createDto, bazosEmail: 'Seller@Bazos.cz' });
       const createCall = prisma.bazosIdentity.create.mock.calls[0][0];
-      expect(prisma.bazosAccount.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { email: 'seller@example.cz' } }));
+      expect(prisma.bazosAccount.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ email: 'seller@bazos.cz' }) }));
       expect(createCall.data.accountId).toBe('acc-1');
       expect(createCall.data.status).toBe(IDENTITY_STATUS.DRAFT);
       expect(createCall.data.reviewState).toBe(REVIEW_STATE.CLEAR);
       expect(createCall.data.sessionState).toBe(SESSION_STATE.MISSING);
     });
 
-    it('creates account when no account exists for the Alfares email', async () => {
+    it('creates account scoped to the Alfares user when no Bazos account exists for that external email', async () => {
       const prisma = makePrisma({ existing: null });
       prisma.bazosAccount.findFirst.mockResolvedValue(null);
       const svc = new BazosIdentityService(prisma, makeLogger());
-      await svc.create('user-1', createDto, 'seller@example.cz');
+      await svc.create('user-1', { ...createDto, bazosEmail: 'seller@bazos.cz' });
       expect(prisma.bazosAccount.create).toHaveBeenCalledWith(expect.objectContaining({
-        data: expect.objectContaining({ email: 'seller@example.cz', password: null, isActive: true }),
+        data: expect.objectContaining({ userId: 'user-1', email: 'seller@bazos.cz', password: null, isActive: true }),
       }));
       expect(prisma.bazosIdentity.create.mock.calls[0][0].data.accountId).toBe('acc-created');
+    });
+
+    it('does not use the Alfares Auth email as the Bazos account email', async () => {
+      const prisma = makePrisma({ existing: null });
+      const svc = new BazosIdentityService(prisma, makeLogger());
+      await svc.create('user-1', createDto);
+      expect(prisma.bazosAccount.findFirst).not.toHaveBeenCalled();
+      expect(prisma.bazosAccount.create).not.toHaveBeenCalled();
+      expect(prisma.bazosIdentity.create.mock.calls[0][0].data.accountId).toBeNull();
+    });
+
+    it('rejects linking an account owned by another Alfares user', async () => {
+      const prisma = makePrisma({ existing: null });
+      prisma.bazosAccount.findUnique.mockResolvedValue({ id: 'acc-2', userId: 'other-user', isActive: true, identities: [] });
+      const svc = new BazosIdentityService(prisma, makeLogger());
+      await expect(svc.create('user-1', { ...createDto, accountId: 'acc-2' })).rejects.toBeInstanceOf(BadRequestException);
     });
 
     it('does not log the raw phone number', async () => {
@@ -190,7 +208,7 @@ describe('BazosIdentityService', () => {
       const prisma = makePrisma({ found: { id: 'id-1', accountId: null, displayName: 'Seller' } });
       prisma.bazosIdentity.findUnique = jest.fn().mockResolvedValue({ id: 'id-1', accountId: null, displayName: 'Seller' });
       const svc = new BazosIdentityService(prisma, makeLogger());
-      await svc.completeManualVerificationSession('id-1', 'session-1', 'user-1', 'seller@example.cz', {
+      await svc.completeManualVerificationSession('id-1', 'session-1', 'user-1', {
         humanConfirmed: true,
         notes: 'Completed by seller in Bazos browser',
       });
@@ -202,7 +220,7 @@ describe('BazosIdentityService', () => {
       expect(JSON.stringify(sessionUpdate.data.evidence).toLowerCase()).not.toContain('smscode');
 
       const identityUpdate = prisma.bazosIdentity.update.mock.calls[0][0];
-      expect(identityUpdate.data.accountId).toBe('acc-1');
+      expect(identityUpdate.data.accountId).toBeNull();
       expect(identityUpdate.data.status).toBe(IDENTITY_STATUS.VERIFIED);
       expect(identityUpdate.data.reviewState).toBe(REVIEW_STATE.CLEAR);
       expect(identityUpdate.data.sessionState).toBe(SESSION_STATE.ACTIVE);

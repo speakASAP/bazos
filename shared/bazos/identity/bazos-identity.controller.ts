@@ -29,7 +29,7 @@ export class BazosIdentityController {
 
   @Post()
   create(@Request() req, @Body() dto: CreateBazosIdentityDto) {
-    return this.identityService.create(req.user.id, dto, req.user.email);
+    return this.identityService.create(req.user.id, dto);
   }
 
   @Get()
@@ -73,7 +73,7 @@ export class BazosIdentityController {
     @Request() req,
     @Body() dto: CompleteManualVerificationSessionDto,
   ) {
-    return this.identityService.completeManualVerificationSession(id, sessionId, req.user.id, req.user.email, dto);
+    return this.identityService.completeManualVerificationSession(id, sessionId, req.user.id, dto);
   }
 
   @Post(':id/verification-sessions/:sessionId/challenge')

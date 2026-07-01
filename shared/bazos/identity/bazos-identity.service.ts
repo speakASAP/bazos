@@ -50,7 +50,7 @@ export class BazosIdentityService {
     private readonly logger: LoggerService,
   ) {}
 
-  async create(userId: string, dto: CreateBazosIdentityDto, userEmail?: string) {
+  async create(userId: string, dto: CreateBazosIdentityDto) {
     const existing = await this.prisma.bazosIdentity.findUnique({
       where: { phoneNumber: dto.phoneNumber },
     });
@@ -58,7 +58,9 @@ export class BazosIdentityService {
       throw new ConflictException(`Phone number ${dto.phoneNumber} is already registered as a Bazos identity`);
     }
 
-    const accountId = dto.accountId || await this.ensureAccountForUser(dto.displayName, userEmail);
+    const accountId = dto.accountId
+      ? await this.resolveAccountForUser(userId, dto.accountId)
+      : await this.ensureAccountForUser(userId, dto.displayName, dto.bazosEmail);
 
     const identity = await this.prisma.bazosIdentity.create({
       data: {
@@ -89,6 +91,9 @@ export class BazosIdentityService {
           orderBy: { createdAt: 'desc' },
           take: 3,
         },
+        account: {
+          select: { id: true, name: true, email: true, isActive: true },
+        },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -102,6 +107,9 @@ export class BazosIdentityService {
         verificationSessions: {
           orderBy: { createdAt: 'desc' },
           take: 5,
+        },
+        account: {
+          select: { id: true, name: true, email: true, isActive: true },
         },
       },
     });
@@ -213,7 +221,6 @@ export class BazosIdentityService {
     id: string,
     sessionId: string,
     userId: string,
-    userEmail: string | undefined,
     dto: CompleteManualVerificationSessionDto,
   ) {
     await this.findById(id, userId);
@@ -228,7 +235,7 @@ export class BazosIdentityService {
     }
 
     const verificationExpiresAt = this.toDate(dto.verificationExpiresAt);
-    const accountId = await this.ensureAccountForIdentity(id, userEmail);
+    const accountId = await this.ensureAccountForIdentity(id);
 
     const updatedSession = await this.prisma.bazosVerificationSession.update({
       where: { id: sessionId },
@@ -421,30 +428,71 @@ export class BazosIdentityService {
     this.logger.log('Category cadence recorded', { identityId, bazosCategory });
   }
 
-  private async ensureAccountForIdentity(identityId: string, userEmail?: string): Promise<string | null> {
+  private async ensureAccountForIdentity(identityId: string): Promise<string | null> {
     const identity = await this.prisma.bazosIdentity.findUnique({ where: { id: identityId } });
     if (identity?.accountId) return identity.accountId;
-    return this.ensureAccountForUser(identity?.displayName, userEmail);
+    return null;
   }
 
-  private async ensureAccountForUser(displayName?: string | null, userEmail?: string): Promise<string | null> {
-    const email = String(userEmail || '').trim().toLowerCase();
+  private async ensureAccountForUser(userId: string, displayName?: string | null, bazosEmail?: string): Promise<string | null> {
+    const email = String(bazosEmail || '').trim().toLowerCase();
     if (!email) return null;
 
     const existing = await this.prisma.bazosAccount.findFirst({
-      where: { email },
+      where: {
+        email,
+        OR: [
+          { userId },
+          { userId: null, identities: { some: { userId } } },
+        ],
+      },
       orderBy: { createdAt: 'asc' },
     });
-    if (existing) return existing.id;
+    if (existing) {
+      if (!existing.userId) {
+        await this.prisma.bazosAccount.update({
+          where: { id: existing.id },
+          data: { userId },
+        });
+      }
+      return existing.id;
+    }
 
     const account = await this.prisma.bazosAccount.create({
       data: {
         name: displayName || email,
+        userId,
         email,
         password: null,
         isActive: true,
       },
     });
+    return account.id;
+  }
+
+  private async resolveAccountForUser(userId: string, accountId: string): Promise<string> {
+    const account = await this.prisma.bazosAccount.findUnique({
+      where: { id: accountId },
+      include: { identities: { select: { userId: true } } },
+    });
+    if (!account || account.isActive === false) {
+      throw new BadRequestException('Bazos account is not available for this user');
+    }
+    if (account.userId && account.userId !== userId) {
+      throw new BadRequestException('Bazos account is not available for this user');
+    }
+
+    const foreignIdentity = (account.identities || []).find((identity) => identity.userId && identity.userId !== userId);
+    if (foreignIdentity) {
+      throw new BadRequestException('Bazos account is not available for this user');
+    }
+
+    if (!account.userId) {
+      await this.prisma.bazosAccount.update({
+        where: { id: account.id },
+        data: { userId },
+      });
+    }
     return account.id;
   }
 

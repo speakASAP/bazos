@@ -1,4 +1,4 @@
-import { IsBoolean, IsNotEmpty, IsObject, IsOptional, IsString, Length } from 'class-validator';
+import { IsBoolean, IsEmail, IsNotEmpty, IsObject, IsOptional, IsString, Length } from 'class-validator';
 import { EncryptedBazosSessionEnvelope } from './bazos-identity.types';
 
 export class CreateBazosIdentityDto {
@@ -35,6 +35,11 @@ export class CreateBazosIdentityDto {
   @IsOptional()
   @IsString()
   accountId?: string;
+
+  @IsOptional()
+  @IsEmail()
+  @Length(3, 200)
+  bazosEmail?: string;
 
   @IsOptional()
   @IsString()
