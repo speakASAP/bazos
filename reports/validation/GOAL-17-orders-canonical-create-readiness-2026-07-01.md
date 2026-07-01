@@ -163,6 +163,45 @@ Validation -> Bazos-to-Orders internal auth path accepted; Orders created a Bazo
 
 No raw tokens, decoded JWTs, live Bazos customer/order payloads, DB row dumps, production customer rows, payment data, Vault values, or Warehouse response bodies beyond bounded synthetic stock counters were printed.
 
+
+## Owner-Approved Full Warehouse Reservation Smoke - 2026-07-01
+
+### Intent Preservation Chain
+
+Vision -> Orders remains the canonical lifecycle and statistics backbone for supported sellable channel orders.
+Goal Impact -> Prove Bazos can create a canonical Orders record only when Warehouse reservation succeeds, and cleanup releases the synthetic reservation.
+System -> `bazos-service` pod calls `orders-microservice`; `orders-microservice` reserves and cancels through `warehouse-microservice` in `statex-apps`.
+Feature -> Bazos canonical Orders create plus Warehouse reservation runtime readiness.
+Task -> discover a Warehouse-owned stock fixture through the Warehouse API, run synthetic create, replay idempotency, cancel with owner-approved audit, and verify Warehouse readback.
+Execution Plan -> inspect ExternalSecret/key-name/env presence without printing secret values, verify Orders-to-Warehouse auth, select one available Warehouse fixture, create through Bazos service headers, replay exact payload, cancel through an Auth-admin token, and verify reservation status.
+Coding Prompt -> owner-approved follow-up; remote-only; no raw token values; no live Bazos provider payloads; no Orders/Warehouse source edits unless required.
+Code -> no source changes required for this pass; documentation/status evidence only.
+Validation -> create, idempotent replay, cancellation, and Warehouse reservation readback passed.
+
+### Evidence
+
+- Kubernetes key-name and env-name inspection found Orders has `WAREHOUSE_SERVICE_TOKEN` and Bazos has `JWT_TOKEN`; Warehouse API auth with the current Orders token returned HTTP 200 for read-only Warehouse endpoints.
+- Warehouse fixture was selected through `GET /api/stock/catalog/reconciliation?limit=50&includeKnown=true` plus `GET /api/warehouses/logistics/:productId`; no token values were printed.
+- Synthetic create was executed from the live Bazos pod against Orders with `x-service-name: bazos-service` and runtime `x-internal-service-token` from the pod environment.
+- Create result: HTTP 201, `success=true`, `channel=bazos`, one item, `warehouseHandoff.status=reserved`, `reservedCount=1`.
+- Exact replay result: HTTP 201, same order returned, `warehouseHandoff.status=reserved`.
+- Cleanup cancellation used an Auth test/admin token from in-cluster env without printing credentials or token values, with owner-approved cancellation audit side effects set true.
+- Cancellation result: HTTP 200, `success=true`, resulting status `cancelled`, `warehouseHandoff.status=cancelled`, `reservedCount=1`, `failedCount=0`.
+- Warehouse readback by synthetic order returned HTTP 200 with one reservation in status `cancelled` and no active reservation left for the smoke order.
+
+### Outcome
+
+- PASS: Bazos runtime service headers are accepted by Orders.
+- PASS: Orders create contract accepts Bazos `orders.create.v1` with stable `channelAccountId`, canonical Catalog `productId`, and Warehouse-owned `warehouseId`.
+- PASS: Orders-to-Warehouse reservation handoff succeeds for a valid Warehouse-owned fixture.
+- PASS: Create idempotency replay returns the same order.
+- PASS: Owner-approved cancellation cleans up the Warehouse reservation.
+- PRESERVED: True live Bazos marketplace webhook support remains `[UNKNOWN: live Bazos marketplace webhook support]` because this smoke used a synthetic/internal payload, not provider-backed Bazos order ingestion.
+
+### Sensitive Data Check
+
+No raw token values, decoded JWTs, live Bazos customer/order payloads, DB rows, payment data, Vault values, or Warehouse response bodies were printed. Synthetic IDs were used only for the smoke transaction and cleanup.
+
 ## Files Changed
 
 - `shared/clients/order-client.service.ts`

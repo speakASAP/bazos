@@ -12,6 +12,7 @@
 
 ## Completed
 <!-- Coordinator-append-only -->
+- 2026-07-01 goal-17-bazos-full-reservation-smoke: live Bazos pod created a synthetic Orders order with Warehouse handoff reserved, replayed idempotently, cancelled with owner approval, and Warehouse readback showed the reservation cancelled.
 - 2026-07-01 goal-17-owner-approved-synthetic-orders-smoke: live Bazos pod created a synthetic Bazos channel order through Orders with accepted Bazos service headers; Warehouse handoff reserved one item, approved cleanup cancelled the order/reservation, and post-cleanup Warehouse read returned reserved=0. Remaining blocker: [UNKNOWN: live Bazos marketplace webhook support].
 - 2026-07-01 goal-17-orders-runtime-deployment-verification: deployed Bazos Orders create readiness/runtime token fallback to image `localhost:5000/bazos-service:230c6b5`; health smoke passed; initial mutating Orders-create smoke was deferred before owner approval, and true live Bazos marketplace webhook support remains [UNKNOWN: live Bazos marketplace webhook support].
 - 2026-07-01 goal-17-orders-token-runtime-follow-up: aligned Bazos Orders client with deployed Orders aliasing by adding caller-side `JWT_TOKEN` / `SERVICE_TOKEN` fallback; key names checked without printing secret values.
