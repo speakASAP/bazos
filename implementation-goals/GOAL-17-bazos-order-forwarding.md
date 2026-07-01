@@ -72,6 +72,7 @@ Forbidden:
 - Missing `warehouseId` fails closed before calling Orders with bounded `[MISSING: Warehouse-owned warehouseId for Bazos order item]` evidence.
 - Missing live Bazos marketplace webhook support remains `[UNKNOWN: live Bazos marketplace webhook support]`.
 - Validation evidence is recorded in `reports/validation/GOAL-17-orders-canonical-create-readiness-2026-07-01.md`.
+- Owner-approved synthetic runtime smoke passed on 2026-07-01: Bazos service headers were accepted by Orders, Warehouse handoff returned `reserved`, approved cleanup returned `cancelled`, and the fixture stock read returned `reserved=0`.
 
 ### Pre-Coding Gate
 
@@ -88,7 +89,7 @@ Evidence:
 Unresolved non-blocking markers:
 
 - `[UNKNOWN: live Bazos marketplace webhook support]` blocks live smoke and true provider webhook ingestion, but does not block defensive canonical create readiness for synthetic/internal sellable payloads.
-- `[MISSING: Orders runtime credential/deploy gate]` may block live production smoke until runtime secrets/deploy approval are provided.
+- Orders runtime credential/deploy gate for the synthetic Bazos smoke is resolved by owner-approved runtime evidence on 2026-07-01; final smoke passed with Warehouse reservation and cancellation cleanup. Keep the external Orders runtime prerequisite tracked in the Orders lane until `43f9774`/Warehouse service-token rotation is pushed or otherwise settled.
 
 ### Parallel Execution
 
