@@ -2231,6 +2231,9 @@ export const appScript = `
     content.innerHTML = '<div class="data-panel empty-state">Načítají se administrátorská data...</div>';
     const summary = await request('/api/bazos/monitoring/summary').catch((error) => ({ error: error.message }));
     const blocked = await request('/api/bazos/monitoring/blocked-attempts?limit=25').catch(() => []);
+    const ordersResult = await request('/ui/orders?scope=admin&limit=25').catch((error) => ({ error: error.message }));
+    const orders = ordersResult.error ? [] : asArray(ordersResult, ['items', 'orders']);
+    const ordersSummary = orderSummary(orders);
     if (summary.error) {
       content.innerHTML = '<div class="data-panel empty-state">' + escapeHtml(summary.error) + '</div>';
       return;
@@ -2242,7 +2245,11 @@ export const appScript = `
         stat('Blokované pokusy', summary.blockedAttempts || asArray(blocked, ['items', 'blockedAttempts']).length || 0) +
         stat('Identity ke kontrole', summary.reviewIdentities || summary.identitiesNeedingReview || 0) +
         stat('Sledované aktivní inzeráty', summary.activeAds || summary.activeAdsTracked || 0) +
-        '</div><div class="data-panel"><h2>Zaměření administrátora</h2><p class="card-note">Kontrolujte blokované pokusy a identity vyžadující ruční zásah. Kontroly publikování nadále vynucují backendová pravidla.</p></div>';
+        stat('Objednávky Bazoš', ordersSummary.total, ordersResult.error ? 'Orders read-model není dostupný' : ordersSummary.centralOk + ' načteno z Orders') +
+        '</div><div class="data-panel"><h2>Zaměření administrátora</h2><p class="card-note">Kontrolujte blokované pokusy, identity vyžadující ruční zásah a objednávky, které nejsou předané nebo nemají čerstvý stav z Orders.</p></div>' +
+        '<div class="data-panel"><div class="panel-heading-actions"><h2>Objednávky Bazoš</h2><button class="button button-secondary" id="refresh-admin-orders" type="button">Obnovit</button></div>' +
+        (ordersResult.error ? '<p class="form-message">' + settingsErrorMarkup(ordersResult.error) + '</p>' : orderTable(orders, 'Nebyly vráceny žádné Bazoš objednávky.')) + '</div>';
+      content.querySelector('#refresh-admin-orders')?.addEventListener('click', () => renderAdmin());
     } else {
       const rows = asArray(blocked, ['items', 'blockedAttempts']);
       content.innerHTML = table([
@@ -2757,6 +2764,7 @@ export const appScript = `
       return;
     }
     const summary = accountSummary(data.identities, data.ads, data.queue);
+    const ordersSummary = orderSummary(data.orders);
     const identitiesNeedingReview = data.identities.filter((identity) => !isVerified(identity) || !hasActiveSession(identity) || !isReviewClear(identity)).length;
     const identityRows = data.identities.map((identity) => ({
       ...identity,
@@ -2764,6 +2772,7 @@ export const appScript = `
       remaining: isVerified(identity) ? Math.max(50 - identityActiveCount(identity, data.ads), 0) : 0,
     }));
     const recentAds = data.ads.slice(0, 8);
+    const recentOrders = data.orders.slice(0, 5);
     content.innerHTML =
       '<div class="summary-grid overview-stats">' +
       stat('Stav přihlášení', 'Přihlášeno', 'Alfares Auth relace je aktivní') +
@@ -2774,7 +2783,8 @@ export const appScript = `
       stat('Aktivní na Bazoši', summary.activeAds, 'Limit je 50 aktivních na ověřenou identitu', { view: 'details', filter: 'active' }) +
       stat('Vyžaduje kontrolu', data.ads.filter((ad) => statusClass(ad.publishStatus || ad.status || ad.bazosStatus) === 'risk').length, 'Blokované stavy nebo výzvy k ručnímu zásahu', { view: 'details', filter: 'review' }) +
       stat('Ve frontě', summary.queued, 'Hlídané publikování čeká na pravidla a cadence', { view: 'details', filter: 'queued' }) +
-      '</div><div class="overview-actions"><button class="button button-primary" data-nav-view="publish" type="button">Přidat inzerát</button><button class="button button-secondary" data-nav-view="details" data-ad-filter="all" type="button">Otevřít moje inzeráty</button><button class="button button-secondary" data-nav-view="account" type="button">Otevřít identity</button><button class="button button-secondary" data-open-bulk-identities type="button">+ Přidat identitu</button></div>' +
+      stat('Objednávky', ordersSummary.total, data.ordersError ? 'Stav Orders není dostupný' : ordersSummary.centralOk + ' načteno z Orders', { view: 'orders' }) +
+      '</div><div class="overview-actions"><button class="button button-primary" data-nav-view="publish" type="button">Přidat inzerát</button><button class="button button-secondary" data-nav-view="details" data-ad-filter="all" type="button">Otevřít moje inzeráty</button><button class="button button-secondary" data-nav-view="orders" type="button">Otevřít objednávky</button><button class="button button-secondary" data-nav-view="account" type="button">Otevřít identity</button><button class="button button-secondary" data-open-bulk-identities type="button">+ Přidat identitu</button></div>' +
       '<div class="overview-grid">' +
       '<div class="data-panel"><div class="panel-heading-actions"><h2>Moje identity na Bazoši</h2><button class="button button-secondary" data-open-bulk-identities type="button">+ Přidat identitu</button></div>' +
       tableOnly([
@@ -2788,6 +2798,8 @@ export const appScript = `
         { label: 'Stav', render: (r) => '<span class="status ' + statusClass(r.publishStatus || r.status || r.bazosStatus) + '">' + statusLabel(r.publishStatus || r.status || r.bazosStatus || 'draft') + '</span>' },
         { label: 'Odkaz', render: (r) => bazosAdUrl(r) ? '<a class="table-link" href="' + escapeHtml(bazosAdUrl(r)) + '" target="_blank" rel="noopener">Zobrazit na Bazoši</a>' : '<button class="link-button" data-nav-view="details" data-ad-filter="all" type="button">Otevřít v mých inzerátech</button>' },
       ], recentAds, 'Pro tento účet nebyly vráceny žádné inzeráty.') +
+      '</div><div class="data-panel"><div class="panel-heading-actions"><h2>Objednávky</h2><button class="button button-secondary" data-nav-view="orders" type="button">Otevřít</button></div>' +
+      (data.ordersError ? '<p class="form-message">' + settingsErrorMarkup(data.ordersError) + '</p>' : orderTable(recentOrders, 'Pro tento účet nebyly vráceny žádné objednávky.')) +
       '</div></div>';
     bindContentNavButtons();
     content.querySelectorAll('[data-open-ad]').forEach((button) => button.addEventListener('click', () => openDraftDetails(button.dataset.openAd)));
@@ -2914,6 +2926,23 @@ export const appScript = `
   async function saveDraftEdits(event, originalAd, originalOptions) {
     event.preventDefault();
     return saveDraftEditsFromForm(event.currentTarget, originalAd, originalOptions);
+  }
+
+  function renderOrders(data) {
+    const rows = data.orders || [];
+    const summary = orderSummary(rows);
+    if (data.ordersError) {
+      content.innerHTML = '<div class="data-panel empty-state">' + settingsErrorMarkup(data.ordersError) + '</div>';
+      return;
+    }
+    content.innerHTML = '<div class="summary-grid">' +
+      stat('Objednávky', summary.total) +
+      stat('Načteno z Orders', summary.centralOk, 'Centrální lifecycle/status je dostupný') +
+      stat('Nepředáno', summary.unforwarded, 'Lokální objednávky bez centrálního Orders toku') +
+      stat('Neznámé / zastaralé', summary.staleOrUnknown, 'Uložený centrální stav se nepodařilo ověřit') +
+      '</div><div class="data-panel"><div class="panel-heading-actions"><h2>Objednávky</h2><button class="button button-secondary" data-refresh-client type="button">Obnovit</button></div>' +
+      orderTable(rows, 'Pro tento účet nebyly vráceny žádné objednávky.') + '</div>';
+    content.querySelector('[data-refresh-client]')?.addEventListener('click', () => renderClient());
   }
 
   function renderPublish(data) {
@@ -3332,6 +3361,7 @@ export const appScript = `
     maybeAutoOpenConnectionWizard(data);
     if (activeView === 'overview') renderOverview(data);
     else if (activeView === 'details') renderDetails(data);
+    else if (activeView === 'orders') renderOrders(data);
     else if (activeView === 'publish') renderPublish(data);
     else if (activeView === 'account') renderAccount(data);
     else if (activeView === 'settings') renderSettings(data);
