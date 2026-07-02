@@ -26,6 +26,16 @@ Bazos consumes Catalog Goal 25 manual/stale/review metadata through the existing
 - `git diff --check`: PASS.
 - `LOGGING_SERVICE_URL=http://logging-microservice:3367 npm --prefix services/aukro-service run build`: PASS.
 
+
+## Runtime Deploy Evidence
+
+- `./scripts/deploy.sh`: PASS, built and pushed `localhost:5000/bazos-service:eb3543c`.
+- `kubectl rollout status deployment/bazos-service -n statex-apps`: PASS through deploy script.
+- `kubectl get deployment bazos-service -n statex-apps -o wide`: `1/1` on `localhost:5000/bazos-service:eb3543c`.
+- `curl -i -sS -m 15 https://bazos.alfares.cz/health`: HTTP 200, `{"status":"ok","service":"bazos-service"}`.
+- `curl -i -sS -m 15 https://bazos.alfares.cz/client`: HTTP 200, client SPA shell served.
+- `curl -sS -m 15 https://bazos.alfares.cz/ui/app.js`: deployed script contains `Manual override`, `Source changed`, `Review required`, and `Catalog source changed` markers.
+
 ## Boundary Decision
 
 This change is UI metadata-only. It does not disable confirm, enqueue publish work, bypass policy gates, call external Bazos endpoints, mutate Catalog, mutate Orders, mutate Warehouse, run migrations, or print secrets.
