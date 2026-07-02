@@ -115,6 +115,10 @@ export class CreateBazosAdDraftDto {
   @IsBoolean()
   saveToCatalog?: boolean;
 
+  @IsOptional()
+  @IsBoolean()
+  resaleEnabled?: boolean;
+
 
   @IsOptional()
   @IsArray()

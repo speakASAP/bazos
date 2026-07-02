@@ -38,8 +38,8 @@ export const renderLandingPage = () =>
     <main>
       <section class="hero-section">
         <div class="hero-copy">
-          <h1>Spravujte inzeráty na Bazoši bezpečně a přehledně.</h1>
-          <p class="hero-lede">Prodejci mohou připravovat inzeráty, sledovat stav na Bazoši a žádat o hlídané publikování přes AlfaRes, aniž by ztratili přehled o limitech Bazoš.cz.</p>
+          <h1>Prodávejte přes Bazoš vlastní produkty, dodavatelské slevy i sdílený katalog.</h1>
+          <p class="hero-lede">Zákazníci mohou prodávat zlevněné produkty Alfares a firemních dodavatelů, publikovat vlastní zboží a resellovat dostupné položky od dalších uživatelů nebo ze sdíleného katalogu. Alfares automatizuje přípravu inzerátů, marketplace/account data a objednávkový tok tam, kde to Bazoš proces dovoluje; zákazník spravuje produkty, připojuje přístup, prodává a expeduje.</p>
           <div class="hero-actions">
             <a class="button button-primary" href="/client">${icon('layout')}Otevřít klientský prostor</a>
             <a class="button button-secondary" href="#service">${icon('catalog')}Zobrazit službu</a>
@@ -53,24 +53,24 @@ export const renderLandingPage = () =>
           <div class="preview-grid">
             <div class="preview-panel wide">
               <div class="panel-header">
-                <strong>Centrum správy inzerátů</strong>
+                <strong>Centrum prodeje a zdrojů produktů</strong>
                 <span class="status ok">Pravidla splněna</span>
               </div>
               <div class="offer-row">
                 <span class="thumb"></span>
-                <div><strong>iPhone 13 128GB</strong><small>Koncept z katalogu</small></div>
+                <div><strong>iPhone 13 128GB</strong><small>Dodavatelská sleva Alfares</small></div>
                 <span>Elektro</span>
                 <span class="status wait">Kontrola</span>
               </div>
               <div class="offer-row">
                 <span class="thumb green"></span>
-                <div><strong>Sada vrtaček Makita</strong><small>Publikováno na Bazoši</small></div>
+                <div><strong>Sada vrtaček Makita</strong><small>Vlastní produkt zákazníka</small></div>
                 <span>Nářadí</span>
                 <span class="status ok">Aktivní</span>
               </div>
               <div class="offer-row">
                 <span class="thumb red"></span>
-                <div><strong>Kancelářská židle</strong><small>Vyžadována kontrola duplicity</small></div>
+                <div><strong>Kancelářská židle</strong><small>Sdílený katalog k resellu</small></div>
                 <span>Nábytek</span>
                 <span class="status risk">Blokováno</span>
               </div>
@@ -95,56 +95,56 @@ export const renderLandingPage = () =>
 
       <section class="benefit-band" id="benefits">
         <div class="section-heading">
-          <h2>Proč prodejci používají tuto službu místo samotného Bazoše</h2>
-          <p>Samotný Bazoš je vhodný pro ruční vkládání. AlfaRes k němu přidává katalogový kontext, přehled o pravidlech, týmové postupy a sledování životního cyklu.</p>
+          <h2>Co zákazník prodává přes Alfares Bazoš</h2>
+          <p>Alfares přidává nad Bazoš zdroje sortimentu, automatickou přípravu inzerátů, kontrolu pravidel a jasný provozní tok od produktu po prodej a expedici.</p>
         </div>
         <div class="benefit-grid">
           <article>
             ${icon('catalog')}
-            <h3>Příprava inzerátu z katalogu</h3>
-            <p>Vytvářejte lokální koncepty z produktových dat a mějte název, kategorii, obrázky, stav skladu i výchozí údaje prodejce na jednom místě.</p>
+            <h3>Alfares a firemní dodavatelé</h3>
+            <p>Prodávejte zvýhodněné dodavatelské produkty přes Bazoš bez ručního přepisování názvů, obrázků, cen a skladového kontextu.</p>
           </article>
           <article>
             ${icon('activity')}
-            <h3>Stav uložený i po ukončení relace</h3>
-            <p>Sledujte, které inzeráty jsou koncepty, ve frontě, publikované, blokované, expirované nebo čekají na ruční kontrolu, bez ručního procházení každého inzerátu.</p>
+            <h3>Vlastní produkty zákazníka</h3>
+            <p>Publikujte vlastní sortiment a používejte Alfares jako pracovní prostor pro přípravu, stav inzerátu, kontroly a další kroky.</p>
           </article>
           <article>
             ${icon('guard')}
-            <h3>Vestavěné kontroly pravidel</h3>
-            <p>Zobrazte limity aktivních inzerátů, kontrolu duplicit, intervaly kategorií a důkazy obsahu ještě před rizikovým publikováním.</p>
+            <h3>Resell ze sdíleného katalogu</h3>
+            <p>Vyberte dostupné položky od dalších uživatelů nebo ze sdíleného katalogu a prodávejte je tam, kde je pro účet povolený přístup.</p>
           </article>
           <article>
             ${icon('team')}
-            <h3>Administrátorský dohled</h3>
-            <p>Kontrolujte blokované pokusy, stavy identit a provozní stav z vyhrazené administrátorské konzole.</p>
+            <h3>Automatizace a odpovědnosti</h3>
+            <p>Alfares připraví inzeráty a provozní data; zákazník spravuje produkty, ověřuje účet, prodává, komunikuje se zákazníkem a odesílá zboží.</p>
           </article>
         </div>
       </section>
 
       <section class="pricing-section" id="service">
         <div class="pricing-copy">
-          <h2>Přístup ke službě pro ověřené prodejce</h2>
-          <p>Používejte klientský panel pro přípravu inzerátů, sledování stavu a hlídané žádosti o publikování pro ověřené identity na Bazoši.</p>
+          <h2>Klientský prostor pro prodej a expedici</h2>
+          <p>Vyberte produktový zdroj, připojte Bazoš přístup, zkontrolujte připravený inzerát a řiďte prodej i odeslání z jednoho zákaznického panelu.</p>
         </div>
         <div class="pricing-card">
           <span>Klientský prostor</span>
           <strong>Přístup</strong>
-          <small>pro ověřené uživatele AlfaRes</small>
+          <small>produkty, přístupy, prodej a expedice</small>
           <a class="button button-primary" href="/client">${icon('login')}Přihlásit se nebo registrovat</a>
         </div>
       </section>
 
       <section class="workflow-section" id="compliance">
         <div class="section-heading">
-          <h2>Nejdříve bezpečný pracovní postup</h2>
-          <p>Služba nenahrazuje ověření na Bazoši ani neobchází pravidla platformy. Zastaví se, když Bazoš vyžaduje zásah člověka.</p>
+          <h2>Automatizace bez ztráty zákaznické kontroly</h2>
+          <p>Alfares automatizuje přípravu inzerátů, marketplace data a sledování provozu, ale nepřebírá odpovědnost zákazníka za výběr produktů, připojení účtu, prodejní rozhodnutí a expedici.</p>
         </div>
         <div class="workflow">
-          <div class="workflow-step"><strong>1</strong><span>Ruční ověření identity na Bazoši</span></div>
-          <div class="workflow-step"><strong>2</strong><span>Lokální koncept a důkaz bez duplicity</span></div>
-          <div class="workflow-step"><strong>3</strong><span>Kontroly frekvence, kategorie a aktivních inzerátů</span></div>
-          <div class="workflow-step"><strong>4</strong><span>Přehled fronty a kontrola při výzvě k ručnímu zásahu</span></div>
+          <div class="workflow-step"><strong>1</strong><span>Výběr dodavatelského, vlastního nebo sdíleného produktu</span></div>
+          <div class="workflow-step"><strong>2</strong><span>Automatická příprava inzerátu a účtu</span></div>
+          <div class="workflow-step"><strong>3</strong><span>Kontrola pravidel, dostupnosti a prodejního rozhodnutí</span></div>
+          <div class="workflow-step"><strong>4</strong><span>Prodej, komunikace se zákazníkem a expedice</span></div>
         </div>
       </section>
 
@@ -152,7 +152,7 @@ export const renderLandingPage = () =>
 
     <footer class="site-footer">
       <span>AlfaRes Bazoš</span>
-      <span>Provoz na Bazoš.cz v souladu s pravidly pro ověřené prodejce.</span>
+      <span>Prodej přes Bazoš z dodavatelských slev, vlastního zboží a sdíleného katalogu.</span>
     </footer>`,
   );
 
@@ -1362,7 +1362,16 @@ export const authCallbackScript = `
   const setMessage = (text) => { if (message) message.textContent = text; };
 
   function safeReturnPath(value) {
-    return value === '/admin' || value === '/client' ? value : '/client';
+    const raw = String(value || '').trim();
+    if (!raw || raw.startsWith('//')) return '/client';
+    try {
+      const url = new URL(raw, 'https://bazos.alfares.cz');
+      if (url.origin !== 'https://bazos.alfares.cz') return '/client';
+      if (url.pathname === '/admin' || url.pathname === '/client') {
+        return url.pathname + url.search + url.hash;
+      }
+    } catch {}
+    return '/client';
   }
 
   function clearPendingAuth() {
@@ -1427,6 +1436,7 @@ export const appScript = `
   const authStateKey = 'bazosAuthState';
   const authReturnKey = 'bazosAuthReturnPath';
   const catalogProvisionWarningKey = 'bazosCatalogProvisionWarning';
+  const catalogReturnKey = 'bazosCatalogReturnUrl';
   const authClientId = 'bazos-service';
   const authBaseUrl = 'https://auth.alfares.cz';
   const authCallbackUrl = 'https://bazos.alfares.cz/auth/callback';
@@ -1439,7 +1449,12 @@ export const appScript = `
   const signOut = document.getElementById('sign-out');
   const adminLink = document.getElementById('admin-link');
   const refresh = document.getElementById('refresh');
-  const catalogProductId = new URLSearchParams(window.location.search).get('productId')?.trim() || '';
+  const launchParams = new URLSearchParams(window.location.search);
+  const catalogProductId = launchParams.get('productId')?.trim() || '';
+  const launchedFromCatalog = launchParams.get('source') === 'catalog';
+  const catalogReturnUrlFromQuery = safeCatalogReturnUrl(launchParams.get('returnUrl'));
+  if (catalogReturnUrlFromQuery) sessionStorage.setItem(catalogReturnKey, catalogReturnUrlFromQuery);
+  const catalogReturnUrl = catalogReturnUrlFromQuery || safeCatalogReturnUrl(sessionStorage.getItem(catalogReturnKey));
   let activeView = initialView();
   let clientAdFilter = 'all';
   let selectedIdentityId = null;
@@ -1490,9 +1505,30 @@ export const appScript = `
     return String(Date.now()) + '-' + Math.random().toString(16).slice(2);
   }
 
+  function safeCatalogReturnUrl(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    try {
+      const url = new URL(raw, window.location.origin);
+      return url.origin === 'https://catalog.alfares.cz' ? url.toString() : '';
+    } catch {
+      return '';
+    }
+  }
+
+  function currentReturnPath() {
+    const fallback = mode === 'admin' ? '/admin' : '/client';
+    try {
+      const path = window.location.pathname + window.location.search + window.location.hash;
+      return /^\/(admin|client)([?#].*)?$/.test(path) ? path : fallback;
+    } catch {
+      return fallback;
+    }
+  }
+
   function startHostedAuth(action) {
     const state = createState();
-    const returnPath = mode === 'admin' ? '/admin' : '/client';
+    const returnPath = currentReturnPath();
     sessionStorage.setItem(authStateKey, state);
     sessionStorage.setItem(authReturnKey, returnPath);
     const url = new URL(action === 'register' ? '/register' : '/login', authBaseUrl);
@@ -2348,6 +2384,7 @@ export const appScript = `
         height: data.heightCm ? Number(data.heightCm) : undefined,
       } : undefined,
       saveToCatalog: true,
+      resaleEnabled: data.resaleEnabled === 'on',
       media: manualMediaItems(form),
     };
     const photoFiles = Array.from(form.querySelector('[data-manual-photo-files]')?.files || []).slice(0, BAZOS_MEDIA_LIMIT - payload.media.length);
@@ -2523,9 +2560,24 @@ export const appScript = `
     });
   }
 
+  function catalogReturnActionMarkup(className) {
+    if (!catalogReturnUrl) return '';
+    return '<a class="' + (className || 'button button-secondary') + '" href="' + escapeHtml(catalogReturnUrl) + '">Vrátit se do Catalog publish flow</a>';
+  }
+
+  function catalogDashboardActionsMarkup() {
+    return '<div class="flow-actions catalog-dashboard-actions"><a class="button button-secondary" href="https://catalog.alfares.cz/dashboard/products" target="_blank" rel="noopener">Spravovat produkty v Catalogu</a><a class="button button-secondary" href="https://catalog.alfares.cz/dashboard/products/new" target="_blank" rel="noopener">Nový produkt v Catalogu</a><a class="button button-secondary" href="https://catalog.alfares.cz/dashboard/settings" target="_blank" rel="noopener">Zdroje Catalogu</a></div>';
+  }
+
   function showSetupNextStep(url) {
-    content.insertAdjacentHTML('afterbegin', '<div class="data-panel panel-stack setup-next-step"><div><h2>Nastavení bylo uloženo</h2><p class="card-note">Bazos.cz se otevřel v nové kartě. Tam se přihlaste nebo zaregistrujte, zadejte uložený telefon a dokončete SMS/ověření podle Bazos.cz. Po dokončení se vraťte sem a u účtu klikněte na Dokončit ruční ověření.</p></div><div class="flow-actions"><a class="button button-primary" href="' + escapeHtml(url || BAZOS_VERIFICATION_URL) + '" target="_blank" rel="noopener">Otevřít Bazos.cz</a><button class="button button-secondary" data-nav-view="account" type="button">Zobrazit účet</button></div></div>');
+    content.insertAdjacentHTML('afterbegin', '<div class="data-panel panel-stack setup-next-step"><div><h2>Nastavení bylo uloženo</h2><p class="card-note">Bazos.cz se otevřel v nové kartě. Tam se přihlaste nebo zaregistrujte, zadejte uložený telefon a dokončete SMS/ověření podle Bazos.cz. Po dokončení se vraťte sem a u účtu klikněte na Dokončit ruční ověření.</p></div><div class="flow-actions"><a class="button button-primary" href="' + escapeHtml(url || BAZOS_VERIFICATION_URL) + '" target="_blank" rel="noopener">Otevřít Bazos.cz</a><button class="button button-secondary" data-nav-view="account" type="button">Zobrazit účet</button>' + catalogReturnActionMarkup() + '</div></div>');
     bindNavigationLinks(content);
+  }
+
+  function showCatalogReturnPrompt() {
+    if (!catalogReturnUrl || !launchedFromCatalog) return;
+    content.insertAdjacentHTML('afterbegin', '<div class="data-panel panel-stack setup-next-step"><div><h2>Pokračování z Catalogu</h2><p class="card-note">Po propojení a ověření identity se vraťte do stejného Catalog publish flow. Výběr produktů zůstává uložený v původní Catalog relaci.</p></div><div class="flow-actions"><button class="button button-primary" data-open-identity-wizard type="button">Připojit účet Bazoš</button>' + catalogReturnActionMarkup() + '</div></div>');
+    bindIdentityWizardButtons();
   }
 
   function setupRequiredFields(form) {
@@ -2788,7 +2840,7 @@ export const appScript = `
       bindContentNavButtons();
       return;
     }
-    content.innerHTML = '<form class="form-panel panel-stack" id="draft-form"><div><h2>Nový inzerát pro Bazos.cz</h2><p class="card-note">Vyberte ověřenou identitu, vyplňte inzerát a zvolte, jestli se má uložit do katalogu nebo poslat do hlídané publikační fronty.</p></div><div class="form-grid">' +
+    content.innerHTML = '<form class="form-panel panel-stack" id="draft-form"><div><h2>Nový inzerát pro Bazos.cz</h2><p class="card-note">Vyberte ověřenou identitu, vyplňte inzerát a zvolte, jestli se má uložit do katalogu nebo poslat do hlídané publikační fronty.</p>' + catalogDashboardActionsMarkup() + '</div><div class="form-grid">' +
       '<label>Účet / telefon<select name="identityId" required>' + renderIdentityOptions(data.identities) + '</select></label>' +
       '<label>Cena v Kč<input name="price" type="number" min="0" step="1" required></label>' +
       '<label>Volba ceny<select name="priceOption">' + priceOptionOptions('fixed_price') + '</select></label>' +
@@ -2807,7 +2859,8 @@ export const appScript = `
       '<label>Výška cm<input name="heightCm" type="number" min="0" step="0.1"></label>' +
       '<div class="wide manual-media-panel"><div><strong>Fotky pro Bazoš</strong><small class="card-note">Alespoň 1, maximálně ' + BAZOS_MEDIA_LIMIT + '. Nahrajte soubory nebo vložte veřejné HTTPS/HTTP URL obrázků; stejné fotky se uloží i k produktu v katalogu.</small></div><label>Upload fotek<input data-manual-photo-files name="photos" type="file" accept="image/*" multiple></label><div data-manual-media-list></div><div class="row-actions"><button class="button button-secondary" data-add-manual-media type="button">Přidat URL fotku</button><span class="card-note" data-manual-media-counter>0 / ' + BAZOS_MEDIA_LIMIT + '</span></div><div class="manual-media-preview" data-manual-media-preview></div></div>' +
       '<label class="check-row"><input name="enqueue" type="checkbox" checked disabled><span>Publikovat inzerát na Bazoš přes hlídanou frontu. Potvrzuji ruční kontrolu duplicity a obsahu.</span></label>' +
-      '<label class="check-row"><input name="saveToCatalog" type="checkbox" checked disabled><span>Přidat tento inzerát do katalogu produktů. Pokud podobný produkt existuje, použije se jako Bazoš verze.</span></label>' +
+      '<label class="check-row"><input name="resaleEnabled" type="checkbox"><span>Zpřístupnit tento vlastní katalogový produkt ostatním uživatelům pro resale. Platí jen pro produkt vlastněný tímto Alfares účtem.</span></label>' +
+      '<label class="check-row"><input name="saveToCatalog" type="checkbox" checked disabled><span>Přidat tento inzerát do katalogu produktů. Pokud podobný vlastní produkt existuje, použije se jako Bazoš verze.</span></label>' +
       '</div><p class="form-message" data-form-message></p><button class="button button-primary" type="submit">Vytvořit inzerát</button></form>';
     const form = document.getElementById('draft-form');
     bindBazosCategoryControls(form);
@@ -3073,7 +3126,7 @@ export const appScript = `
       const options = data.identities.length ? renderIdentityOptions(data.identities) : '';
       const media = normalizeMedia(prepared?.draft?.media?.length ? prepared.draft.media : productMedia(selected));
       const mediaPicker = media.length ? '<div class="wide"><label>Fotky pro Bazoš</label><div class="media-picker">' + media.map((item, index) => '<div class="media-choice"><label><input data-media-choice type="checkbox" value="' + escapeHtml(item.url) + '"' + (prepared?.draft?.media?.length || index < 5 ? ' checked' : '') + '><img src="' + escapeHtml(item.thumbnailUrl || item.url) + '" alt="' + escapeHtml(item.altText || item.title || 'Foto') + '"><span>' + cell(item.title || item.altText || ('Foto ' + (index + 1))) + '</span></label></div>').join('') + '</div></div>' : '<p class="form-message wide">Katalog nevrátil žádné produktové fotky pro tento produkt.</p>';
-      content.innerHTML = '<div class="catalog-flow"><div class="data-panel flow-column"><h2>Katalog</h2><div class="search-row"><input class="input" id="catalog-search" value="' + escapeHtml(searchValue || '') + '" placeholder="Hledat produkt podle názvu, SKU nebo značky"><button class="button button-secondary" id="catalog-search-button" type="button">Hledat</button></div><div class="product-list">' +
+      content.innerHTML = '<div class="catalog-flow"><div class="data-panel flow-column"><h2>Katalog</h2><p class="card-note">Výběr používá Catalog effective zdroje: vlastní produkty, povolený Alfares katalog a komunitní resale položky podle nastavení Catalogu.</p>' + catalogDashboardActionsMarkup() + '<div class="search-row"><input class="input" id="catalog-search" value="' + escapeHtml(searchValue || '') + '" placeholder="Hledat produkt podle názvu, SKU nebo značky"><button class="button button-secondary" id="catalog-search-button" type="button">Hledat</button></div><div class="product-list">' +
         products.map((product, index) => '<button class="product-option' + (product === selected ? ' active' : '') + '" type="button" data-product-index="' + index + '"><span class="product-thumb"></span><span><strong>' + cell(product === selected ? previewTitle(product) : productTitle(product)) + '</strong><small class="card-note">' + cell(product.sku || product.id) + '</small><small class="card-note">' + cell(productOriginLabel(product)) + ' - ' + cell(productOriginNote(product)) + '</small>' + (product === selected && contentPreview ? '<small class="card-note">Kanonický obsah: ' + cell(previewLabel()) + '</small>' : '') + '</span></button>').join('') +
         '</div></div><div class="flow-column"><form class="form-panel panel-stack" id="catalog-draft-form"><div><h2>Publikovat z katalogu</h2><p class="card-note">Produkt se nejdříve převede do Bazoš konceptu. Teprve po náhledu a schválení se odešle do hlídané publikační fronty.</p>' + renderContentPreviewSource() + '</div><div class="form-grid"><label>Účet / telefon<select name="identityId" required>' + options + '</select></label><label>Cena v Kč<input name="price" type="number" min="0" step="1" required></label><label>Volba ceny<select name="priceOption">' + priceOptionOptions('fixed_price') + '</select></label><label>Rubrika<select name="rubric" data-bazos-rubric required>' + rubricOptions('auto') + '</select></label><label>Kategorie Bazos.cz<select name="category" data-bazos-category required>' + categoryOptions('auto', '') + '</select></label><div class="category-suggestions wide" data-category-suggestions></div><label class="wide">Název<input name="title" maxlength="500" required></label><label class="wide">Popis<textarea name="description" maxlength="' + BAZOS_DESCRIPTION_MAX_LENGTH + '"></textarea></label>' + mediaPicker + '<label>Lokalita<input name="location" maxlength="200"></label></div><p class="form-message" data-form-message></p><button class="button button-primary" type="submit">Sformovat inzerát</button></form>' + renderPreview() + '</div></div>';
       fillForm(selected);
@@ -3201,6 +3254,7 @@ export const appScript = `
     else if (activeView === 'account') renderAccount(data);
     else if (activeView === 'settings') renderSettings(data);
     else if (activeView === 'catalog') await renderCatalog(data);
+    showCatalogReturnPrompt();
     maybeStartPublishWorker(data);
   }
 

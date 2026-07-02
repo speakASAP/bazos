@@ -39,7 +39,7 @@ export class BazosAdService {
       throw new BadRequestException('At least one photo URL is required before creating a Bazos ad');
     }
 
-    const productId = dto.productId || (dto.saveToCatalog ? await this.ensureCatalogProduct(dto, authorization) : null);
+    const productId = dto.productId || (dto.saveToCatalog ? await this.ensureCatalogProduct(userId, dto, authorization) : null);
 
     const ad = await this.prisma.bazosAd.create({
       data: {
@@ -74,7 +74,7 @@ export class BazosAdService {
       throw new BadRequestException('Catalog integration is required before uploading Bazos photos');
     }
 
-    const productId = dto.productId || await this.ensureCatalogProduct(dto, authorization);
+    const productId = dto.productId || await this.ensureCatalogProduct(userId, dto, authorization);
     const existingMedia = this.normalizeMedia(dto.media);
     const uploadedMedia = [];
     for (const [index, file] of normalizedFiles.entries()) {
@@ -126,14 +126,14 @@ export class BazosAdService {
     }, authorization);
   }
 
-  private async ensureCatalogProduct(dto: CreateBazosAdDraftDto, authorization?: string): Promise<string> {
+  private async ensureCatalogProduct(userId: string, dto: CreateBazosAdDraftDto, authorization?: string): Promise<string> {
     if (!this.catalogClient) {
       throw new BadRequestException('Catalog integration is not available for Bazos draft creation');
     }
 
-    const existing = await this.findSimilarCatalogProduct(dto.title);
+    const existing = await this.findSimilarCatalogProduct(dto.title, authorization);
     if (existing?.id) {
-      await this.markCatalogProductAsBazosVersion(existing, dto, authorization);
+      await this.markCatalogProductAsBazosVersion(existing, dto, authorization, userId);
       await this.syncCatalogMedia(existing.id, dto, authorization);
       return existing.id;
     }
@@ -146,21 +146,22 @@ export class BazosAdService {
     return product.id;
   }
 
-  private async findSimilarCatalogProduct(title: string): Promise<any | null> {
+  private async findSimilarCatalogProduct(title: string, authorization?: string): Promise<any | null> {
     if (!this.catalogClient) return null;
     const normalizedTitle = this.normalizeCatalogText(title);
-    const result = await this.catalogClient.searchProducts({ search: title, isActive: true, limit: 10 });
+    const result = await this.catalogClient.searchProducts({ search: title, isActive: true, limit: 10, ...(authorization ? { catalogScope: 'own' as const } : {}) }, authorization);
     return (result.items || []).find((product) => {
       const candidate = this.normalizeCatalogText(product?.title);
       return candidate === normalizedTitle || candidate.includes(normalizedTitle) || normalizedTitle.includes(candidate);
     }) || null;
   }
 
-  private async markCatalogProductAsBazosVersion(product: any, dto: CreateBazosAdDraftDto, authorization?: string) {
+  private async markCatalogProductAsBazosVersion(product: any, dto: CreateBazosAdDraftDto, authorization?: string, userId?: string) {
     if (!this.catalogClient || !product?.id) return;
     await this.catalogClient.updateProduct(product.id, {
       tags: this.mergeTags(product.tags, BAZOS_CATALOG_TAGS),
       seoData: this.mergeSeoData(product.seoData, dto),
+      ...(dto.resaleEnabled !== undefined && this.isCatalogProductOwner(product, userId) ? { resaleEnabled: Boolean(dto.resaleEnabled) } : {}),
     }, authorization);
   }
 
@@ -199,7 +200,13 @@ export class BazosAdService {
       weightKg: dto.weightKg || undefined,
       dimensionsCm: dto.dimensionsCm || undefined,
       seoData: this.mergeSeoData(null, dto),
+      ...(dto.resaleEnabled !== undefined ? { resaleEnabled: Boolean(dto.resaleEnabled) } : {}),
     };
+  }
+
+  private isCatalogProductOwner(product: any, userId?: string) {
+    const ownerUserId = product?.ownerUserId ?? product?.owner_user_id ?? product?.ownerId ?? product?.owner?.userId ?? product?.owner?.id;
+    return Boolean(userId && ownerUserId && String(ownerUserId) === String(userId));
   }
 
   private async syncCatalogMedia(productId: string, dto: CreateBazosAdDraftDto, authorization?: string) {

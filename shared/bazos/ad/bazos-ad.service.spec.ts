@@ -289,12 +289,14 @@ describe('BazosAdService pending Bazos updates', () => {
       price: 990,
       category: 'ostatni',
       saveToCatalog: true,
+      resaleEnabled: true,
       media: [{ url: 'https://cdn.example.test/manual-catalog-item.jpg', thumbnailUrl: 'https://cdn.example.test/manual-catalog-item-thumb.jpg' }],
     }, 'Bearer user-token');
 
     expect(catalog.createProduct).toHaveBeenCalledWith(expect.objectContaining({
       title: 'Manual catalog item',
       tags: expect.arrayContaining(['bazos', 'bazos-draft']),
+      resaleEnabled: true,
     }), 'Bearer user-token');
     expect(catalog.createMedia).toHaveBeenCalledWith(expect.objectContaining({
       productId: 'catalog-product-1',
@@ -318,6 +320,74 @@ describe('BazosAdService pending Bazos updates', () => {
       'Bearer user-token',
     );
     expect(result.productId).toBe('catalog-product-1');
+  });
+
+  it('updates resaleEnabled only when an existing catalog product is owned by the user', async () => {
+    const prisma = {
+      bazosIdentity: {
+        findFirst: jest.fn().mockResolvedValue({ ...identity, accountId: 'account-1' }),
+      },
+      bazosAd: {
+        create: jest.fn().mockResolvedValue({ id: 'manual-ad-2', identityId: identity.id, productId: 'catalog-product-2' }),
+      },
+    } as any;
+    const catalog = {
+      searchProducts: jest.fn().mockResolvedValue({ items: [{ id: 'catalog-product-2', title: 'Owned catalog item', ownerUserId: 'user-1', tags: [] }], total: 1, page: 1, limit: 10 }),
+      updateProduct: jest.fn().mockResolvedValue({ id: 'catalog-product-2' }),
+      getProductById: jest.fn().mockResolvedValue({ id: 'catalog-product-2', title: 'Owned catalog item', tags: [] }),
+      createMedia: jest.fn().mockResolvedValue({ id: 'media-2' }),
+    } as any;
+    const service = new BazosAdService(prisma, makeLogger(), { evaluate: jest.fn() } as any, catalog);
+
+    await service.createDraft('user-1', {
+      identityId: identity.id,
+      title: 'Owned catalog item',
+      description: 'Bazoš description',
+      price: 1290,
+      category: 'ostatni',
+      saveToCatalog: true,
+      resaleEnabled: true,
+      media: [{ url: 'https://cdn.example.test/owned-catalog-item.jpg' }],
+    }, 'Bearer user-token');
+
+    expect(catalog.searchProducts).toHaveBeenCalledWith(expect.objectContaining({ catalogScope: 'own' }), 'Bearer user-token');
+    expect(catalog.updateProduct).toHaveBeenCalledWith(
+      'catalog-product-2',
+      expect.objectContaining({ resaleEnabled: true }),
+      'Bearer user-token',
+    );
+  });
+
+  it('does not forward resaleEnabled when a matched catalog product is not owned by the user', async () => {
+    const prisma = {
+      bazosIdentity: {
+        findFirst: jest.fn().mockResolvedValue({ ...identity, accountId: 'account-1' }),
+      },
+      bazosAd: {
+        create: jest.fn().mockResolvedValue({ id: 'manual-ad-3', identityId: identity.id, productId: 'catalog-product-3' }),
+      },
+    } as any;
+    const catalog = {
+      searchProducts: jest.fn().mockResolvedValue({ items: [{ id: 'catalog-product-3', title: 'Shared catalog item', ownerUserId: 'other-user', tags: [] }], total: 1, page: 1, limit: 10 }),
+      updateProduct: jest.fn().mockResolvedValue({ id: 'catalog-product-3' }),
+      getProductById: jest.fn().mockResolvedValue({ id: 'catalog-product-3', title: 'Shared catalog item', tags: [] }),
+      createMedia: jest.fn().mockResolvedValue({ id: 'media-3' }),
+    } as any;
+    const service = new BazosAdService(prisma, makeLogger(), { evaluate: jest.fn() } as any, catalog);
+
+    await service.createDraft('user-1', {
+      identityId: identity.id,
+      title: 'Shared catalog item',
+      description: 'Bazoš description',
+      price: 1490,
+      category: 'ostatni',
+      saveToCatalog: true,
+      resaleEnabled: true,
+      media: [{ url: 'https://cdn.example.test/shared-catalog-item.jpg' }],
+    }, 'Bearer user-token');
+
+    const updatePayload = catalog.updateProduct.mock.calls[0][1];
+    expect(updatePayload.resaleEnabled).toBeUndefined();
   });
 
   it('rejects manual Bazoš draft creation without at least one photo URL', async () => {
