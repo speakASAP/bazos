@@ -1,5 +1,6 @@
 import { Controller, ForbiddenException, Get, Param, Post, Query, Request, Res, UnauthorizedException, UseGuards } from '@nestjs/common';
 import { AuthService, CatalogClientService, JwtAuthGuard } from '@bazos/shared';
+import { OrdersService } from '../aukro/orders/orders.service';
 import { appScript, appStyles, renderAppPage, renderAuthCallbackPage, renderLandingPage } from './ui.assets';
 
 const ADMIN_ROLE_NAMES = new Set(['admin', 'administrator', 'owner']);
@@ -13,6 +14,7 @@ export class UiController {
   constructor(
     private readonly authService: AuthService,
     private readonly catalogClient: CatalogClientService,
+    private readonly ordersService: OrdersService,
   ) {}
 
   @Get()
@@ -95,6 +97,27 @@ export class UiController {
 
     const preview = await this.catalogClient.getProductContentPreview(cleanProductId, 'bazos', req.headers.authorization);
     return { preview };
+  }
+
+  @Get('ui/orders')
+  @UseGuards(JwtAuthGuard)
+  async orders(
+    @Request() req: any,
+    @Query('scope') scope?: string,
+    @Query('limit') limit?: string,
+    @Query('status') status?: string,
+    @Query('forwarded') forwarded?: string,
+    @Query('accountId') accountId?: string,
+  ) {
+    const query = { limit, status, forwarded, accountId, centralStatus: 'true' };
+    if (scope === 'admin') {
+      if (!this.hasAdminAccess(req.user)) {
+        throw new ForbiddenException('Administrátorský přístup není povolen pro tento účet');
+      }
+      return { items: await this.ordersService.findAll(query), scope: 'admin' };
+    }
+
+    return { items: await this.ordersService.findForUser(req.user?.id, query), scope: 'client' };
   }
 
   @Get('ui/auth/me')

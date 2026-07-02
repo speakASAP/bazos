@@ -5,6 +5,9 @@ const BAZOS_ORDER_ITEM_CONTRACT_MISSING = '[MISSING: Bazos order item ingestion 
 const BAZOS_ORDER_ITEM_MAPPING_UNAVAILABLE = 'BAZOS_ORDER_ITEM_MAPPING_UNAVAILABLE';
 const BAZOS_ORDER_WAREHOUSE_ID_MISSING = '[MISSING: Warehouse-owned warehouseId for Bazos order item]';
 const LIVE_BAZOS_WEBHOOK_SUPPORT = '[UNKNOWN: live Bazos marketplace webhook support]';
+const CENTRAL_ORDER_UNFORWARDED = 'unforwarded';
+const CENTRAL_ORDER_UNKNOWN = 'unknown';
+const CENTRAL_ORDER_STALE = 'stale';
 
 interface SourceOrderLine {
   adId?: string;
@@ -42,6 +45,13 @@ type ItemMappingResult =
   | { available: true; items: CentralOrderItem[] }
   | { available: false; reason: string; missing: string };
 
+interface FindOrdersOptions {
+  accountIds?: string[];
+  status?: string;
+  forwarded?: boolean;
+  limit: number;
+}
+
 @Injectable()
 export class OrdersService {
   private readonly logger: LoggerService;
@@ -55,24 +65,44 @@ export class OrdersService {
     this.logger.setContext('OrdersService');
   }
 
-  async findAll(query: any) {
-    return this.prisma.bazosOrder.findMany({
-      where: {
-        accountId: query.accountId,
-        status: query.status,
-        forwarded: query.forwarded !== undefined ? query.forwarded === 'true' : undefined,
-      },
-      include: {
-        account: true,
-      },
+  async findAll(query: any = {}) {
+    const accountId = this.cleanIdentifier(query.accountId);
+    const orders = await this.findOrders({
+      accountIds: accountId ? [accountId] : undefined,
+      status: this.cleanIdentifier(query.status),
+      forwarded: this.parseOptionalBoolean(query.forwarded),
+      limit: this.parseLimit(query.limit),
     });
+    return this.attachCentralReadModels(orders, this.shouldIncludeCentralStatus(query));
   }
 
-  async findOne(id: string) {
-    return this.prisma.bazosOrder.findUnique({
-      where: { id },
-      include: { account: true },
+  async findForUser(userId: string, query: any = {}) {
+    const cleanUserId = this.cleanIdentifier(userId);
+    if (!cleanUserId) return [];
+
+    const accountIds = await this.accountIdsForUser(cleanUserId);
+    const requestedAccountId = this.cleanIdentifier(query.accountId);
+    const scopedAccountIds = requestedAccountId
+      ? accountIds.filter((accountId) => accountId === requestedAccountId)
+      : accountIds;
+    if (scopedAccountIds.length === 0) return [];
+
+    const orders = await this.findOrders({
+      accountIds: scopedAccountIds,
+      status: this.cleanIdentifier(query.status),
+      forwarded: this.parseOptionalBoolean(query.forwarded),
+      limit: this.parseLimit(query.limit),
     });
+    return this.attachCentralReadModels(orders, this.shouldIncludeCentralStatus(query));
+  }
+
+  async findOne(id: string, query: any = {}) {
+    const order = await this.prisma.bazosOrder.findUnique({
+      where: { id },
+      include: { account: { select: { id: true, name: true, email: true, isActive: true, userId: true } } },
+    });
+    if (!order || !this.shouldIncludeCentralStatus(query)) return order;
+    return this.attachCentralReadModel(order);
   }
 
   async create(data: any) {
@@ -148,6 +178,115 @@ export class OrdersService {
       orderId: order.id,
       forwarding: order.forwarding,
     };
+  }
+
+  private async findOrders(options: FindOrdersOptions) {
+    if (options.accountIds && options.accountIds.length === 0) return [];
+    const where: any = {
+      status: options.status,
+      forwarded: options.forwarded,
+    };
+    if (options.accountIds) {
+      where.accountId = options.accountIds.length === 1 ? options.accountIds[0] : { in: options.accountIds };
+    }
+
+    return this.prisma.bazosOrder.findMany({
+      where,
+      include: { account: { select: { id: true, name: true, email: true, isActive: true, userId: true } } },
+      orderBy: { createdAt: 'desc' },
+      take: options.limit,
+    });
+  }
+
+  private async accountIdsForUser(userId: string): Promise<string[]> {
+    const accounts = await this.prisma.bazosAccount.findMany({
+      where: {
+        OR: [
+          { userId },
+          { identities: { some: { userId } } },
+        ],
+      },
+      select: { id: true },
+    });
+    return accounts.map((account: any) => account.id).filter(Boolean);
+  }
+
+  private async attachCentralReadModels(orders: any[], includeCentralStatus: boolean) {
+    if (!includeCentralStatus) return orders;
+    return Promise.all(orders.map((order) => this.attachCentralReadModel(order)));
+  }
+
+  private async attachCentralReadModel(order: any) {
+    return {
+      ...order,
+      centralOrder: await this.buildCentralOrderRead(order),
+    };
+  }
+
+  private async buildCentralOrderRead(order: any) {
+    const centralOrderId = this.cleanIdentifier(order?.orderId);
+    if (!centralOrderId) {
+      const state = order?.forwarded ? CENTRAL_ORDER_UNKNOWN : CENTRAL_ORDER_UNFORWARDED;
+      return {
+        state,
+        orderId: null,
+        status: state,
+        lifecycleStage: state,
+        reason: order?.forwarded
+          ? 'Bazos order is marked forwarded but has no stored central Orders id.'
+          : 'Bazos order has not been forwarded to central Orders.',
+      };
+    }
+
+    if (!order?.forwarded) {
+      return {
+        state: CENTRAL_ORDER_UNFORWARDED,
+        orderId: centralOrderId,
+        status: CENTRAL_ORDER_UNFORWARDED,
+        lifecycleStage: CENTRAL_ORDER_UNFORWARDED,
+        reason: 'Bazos order still reports forwarded=false even though a central Orders id is stored.',
+      };
+    }
+
+    try {
+      const central = await this.orderClient.getOrderLifecycleStatus(centralOrderId);
+      return {
+        state: 'ok',
+        ...central,
+      };
+    } catch (error: any) {
+      this.logger.warn(`Central Orders read failed for Bazos order ${order.id}: ${error?.message || String(error)}`);
+      return {
+        state: CENTRAL_ORDER_STALE,
+        orderId: centralOrderId,
+        status: CENTRAL_ORDER_STALE,
+        lifecycleStage: CENTRAL_ORDER_STALE,
+        reason: 'Central Orders read failed for the stored central Orders id; local mapping may be stale.',
+      };
+    }
+  }
+
+  private shouldIncludeCentralStatus(query: any): boolean {
+    return this.parseOptionalBoolean(query.centralStatus)
+      || this.parseOptionalBoolean(query.includeCentralStatus)
+      || this.parseOptionalBoolean(query.central)
+      || this.parseOptionalBoolean(query.withCentral)
+      || false;
+  }
+
+  private parseOptionalBoolean(value: unknown): boolean | undefined {
+    if (typeof value === 'boolean') return value;
+    if (typeof value !== 'string') return undefined;
+    const normalized = value.trim().toLowerCase();
+    if (normalized === 'true' || normalized === '1' || normalized === 'yes') return true;
+    if (normalized === 'false' || normalized === '0' || normalized === 'no') return false;
+    return undefined;
+  }
+
+  private parseLimit(value: unknown): number {
+    const parsed = Number(value ?? 25);
+    if (!Number.isInteger(parsed) || parsed < 1) return 25;
+    return Math.min(parsed, 100);
   }
 
   private async buildCentralOrderItems(data: any, order: any): Promise<ItemMappingResult> {
@@ -329,15 +468,15 @@ export class OrdersService {
   }
 
   private cleanIdentifier(value: unknown): string | undefined {
-    if (typeof value !== 'string') {
+    if (value === undefined || value === null) {
       return undefined;
     }
-    const trimmed = value.trim();
+    const trimmed = String(value).trim();
     return trimmed || undefined;
   }
 
   private isUuid(value: string): boolean {
-    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i.test(value);
   }
 
   private toPositiveNumber(value: unknown, fallback: number): number {
