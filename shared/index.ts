@@ -18,6 +18,7 @@ export * from './clients/warehouse-client.service';
 export * from './clients/order-client.service';
 export * from './rabbitmq/rabbitmq.module';
 export * from './rabbitmq/stock-events.subscriber';
+export * from './rabbitmq/catalog-product-events.subscriber';
 export * from './bazos/bazos.module';
 export * from './bazos/identity/bazos-identity.service';
 export * from './bazos/identity/bazos-identity.types';
