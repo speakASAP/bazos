@@ -4,6 +4,7 @@ import { LoggerService } from '../../logger/logger.service';
 import { BazosAdService } from '../ad/bazos-ad.service';
 import { BazosPublisherQueueService } from '../publisher/bazos-publisher-queue.service';
 import { WarehouseClientService } from '../../clients/warehouse-client.service';
+import { CatalogClientService } from '../../clients/catalog-client.service';
 import { POLICY_GATE } from '../policy/publish-policy.types';
 import {
   CatalogSellActionStatusQueryDto,
@@ -14,6 +15,8 @@ import {
 const REUSABLE_DRAFT_STATUSES = ['draft', 'blocked_policy', 'failed', 'challenge'];
 const HUMAN_ACTION_ATTEMPT_STATUSES = ['policy_blocked', 'challenge_required', 'failed'];
 const ACTIVE_PUBLISHED_STATUSES = ['published', 'publishing', 'queued'];
+const PRODUCT_QUALITY_POLICY_ID = 'catalog.product_quality.v1';
+const NON_QUALITY_READINESS_BLOCKERS = new Set<string>(['draft_product', 'inactive_product']);
 const MANUAL_CONFIRMATION_GATES = new Set<string>([
   POLICY_GATE.PUBLIC_DUPLICATE_CHECK_MISSING,
   POLICY_GATE.CONTENT_POLICY_NOT_VALIDATED,
@@ -27,11 +30,29 @@ export class BazosCatalogSellActionService {
     private readonly ads: BazosAdService,
     private readonly queue: BazosPublisherQueueService,
     private readonly warehouseClient: WarehouseClientService,
+    private readonly catalogClient: CatalogClientService,
   ) {}
 
-  async prepare(userId: string, productId: string, dto: PrepareCatalogSellActionDto) {
+  async prepare(userId: string, productId: string, dto: PrepareCatalogSellActionDto, authorization?: string) {
     const identity = await this.findIdentityForUser(dto.identityId, userId);
     const categoryMapping = await this.findCategoryMapping(dto.category);
+    const catalogQuality = await this.evaluateCatalogQuality(productId, authorization);
+    if (!catalogQuality.allowed) {
+      this.logger.warn('Catalog Bazos sell action blocked by Catalog product quality preflight', {
+        productId,
+        identityId: identity.id,
+        blockers: catalogQuality.blockingIssues.map((issue) => issue.code).join(','),
+      });
+      return this.buildCatalogQualityBlockedResponse({
+        productId,
+        identity,
+        category: dto.category,
+        categoryMapping,
+        catalogQuality,
+        draft: null,
+      });
+    }
+
     const draft = await this.findOrCreateDraft(userId, productId, dto);
     const policyStatus = await this.ads.evaluatePublishPolicy(draft.id, userId);
 
@@ -49,10 +70,11 @@ export class BazosCatalogSellActionService {
       categoryMapping,
       policyStatus,
       queueResult: null,
+      catalogQuality,
     });
   }
 
-  async confirm(userId: string, productId: string, dto: ConfirmCatalogSellActionDto) {
+  async confirm(userId: string, productId: string, dto: ConfirmCatalogSellActionDto, authorization?: string) {
     if (dto.confirmed !== true) {
       throw new BadRequestException('Explicit user confirmation is required before queueing Bazos publish');
     }
@@ -60,6 +82,24 @@ export class BazosCatalogSellActionService {
     const draft = await this.findDraftForProduct(dto.adId, productId, userId);
     const identity = draft.identity;
     const categoryMapping = await this.findCategoryMapping(draft.category);
+    const catalogQuality = await this.evaluateCatalogQuality(productId, authorization);
+    if (!catalogQuality.allowed) {
+      this.logger.warn('Catalog Bazos sell action confirmation blocked by Catalog product quality preflight', {
+        productId,
+        adId: draft.id,
+        identityId: draft.identityId,
+        blockers: catalogQuality.blockingIssues.map((issue) => issue.code).join(','),
+      });
+      return this.buildCatalogQualityBlockedResponse({
+        productId,
+        identity,
+        category: draft.category,
+        categoryMapping,
+        catalogQuality,
+        draft,
+      });
+    }
+
     const queueResult = await this.queue.enqueueDraft(draft.id, userId, dto);
     const refreshedDraft = await this.findDraftForProduct(draft.id, productId, userId);
 
@@ -77,6 +117,7 @@ export class BazosCatalogSellActionService {
       categoryMapping,
       policyStatus: queueResult.decision || queueResult.attempt?.policyResult || null,
       queueResult,
+      catalogQuality,
     });
   }
 
@@ -251,6 +292,7 @@ export class BazosCatalogSellActionService {
     categoryMapping: any;
     policyStatus: any;
     queueResult: any;
+    catalogQuality?: any;
   }) {
     return {
       action: 'sell_on_bazos',
@@ -259,12 +301,142 @@ export class BazosCatalogSellActionService {
       identity: this.describeIdentity(input.identity),
       categoryMapping: this.describeCategoryMapping(input.draft.category, input.categoryMapping),
       policyStatus: input.policyStatus,
+      catalogQuality: input.catalogQuality || null,
       requiresConfirmation: !input.queueResult,
-      canQueueAfterConfirmation: this.canQueueAfterConfirmation(input.policyStatus),
+      canQueueAfterConfirmation: this.canQueueAfterConfirmation(input.policyStatus, input.catalogQuality),
       queue: input.queueResult,
       requiresHumanAction: this.requiresHumanAction(input.draft, input.queueResult?.attempt),
-      nextAction: this.nextAction(input.policyStatus, input.queueResult),
+      nextAction: this.nextAction(input.policyStatus, input.queueResult, input.catalogQuality),
     };
+  }
+
+  private async evaluateCatalogQuality(productId: string, authorization?: string) {
+    try {
+      const readiness = await this.catalogClient.getProductReadiness(productId, authorization);
+      if (!readiness || !Array.isArray(readiness.issues)) {
+        return this.catalogQualityUnavailable(productId, 'Catalog readiness response did not include product quality issues.');
+      }
+
+      const issues = readiness.issues.map((issue) => this.describeCatalogQualityIssue(issue));
+      const blockingIssues = issues.filter((issue) => this.isCatalogQualityBlocker(issue));
+      const optionalOpportunities = issues.filter((issue) => !this.isCatalogQualityBlocker(issue));
+      const blockingMissingFields = Array.from(new Set(blockingIssues.map((issue) => this.catalogQualityFieldKey(issue))));
+
+      return {
+        policyId: PRODUCT_QUALITY_POLICY_ID,
+        source: 'catalog_readiness',
+        productId: readiness.productId || productId,
+        lifecycle: readiness.lifecycle || null,
+        publishable: readiness.publishable ?? null,
+        canActivate: blockingIssues.length === 0,
+        allowed: blockingIssues.length === 0,
+        blockingIssues,
+        blockingMissingFields,
+        optionalOpportunities,
+        nextAction: this.catalogQualityNextAction(blockingIssues),
+        unavailable: false,
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown Catalog readiness error';
+      this.logger.warn('Catalog product quality readiness unavailable; failing closed for Bazos sell action', {
+        productId,
+        error: errorMessage,
+      });
+      return this.catalogQualityUnavailable(productId, 'Catalog product quality readiness is unavailable.');
+    }
+  }
+
+  private catalogQualityUnavailable(productId: string, message: string) {
+    const issue = {
+      code: 'catalog_quality_unavailable',
+      field: 'catalog_quality',
+      severity: 'blocking',
+      message,
+      source: PRODUCT_QUALITY_POLICY_ID,
+    };
+    return {
+      policyId: PRODUCT_QUALITY_POLICY_ID,
+      source: 'catalog_readiness',
+      productId,
+      lifecycle: null,
+      publishable: false,
+      canActivate: false,
+      allowed: false,
+      blockingIssues: [issue],
+      blockingMissingFields: ['catalog_quality'],
+      optionalOpportunities: [],
+      nextAction: 'resolve_catalog_quality_blockers',
+      unavailable: true,
+    };
+  }
+
+  private describeCatalogQualityIssue(issue: any) {
+    return {
+      code: String(issue?.code || 'unknown_catalog_quality_issue'),
+      field: issue?.field ? String(issue.field) : null,
+      severity: String(issue?.severity || 'warning'),
+      message: String(issue?.message || issue?.code || 'Catalog product quality issue'),
+      source: issue?.source || PRODUCT_QUALITY_POLICY_ID,
+    };
+  }
+
+  private isCatalogQualityBlocker(issue: any) {
+    const code = String(issue?.code || '');
+    return issue?.severity === 'blocking' && !NON_QUALITY_READINESS_BLOCKERS.has(code);
+  }
+
+  private catalogQualityFieldKey(issue: any) {
+    if (issue.code === 'missing_current_price') return 'price';
+    if (issue.code === 'missing_image' || issue.code === 'placeholder_image_only') return 'image';
+    return issue.field || issue.code;
+  }
+
+  private catalogQualityNextAction(blockingIssues: any[]) {
+    if (!blockingIssues.length) return 'ready_for_bazos_preflight';
+    return 'resolve_catalog_quality_blockers';
+  }
+
+  private buildCatalogQualityBlockedResponse(input: {
+    productId: string;
+    identity: any;
+    category: string | null | undefined;
+    categoryMapping: any;
+    catalogQuality: any;
+    draft: any | null;
+  }) {
+    const policyFailures = this.catalogQualityPolicyFailures(input.catalogQuality);
+    return {
+      action: 'sell_on_bazos',
+      productId: input.productId,
+      draft: input.draft ? this.describeDraft(input.draft) : null,
+      identity: this.describeIdentity(input.identity),
+      categoryMapping: this.describeCategoryMapping(input.draft?.category || input.category, input.categoryMapping),
+      policyStatus: {
+        allowed: false,
+        failures: policyFailures,
+      },
+      catalogQuality: input.catalogQuality,
+      requiresConfirmation: false,
+      canQueueAfterConfirmation: false,
+      queue: null,
+      requiresHumanAction: {
+        required: true,
+        reason: 'catalog_product_quality_blocked',
+        policyFailures,
+        error: null,
+      },
+      nextAction: 'resolve_catalog_quality_blockers',
+    };
+  }
+
+  private catalogQualityPolicyFailures(catalogQuality: any) {
+    return (Array.isArray(catalogQuality?.blockingIssues) ? catalogQuality.blockingIssues : []).map((issue) => ({
+      gate: 'catalog_product_quality_blocker',
+      code: issue.code,
+      field: issue.field,
+      message: issue.message,
+      source: catalogQuality.policyId || PRODUCT_QUALITY_POLICY_ID,
+    }));
   }
 
   private describeDraft(draft: any) {
@@ -318,7 +490,8 @@ export class BazosCatalogSellActionService {
       }));
   }
 
-  private canQueueAfterConfirmation(policyStatus: any) {
+  private canQueueAfterConfirmation(policyStatus: any, catalogQuality?: any) {
+    if (catalogQuality && !catalogQuality.allowed) return false;
     if (policyStatus?.allowed) return true;
     const failures = Array.isArray(policyStatus?.failures) ? policyStatus.failures : [];
     if (!failures.length) return false;
@@ -398,7 +571,8 @@ export class BazosCatalogSellActionService {
     };
   }
 
-  private nextAction(policyStatus: any, queueResult: any) {
+  private nextAction(policyStatus: any, queueResult: any, catalogQuality?: any) {
+    if (catalogQuality && !catalogQuality.allowed) return 'resolve_catalog_quality_blockers';
     if (queueResult?.queued) return 'poll_publish_status';
     if (queueResult && !queueResult.queued) return 'resolve_policy_failures';
     if (policyStatus?.allowed) return 'confirm_publish';

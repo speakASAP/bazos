@@ -14,12 +14,12 @@ export class BazosCatalogSellActionController {
 
   @Post()
   prepare(@Param('productId') productId: string, @Request() req, @Body() dto: PrepareCatalogSellActionDto) {
-    return this.sellAction.prepare(req.user.id, productId, dto);
+    return this.sellAction.prepare(req.user.id, productId, dto, req.headers.authorization);
   }
 
   @Post('confirm')
   confirm(@Param('productId') productId: string, @Request() req, @Body() dto: ConfirmCatalogSellActionDto) {
-    return this.sellAction.confirm(req.user.id, productId, dto);
+    return this.sellAction.confirm(req.user.id, productId, dto, req.headers.authorization);
   }
 
   @Get('status')

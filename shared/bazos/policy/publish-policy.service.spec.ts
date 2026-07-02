@@ -44,8 +44,17 @@ function makeWarehouse(overrides: Partial<{ stockRows: any[]; totalAvailable: nu
   } as any;
 }
 
-function makePolicyService(prisma: any, warehouse = makeWarehouse()) {
-  return new PublishPolicyService(prisma, makeLogger(), warehouse);
+function makeCatalog(overrides: Partial<{ readiness: any; reject: Error }> = {}) {
+  return {
+    getProductReadiness: jest.fn().mockImplementation(async () => {
+      if (overrides.reject) throw overrides.reject;
+      return overrides.readiness ?? { productId: 'product-1', lifecycle: 'active', publishable: true, issues: [] };
+    }),
+  } as any;
+}
+
+function makePolicyService(prisma: any, warehouse = makeWarehouse(), catalog = makeCatalog()) {
+  return new PublishPolicyService(prisma, makeLogger(), warehouse, catalog);
 }
 
 function baseIdentity(overrides: Partial<any> = {}): any {
@@ -257,6 +266,40 @@ describe('PublishPolicyService', () => {
       const result = await svc.evaluate(input);
       expect(result.allowed).toBe(false);
       expect(result.failures.some((f) => f.gate === POLICY_GATE.WAREHOUSE_STOCK_UNAVAILABLE)).toBe(true);
+    });
+  });
+
+  describe('Gate 10 — Catalog product quality authority', () => {
+    it('blocks publishing when Catalog reports mandatory quality blockers', async () => {
+      const prisma = makePrismaStub({ identity: baseIdentity() });
+      const catalog = makeCatalog({
+        readiness: {
+          productId: 'product-1',
+          lifecycle: 'draft',
+          publishable: false,
+          issues: [
+            { code: 'draft_product', field: 'lifecycle', severity: 'blocking', message: 'Draft products need review before publication.' },
+            { code: 'missing_description', field: 'description', severity: 'blocking', message: 'Description is required.' },
+          ],
+        },
+      });
+      const svc = makePolicyService(prisma, makeWarehouse(), catalog);
+
+      const result = await svc.evaluate(input);
+
+      expect(result.allowed).toBe(false);
+      expect(result.failures.some((f) => f.gate === POLICY_GATE.CATALOG_QUALITY_BLOCKED)).toBe(true);
+      expect(result.failures.find((f) => f.gate === POLICY_GATE.CATALOG_QUALITY_BLOCKED)?.message).toContain('missing_description');
+    });
+
+    it('fails closed when Catalog quality readiness is unavailable', async () => {
+      const prisma = makePrismaStub({ identity: baseIdentity() });
+      const svc = makePolicyService(prisma, makeWarehouse(), makeCatalog({ reject: new Error('catalog down') }));
+
+      const result = await svc.evaluate(input);
+
+      expect(result.allowed).toBe(false);
+      expect(result.failures.some((f) => f.gate === POLICY_GATE.CATALOG_QUALITY_BLOCKED)).toBe(true);
     });
   });
 

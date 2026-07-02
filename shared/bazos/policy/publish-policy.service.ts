@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { LoggerService } from '../../logger/logger.service';
+import { CatalogClientService } from '../../clients/catalog-client.service';
 import { WarehouseClientService } from '../../clients/warehouse-client.service';
 import {
   IDENTITY_STATUS,
@@ -51,6 +52,7 @@ export class PublishPolicyService {
     private readonly prisma: PrismaService,
     private readonly logger: LoggerService,
     private readonly warehouseClient?: WarehouseClientService,
+    private readonly catalogClient?: CatalogClientService,
   ) {}
 
   /**
@@ -67,9 +69,10 @@ export class PublishPolicyService {
    *  7. now - category.lastPublishedAt >= 24h
    *  8. No local active duplicate for product/identity
    *  9. Warehouse availability for the linked catalog product is known and > 0
-   * 10. No likely public Bazos duplicate
-   * 11. Category mapping exists and is not blocked
-   * 12. Content policy validation passes
+   * 10. Catalog product quality/readiness has no blocking issues
+   * 11. No likely public Bazos duplicate
+   * 12. Category mapping exists and is not blocked
+   * 13. Content policy validation passes
    */
   async evaluate(input: PolicyCheckInput): Promise<PolicyEvaluationResult> {
     const now = new Date();
@@ -177,7 +180,10 @@ export class PublishPolicyService {
     // Gate 9 — Warehouse remains the stock authority. Local draft stock is never sellable truth.
     await this.evaluateWarehouseAvailability(input.productId, failures);
 
-    // Gate 10 — public duplicate evidence must exist, be trusted, and be clean.
+    // Gate 10 — Catalog remains product-quality and publication-readiness authority.
+    await this.evaluateCatalogProductQuality(input.productId, failures);
+
+    // Gate 11 — public duplicate evidence must exist, be trusted, and be clean.
     if (!input.publicDuplicateCheck) {
       failures.push({
         gate: POLICY_GATE.PUBLIC_DUPLICATE_CHECK_MISSING,
@@ -200,7 +206,7 @@ export class PublishPolicyService {
       });
     }
 
-    // Gate 11 — category mapping must exist and be active
+    // Gate 12 — category mapping must exist and be active
     const categoryMapping = await this.prisma.bazosCategory.findFirst({
       where: { bazosCategory: input.bazosCategory, isActive: true },
     });
@@ -211,7 +217,7 @@ export class PublishPolicyService {
       });
     }
 
-    // Gate 12 — content policy evidence must exist, be trusted, and pass.
+    // Gate 13 — content policy evidence must exist, be trusted, and pass.
     if (!input.contentPolicy) {
       failures.push({
         gate: POLICY_GATE.CONTENT_POLICY_NOT_VALIDATED,
@@ -258,6 +264,47 @@ export class PublishPolicyService {
     return Math.floor(Math.random() * (range + 1)) + PACING_MIN_SECONDS;
   }
 
+
+  private async evaluateCatalogProductQuality(productId: string | undefined, failures: PolicyGateFailure[]) {
+    if (!productId) {
+      failures.push({
+        gate: POLICY_GATE.CATALOG_QUALITY_BLOCKED,
+        message: 'Catalog product ID is required before Catalog quality can authorize Bazos publishing',
+      });
+      return;
+    }
+
+    if (!this.catalogClient) {
+      failures.push({
+        gate: POLICY_GATE.CATALOG_QUALITY_BLOCKED,
+        message: 'Catalog client is not configured for Bazos publish policy evaluation',
+      });
+      return;
+    }
+
+    try {
+      const readiness = await this.catalogClient.getProductReadiness(productId);
+      const issues = Array.isArray(readiness?.issues) ? readiness.issues : [];
+      const blockingIssues = issues.filter((issue: any) => String(issue?.severity || '').toLowerCase() === 'blocking');
+      const publishable = readiness?.publishable !== false;
+
+      if (blockingIssues.length > 0 || !publishable) {
+        const blockerCodes = blockingIssues.map((issue: any) => String(issue?.code || issue?.field || 'catalog_quality_blocker')).filter(Boolean);
+        failures.push({
+          gate: POLICY_GATE.CATALOG_QUALITY_BLOCKED,
+          message: blockerCodes.length
+            ? `Catalog product quality blockers prevent Bazos publishing: ${Array.from(new Set(blockerCodes)).join(', ')}`
+            : 'Catalog product is not publishable according to Catalog readiness',
+        });
+      }
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      failures.push({
+        gate: POLICY_GATE.CATALOG_QUALITY_BLOCKED,
+        message: `Catalog product quality readiness check failed for product ${productId}: ${errorMessage}`,
+      });
+    }
+  }
 
   private async evaluateWarehouseAvailability(productId: string | undefined, failures: PolicyGateFailure[]) {
     if (!productId) {

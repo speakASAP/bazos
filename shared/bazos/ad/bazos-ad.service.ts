@@ -149,7 +149,7 @@ export class BazosAdService {
   private async findSimilarCatalogProduct(title: string, authorization?: string): Promise<any | null> {
     if (!this.catalogClient) return null;
     const normalizedTitle = this.normalizeCatalogText(title);
-    const result = await this.catalogClient.searchProducts({ search: title, isActive: true, limit: 10, ...(authorization ? { catalogScope: 'own' as const } : {}) }, authorization);
+    const result = await this.catalogClient.searchProducts({ search: title, limit: 10, ...(authorization ? { catalogScope: 'own' as const } : {}) }, authorization);
     return (result.items || []).find((product) => {
       const candidate = this.normalizeCatalogText(product?.title);
       return candidate === normalizedTitle || candidate.includes(normalizedTitle) || normalizedTitle.includes(candidate);
@@ -191,8 +191,8 @@ export class BazosAdService {
       sku: this.bazosCatalogSku(dto.title),
       title: dto.title,
       description: dto.description || undefined,
-      isActive: true,
-      lifecycle: 'active',
+      isActive: false,
+      lifecycle: 'draft',
       tags: BAZOS_CATALOG_TAGS,
       brand: dto.brand || undefined,
       manufacturer: dto.manufacturer || undefined,

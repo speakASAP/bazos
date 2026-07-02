@@ -79,6 +79,25 @@ const cleanEvidence = {
   contentPolicy: { checkedAt: new Date().toISOString(), source: 'manual_review' as const, passed: true },
 };
 
+const cleanCatalogReadiness = {
+  productId: draft.productId,
+  lifecycle: 'active',
+  publishable: true,
+  issues: [
+    { code: 'missing_ean', field: 'ean', severity: 'warning', message: 'EAN is missing.' },
+  ],
+};
+
+const blockedCatalogReadiness = {
+  productId: draft.productId,
+  lifecycle: 'active',
+  publishable: false,
+  issues: [
+    { code: 'missing_description', field: 'description', severity: 'blocking', message: 'Description is required.' },
+    { code: 'missing_ean', field: 'ean', severity: 'warning', message: 'EAN is missing.' },
+  ],
+};
+
 function makePrisma(overrides: Record<string, any> = {}) {
   return {
     bazosIdentity: {
@@ -103,7 +122,7 @@ function makePrisma(overrides: Record<string, any> = {}) {
   } as any;
 }
 
-function makeService(prisma: any, policy = blockedPolicy, warehouseAvailable = 60) {
+function makeService(prisma: any, policy = blockedPolicy, warehouseAvailable = 60, catalogReadiness: any = cleanCatalogReadiness) {
   const ads = {
     createDraftFromCatalog: jest.fn().mockResolvedValue(draft),
     evaluatePublishPolicy: jest.fn().mockResolvedValue(policy),
@@ -119,8 +138,16 @@ function makeService(prisma: any, policy = blockedPolicy, warehouseAvailable = 6
   const warehouseClient = {
     getTotalAvailable: jest.fn().mockResolvedValue(warehouseAvailable),
   } as any;
-  const service = new BazosCatalogSellActionService(prisma, makeLogger(), ads, queue, warehouseClient);
-  return { service, ads, queue, warehouseClient };
+  const catalogClient = {
+    getProductReadiness: jest.fn(),
+  } as any;
+  if (catalogReadiness instanceof Error) {
+    catalogClient.getProductReadiness.mockRejectedValue(catalogReadiness);
+  } else {
+    catalogClient.getProductReadiness.mockResolvedValue(catalogReadiness);
+  }
+  const service = new BazosCatalogSellActionService(prisma, makeLogger(), ads, queue, warehouseClient, catalogClient);
+  return { service, ads, queue, warehouseClient, catalogClient };
 }
 
 describe('BazosCatalogSellActionService', () => {
@@ -246,6 +273,66 @@ describe('BazosCatalogSellActionService', () => {
     expect(result.draft.title).toBe('Bazos title');
     expect(result.draft.description).toBe('Bazos-only description');
     expect(result.draft.media).toEqual([mediaOverride]);
+  });
+
+
+  it('fails closed before draft mutation when Catalog product quality blockers remain', async () => {
+    const prisma = makePrisma({ existingDraft: null });
+    const { service, ads, queue, catalogClient } = makeService(prisma, allowedPolicy, 60, blockedCatalogReadiness);
+
+    const result = await service.prepare('user-1', draft.productId, {
+      identityId: identity.id,
+      title: draft.title,
+      price: 1000,
+      category: 'elektro',
+      location: 'Praha',
+      stockQuantity: 1,
+    });
+
+    expect(catalogClient.getProductReadiness).toHaveBeenCalledWith(draft.productId, undefined);
+    expect(ads.createDraftFromCatalog).not.toHaveBeenCalled();
+    expect(prisma.bazosAd.update).not.toHaveBeenCalled();
+    expect(queue.enqueueDraft).not.toHaveBeenCalled();
+    expect(result.draft).toBeNull();
+    expect(result.catalogQuality.allowed).toBe(false);
+    expect(result.catalogQuality.blockingIssues.map((issue) => issue.code)).toEqual(['missing_description']);
+    expect(result.catalogQuality.optionalOpportunities.map((issue) => issue.code)).toEqual(['missing_ean']);
+    expect(result.canQueueAfterConfirmation).toBe(false);
+    expect(result.nextAction).toBe('resolve_catalog_quality_blockers');
+  });
+
+  it('fails closed when Catalog product quality readiness is unavailable', async () => {
+    const prisma = makePrisma({ existingDraft: null });
+    const { service, ads } = makeService(prisma, allowedPolicy, 60, new Error('catalog unavailable'));
+
+    const result = await service.prepare('user-1', draft.productId, {
+      identityId: identity.id,
+      title: draft.title,
+      price: 1000,
+      category: 'elektro',
+    });
+
+    expect(ads.createDraftFromCatalog).not.toHaveBeenCalled();
+    expect(result.catalogQuality.allowed).toBe(false);
+    expect(result.catalogQuality.blockingIssues[0].code).toBe('catalog_quality_unavailable');
+    expect(result.requiresHumanAction.reason).toBe('catalog_product_quality_blocked');
+  });
+
+  it('re-checks Catalog quality and blocks confirmation before queueing', async () => {
+    const prisma = makePrisma({ existingDraft: draft });
+    const { service, queue } = makeService(prisma, allowedPolicy, 60, blockedCatalogReadiness);
+
+    const result = await service.confirm('user-1', draft.productId, {
+      adId: draft.id,
+      confirmed: true,
+      ...cleanEvidence,
+    });
+
+    expect(queue.enqueueDraft).not.toHaveBeenCalled();
+    expect(result.draft.id).toBe(draft.id);
+    expect(result.queue).toBeNull();
+    expect(result.catalogQuality.blockingIssues[0].code).toBe('missing_description');
+    expect(result.canQueueAfterConfirmation).toBe(false);
   });
 
   it('requires explicit confirmation before queueing publish', async () => {

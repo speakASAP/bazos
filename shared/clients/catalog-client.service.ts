@@ -71,6 +71,33 @@ export class CatalogClientService {
   }
 
   /**
+   * Get product readiness diagnostics from Catalog product truth.
+   */
+  async getProductReadiness(productId: string, authorization?: string): Promise<any> {
+    const cleanProductId = productId.trim();
+    if (!cleanProductId) {
+      throw new HttpException('Catalog product id is required for readiness check', HttpStatus.BAD_REQUEST);
+    }
+
+    try {
+      const response = await firstValueFrom(
+        this.httpService.get(
+          `${this.baseUrl}/api/products/${encodeURIComponent(cleanProductId)}/readiness`,
+          this.authOptions(authorization),
+        )
+      );
+      if (response.data?.success === false) {
+        throw new Error(response.data?.message || 'Catalog readiness request was rejected');
+      }
+      return response.data?.data || response.data;
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.warn(`Product readiness unavailable for ${cleanProductId}: ${errorMessage}`, 'CatalogClient');
+      throw new HttpException('Catalog product readiness unavailable', HttpStatus.BAD_GATEWAY);
+    }
+  }
+
+  /**
    * Get product by SKU
    */
   async getProductBySku(sku: string): Promise<any> {
@@ -255,10 +282,16 @@ export class CatalogClientService {
   }
 
   private authOptions(authorization?: string) {
-    if (!authorization) return undefined;
-    return {
-      headers: { Authorization: authorization },
-    };
+    const headers: Record<string, string> = {};
+    if (authorization) headers.Authorization = authorization;
+
+    const internalToken = process.env.CATALOG_INTERNAL_SERVICE_TOKEN || process.env.INTERNAL_SERVICE_TOKEN;
+    if (internalToken) {
+      headers['x-internal-service-token'] = internalToken;
+      headers['x-service-name'] = 'bazos-service';
+    }
+
+    return Object.keys(headers).length ? { headers } : undefined;
   }
 }
 

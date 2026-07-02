@@ -3263,8 +3263,23 @@ export const appScript = `
         '</div>';
     }
 
+    function renderCatalogQualityBlockers() {
+      const quality = prepared?.catalogQuality;
+      if (!quality || quality.allowed) return '';
+      const blockers = Array.isArray(quality.blockingIssues) ? quality.blockingIssues : [];
+      const missing = Array.isArray(quality.blockingMissingFields) ? quality.blockingMissingFields : [];
+      const blockerList = blockers.length
+        ? '<ul class="quality-blocker-list">' + blockers.map((issue) => '<li><strong>' + cell(issue.code || issue.field || 'catalog_blocker') + '</strong>' + (issue.message ? ': ' + cell(issue.message) : '') + '</li>').join('') + '</ul>'
+        : '<p class="form-message">Catalog product quality check is unavailable.</p>';
+      return '<div class="preview-source preview-warning"><strong>Catalog blokuje pripravu pro Bazos</strong>' +
+        (missing.length ? '<span>Povinna pole: ' + missing.map(cell).join(', ') + '</span>' : '') +
+        blockerList +
+        '<span>Opravte produkt v Catalogu a znovu sformujte inzerat.</span></div>';
+    }
+
     function renderPreview() {
-      if (!prepared?.draft) return '';
+      const catalogQualityMarkup = renderCatalogQualityBlockers();
+      if (!prepared?.draft) return catalogQualityMarkup;
       const draft = prepared.draft;
       const allowed = Boolean(prepared.canQueueAfterConfirmation);
       return '<div class="preview-card">' +
@@ -3280,6 +3295,7 @@ export const appScript = `
           '<span>Aktivní inzeráty identity<strong>' + cell(prepared.identity?.activeAdCount) + '</strong></span>' +
           '<span>Další krok<strong>' + cell(prepared.nextAction) + '</strong></span>' +
         '</div>' +
+        catalogQualityMarkup +
         (prepared.requiresHumanAction?.required ? '<p class="form-message">Vyžaduje zásah: ' + cell(prepared.requiresHumanAction.reason) + '</p>' : '') +
         '<div class="flow-actions"><button class="button button-primary" id="catalog-confirm" type="button"' + (allowed ? '' : ' disabled') + '>Schválit a odeslat na Bazoš</button><button class="button button-secondary" data-policy="' + cell(draft.id) + '" type="button">Ověřit pravidla</button></div>' +
       '</div>';

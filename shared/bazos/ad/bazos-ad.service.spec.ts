@@ -293,10 +293,13 @@ describe('BazosAdService pending Bazos updates', () => {
       media: [{ url: 'https://cdn.example.test/manual-catalog-item.jpg', thumbnailUrl: 'https://cdn.example.test/manual-catalog-item-thumb.jpg' }],
     }, 'Bearer user-token');
 
+    expect(catalog.searchProducts).toHaveBeenCalledWith(expect.not.objectContaining({ isActive: true }), 'Bearer user-token');
     expect(catalog.createProduct).toHaveBeenCalledWith(expect.objectContaining({
       title: 'Manual catalog item',
       tags: expect.arrayContaining(['bazos', 'bazos-draft']),
       resaleEnabled: true,
+      isActive: false,
+      lifecycle: 'draft',
     }), 'Bearer user-token');
     expect(catalog.createMedia).toHaveBeenCalledWith(expect.objectContaining({
       productId: 'catalog-product-1',
