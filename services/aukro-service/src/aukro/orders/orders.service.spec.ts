@@ -13,11 +13,15 @@ const order = {
   id: 'order-1',
   accountId: 'account-1',
   bazosOrderId: 'bazos-order-1',
+  orderId: null,
   customerEmail: 'customer@example.test',
   customerPhone: '+420777000000',
   total: 1000,
   currency: 'CZK',
+  status: 'pending',
+  forwarded: false,
   createdAt: new Date('2026-06-26T12:00:00.000Z'),
+  updatedAt: new Date('2026-06-26T12:00:00.000Z'),
 };
 
 const ad = {
@@ -34,6 +38,11 @@ function makePrisma(overrides: Partial<Record<string, any>> = {}) {
     bazosOrder: {
       create: jest.fn().mockImplementation(({ data }) => Promise.resolve({ ...order, ...data })),
       update: jest.fn().mockImplementation(({ data }) => Promise.resolve({ ...order, ...data })),
+      findMany: jest.fn().mockResolvedValue(overrides.orders ?? []),
+      findUnique: jest.fn().mockResolvedValue(overrides.order ?? order),
+    },
+    bazosAccount: {
+      findMany: jest.fn().mockResolvedValue(overrides.accounts ?? [{ id: 'account-1' }]),
     },
     bazosAd: {
       findFirst: jest.fn().mockResolvedValue(overrides.ad ?? ad),
@@ -43,7 +52,20 @@ function makePrisma(overrides: Partial<Record<string, any>> = {}) {
 
 function makeService(
   prisma: any,
-  orderClient = { createOrder: jest.fn().mockResolvedValue({ id: 'central-order-1' }) } as any,
+  orderClient = {
+    createOrder: jest.fn().mockResolvedValue({ id: 'central-order-1' }),
+    getOrderLifecycleStatus: jest.fn().mockResolvedValue({
+      orderId: 'central-order-1',
+      status: 'processing',
+      lifecycleStage: 'warehouse_collecting',
+      paymentStatus: 'paid',
+      fulfillmentStatus: 'collecting',
+      deliveryStatus: 'not_started',
+      updatedAt: '2026-07-02T10:00:00.000Z',
+      orderedAt: '2026-07-02T09:00:00.000Z',
+      source: 'orders.detail',
+    }),
+  } as any,
 ) {
   const logger = makeLogger();
   const service = new OrdersService(prisma, orderClient, logger);
@@ -51,6 +73,58 @@ function makeService(
 }
 
 describe('OrdersService', () => {
+  it('returns user-scoped orders with central Orders lifecycle status', async () => {
+    const prisma = makePrisma({
+      accounts: [{ id: 'account-1' }],
+      orders: [{ ...order, forwarded: true, orderId: 'central-order-1' }],
+    });
+    const { service, orderClient } = makeService(prisma);
+
+    const result = await service.findForUser('user-1', { centralStatus: 'true' }) as any[];
+
+    expect(prisma.bazosAccount.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { OR: [{ userId: 'user-1' }, { identities: { some: { userId: 'user-1' } } }] },
+    }));
+    expect(orderClient.getOrderLifecycleStatus).toHaveBeenCalledWith('central-order-1');
+    expect(result[0].centralOrder).toEqual(expect.objectContaining({
+      state: 'ok',
+      orderId: 'central-order-1',
+      lifecycleStage: 'warehouse_collecting',
+    }));
+  });
+
+  it('marks local orders without central ids as unforwarded in the read model', async () => {
+    const prisma = makePrisma({ orders: [{ ...order, forwarded: false, orderId: null }] });
+    const { service, orderClient } = makeService(prisma);
+
+    const result = await service.findForUser('user-1', { centralStatus: 'true' }) as any[];
+
+    expect(orderClient.getOrderLifecycleStatus).not.toHaveBeenCalled();
+    expect(result[0].centralOrder).toEqual(expect.objectContaining({
+      state: 'unforwarded',
+      status: 'unforwarded',
+      lifecycleStage: 'unforwarded',
+    }));
+  });
+
+  it('marks stored central ids as stale when Orders read fails', async () => {
+    const prisma = makePrisma({ orders: [{ ...order, forwarded: true, orderId: 'central-order-1' }] });
+    const { service, orderClient } = makeService(prisma, {
+      createOrder: jest.fn(),
+      getOrderLifecycleStatus: jest.fn().mockRejectedValue(new Error('orders unavailable')),
+    } as any);
+
+    const result = await service.findForUser('user-1', { centralStatus: 'true' }) as any[];
+
+    expect(orderClient.getOrderLifecycleStatus).toHaveBeenCalledWith('central-order-1');
+    expect(result[0].centralOrder).toEqual(expect.objectContaining({
+      state: 'stale',
+      orderId: 'central-order-1',
+      status: 'stale',
+      lifecycleStage: 'stale',
+    }));
+  });
+
   it('does not forward when the order has no item/ad line contract', async () => {
     const prisma = makePrisma();
     const { service, orderClient } = makeService(prisma);

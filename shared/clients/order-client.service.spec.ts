@@ -75,6 +75,46 @@ describe('OrderClientService', () => {
       },
     );
   });
+  it('reads central order lifecycle status from Orders detail', async () => {
+    process.env.ORDER_SERVICE_URL = 'http://orders.test';
+    process.env.BAZOS_INTERNAL_SERVICE_TOKEN = 'test-internal-token';
+    const httpService = {
+      get: jest.fn().mockReturnValue(of({
+        data: {
+          data: {
+            id: 'central-order-1',
+            status: 'processing',
+            paymentStatus: 'paid',
+            warehouseHandoff: { status: 'reserved' },
+            items: [{ fulfillmentStatus: 'reserved' }],
+            updatedAt: '2026-07-02T10:00:00.000Z',
+          },
+        },
+      })),
+    } as any;
+    const service = new OrderClientService(httpService, makeLogger());
+
+    const result = await service.getOrderLifecycleStatus('central-order-1');
+
+    expect(httpService.get).toHaveBeenCalledWith(
+      'http://orders.test/api/orders/central-order-1',
+      {
+        headers: {
+          'x-service-name': 'bazos-service',
+          'x-internal-service-token': 'test-internal-token',
+        },
+      },
+    );
+    expect(result).toEqual(expect.objectContaining({
+      orderId: 'central-order-1',
+      status: 'processing',
+      lifecycleStage: 'warehouse_collecting',
+      paymentStatus: 'paid',
+      fulfillmentStatus: 'collecting',
+      source: 'orders.detail',
+    }));
+  });
+
   it('falls back to the Bazos runtime JWT_TOKEN used by Orders runtime aliasing', async () => {
     process.env.ORDER_SERVICE_URL = 'http://orders.test';
     process.env.JWT_TOKEN = 'runtime-service-token';
