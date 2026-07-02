@@ -1980,7 +1980,16 @@ export const appScript = `
       centralOk: rows.filter((order) => centralOrderState(order) === 'ok').length,
       unforwarded: rows.filter((order) => centralOrderState(order) === 'unforwarded').length,
       staleOrUnknown: rows.filter((order) => ['stale', 'unknown'].includes(centralOrderState(order))).length,
+      deliveryPending: rows.filter((order) => centralOrderState(order) === 'ok' && orderDeliveryState(order) === 'not_started').length,
+      deliveryInProgress: rows.filter((order) => ['handed_to_delivery', 'in_delivery'].includes(orderDeliveryState(order))).length,
+      deliveryReceived: rows.filter((order) => ['received', 'delivered'].includes(orderDeliveryState(order))).length,
+      deliveryReturned: rows.filter((order) => ['not_received', 'returned'].includes(orderDeliveryState(order))).length,
     };
+  }
+
+  function orderDeliveryState(order) {
+    const central = centralOrderRead(order);
+    return String(central.deliveryStatus || central.lifecycleStage || central.status || 'unknown').toLowerCase();
   }
 
   function centralOrderRead(order) {
@@ -2246,7 +2255,10 @@ export const appScript = `
         stat('Identity ke kontrole', summary.reviewIdentities || summary.identitiesNeedingReview || 0) +
         stat('Sledované aktivní inzeráty', summary.activeAds || summary.activeAdsTracked || 0) +
         stat('Objednávky Bazoš', ordersSummary.total, ordersResult.error ? 'Orders read-model není dostupný' : ordersSummary.centralOk + ' načteno z Orders') +
-        '</div><div class="data-panel"><h2>Zaměření administrátora</h2><p class="card-note">Kontrolujte blokované pokusy, identity vyžadující ruční zásah a objednávky, které nejsou předané nebo nemají čerstvý stav z Orders.</p></div>' +
+        stat('Doručení čeká', ordersSummary.deliveryPending, 'Centrální Orders zatím nehlásí předání dopravě') +
+        stat('V doručení', ordersSummary.deliveryInProgress, 'Předáno dopravě nebo probíhá doručení') +
+        stat('Doručeno / vráceno', ordersSummary.deliveryReceived + ordersSummary.deliveryReturned, ordersSummary.deliveryReceived + ' převzato, ' + ordersSummary.deliveryReturned + ' vráceno') +
+        '</div><div class="data-panel"><h2>Zaměření administrátora</h2><p class="card-note">Kontrolujte blokované pokusy, identity vyžadující ruční zásah, objednávky bez čerstvého stavu z Orders a doručovací stav předaných objednávek.</p></div>' +
         '<div class="data-panel"><div class="panel-heading-actions"><h2>Objednávky Bazoš</h2><button class="button button-secondary" id="refresh-admin-orders" type="button">Obnovit</button></div>' +
         (ordersResult.error ? '<p class="form-message">' + settingsErrorMarkup(ordersResult.error) + '</p>' : orderTable(orders, 'Nebyly vráceny žádné Bazoš objednávky.')) + '</div>';
       content.querySelector('#refresh-admin-orders')?.addEventListener('click', () => renderAdmin());
@@ -2940,6 +2952,9 @@ export const appScript = `
       stat('Načteno z Orders', summary.centralOk, 'Centrální lifecycle/status je dostupný') +
       stat('Nepředáno', summary.unforwarded, 'Lokální objednávky bez centrálního Orders toku') +
       stat('Neznámé / zastaralé', summary.staleOrUnknown, 'Uložený centrální stav se nepodařilo ověřit') +
+      stat('Čeká na doručení', summary.deliveryPending, 'Objednávka ještě nebyla předána dopravě') +
+      stat('V doručení', summary.deliveryInProgress, 'Předáno dopravě nebo probíhá doručení') +
+      stat('Převzato / vráceno', summary.deliveryReceived + summary.deliveryReturned, summary.deliveryReceived + ' převzato, ' + summary.deliveryReturned + ' vráceno') +
       '</div><div class="data-panel"><div class="panel-heading-actions"><h2>Objednávky</h2><button class="button button-secondary" data-refresh-client type="button">Obnovit</button></div>' +
       orderTable(rows, 'Pro tento účet nebyly vráceny žádné objednávky.') + '</div>';
     content.querySelector('[data-refresh-client]')?.addEventListener('click', () => renderClient());
