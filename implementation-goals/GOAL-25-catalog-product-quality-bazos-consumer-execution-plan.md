@@ -4,7 +4,7 @@
 
 ```yaml
 id: BAZOS-GOAL-25-CATALOG-PRODUCT-QUALITY-CONSUMER
-status: pre-coding-accepted
+status: source-validated-deploy-approved-follow-up
 owner: catalog-goal-25-bazos-worker
 created: 2026-07-02
 last_updated: 2026-07-02
@@ -47,6 +47,7 @@ The change prevents incomplete Catalog product truth from becoming a Bazos draft
 - Existing sell-action prepare creates/reuses a local draft, caps stock by Warehouse, evaluates Bazos publish policy, and returns a preview without queueing.
 - Existing confirm requires explicit user confirmation and delegates queueing to `BazosPublisherQueueService`.
 - Catalog Goal 25 exposes `catalog.product_quality.v1`; exact per-product quality evidence is available through Catalog readiness with the same blocker codes, while `GET /api/products/review/quality` does not currently expose an exact product-id filter.
+- Subagent readiness review found that the source consumer needs runtime access to Catalog's shared internal service token; Bazos maps `CATALOG_INTERNAL_SERVICE_TOKEN` from the existing Auth secret without printing the value.
 
 ## Project Invariants
 
@@ -98,16 +99,23 @@ Prepare remains idempotent for reusable drafts only after quality passes. Blocke
 - `shared/bazos/catalog/bazos-catalog-sell-action.service.ts`
 - `shared/bazos/catalog/bazos-catalog-sell-action.controller.ts`
 - `shared/bazos/catalog/bazos-catalog-sell-action.service.spec.ts`
+- `shared/bazos/policy/publish-policy.types.ts`
+- `shared/bazos/policy/publish-policy.service.ts`
+- `shared/bazos/policy/publish-policy.service.spec.ts`
+- `shared/bazos/ad/bazos-ad.service.ts`
+- `shared/bazos/ad/bazos-ad.service.spec.ts`
 - `services/aukro-service/src/ui/ui.assets.ts`
+- `k8s/external-secret.yaml`
+- `.env.example`
 - `docs/IMPLEMENTATION_STATE.md`
 
 ### Files That Must Not Be Modified
 
 - Catalog microservice source files.
 - Prisma schema/migrations unless a separate owner-approved plan exists.
-- Bazos publisher queue, identity, policy, and compliance rules except through existing calls.
-- Kubernetes/deploy scripts.
-- Secret/config files.
+- Bazos publisher queue, identity, pacing, duplicate, challenge, and publish-action ownership except through existing preflight calls.
+- Kubernetes/deploy scripts and unrelated Kubernetes resources; `k8s/external-secret.yaml` is allowed only for Catalog internal-token runtime mapping.
+- Secret values or generated runtime secret material.
 
 ## Implementation Steps
 
@@ -117,19 +125,22 @@ Prepare remains idempotent for reusable drafts only after quality passes. Blocke
 4. Call preflight in `prepare` before `findOrCreateDraft` and in `confirm` before `queue.enqueueDraft`.
 5. Include `catalogQuality` and policy failure details in API responses.
 6. Render Catalog quality blockers in the catalog publish UI and disable confirmation while blocked.
-7. Add focused tests for blocked prepare, blocked confirm, fail-closed Catalog unavailable, and EAN warning non-blocking.
-8. Run validation commands and update reports/state.
+7. Extend publish policy and Bazos ad draft preparation tests for Catalog quality blockers and draft lifecycle preservation.
+8. Map `CATALOG_INTERNAL_SERVICE_TOKEN` for Bazos runtime service-to-service Catalog readiness calls.
+9. Run validation commands and update reports/state.
 
 ## Test Plan
 
-- Focused Jest spec: `npm --prefix shared test -- bazos-catalog-sell-action.service.spec.ts`.
+- Focused Jest specs: `npm --prefix shared test -- bazos-catalog-sell-action.service.spec.ts publish-policy.service.spec.ts bazos-ad.service.spec.ts`.
 - Build shared package to catch constructor/client typing issues.
 - Build service UI package to catch asset/script syntax issues.
+- Server-side Kubernetes dry run for `k8s/external-secret.yaml` to validate the runtime token mapping shape without mutating the cluster.
 
 ## Validation Plan
 
 - `git diff --check` must pass.
 - Focused tests must pass.
+- `kubectl apply --dry-run=server -f k8s/external-secret.yaml -n statex-apps` must pass before deployment.
 - `npm --prefix shared run build` must pass.
 - `npm --prefix services/aukro-service run build` must pass.
 - No deployment without explicit owner approval.
@@ -139,7 +150,8 @@ Prepare remains idempotent for reusable drafts only after quality passes. Blocke
 ```text
 git status --short --branch
 git diff --check
-npm --prefix shared test -- bazos-catalog-sell-action.service.spec.ts
+npm --prefix shared test -- bazos-catalog-sell-action.service.spec.ts publish-policy.service.spec.ts bazos-ad.service.spec.ts
+kubectl apply --dry-run=server -f k8s/external-secret.yaml -n statex-apps
 npm --prefix shared run build
 npm --prefix services/aukro-service run build
 ```
@@ -175,12 +187,13 @@ Implement only the Bazos consumer side of Catalog Goal 25 product quality blocke
 
 ## Completion Checklist
 
-- [ ] Required reading complete.
-- [ ] Pre-coding gate recorded.
-- [ ] Catalog quality preflight implemented.
-- [ ] UI blockers surfaced.
-- [ ] Focused tests added/passing.
-- [ ] Builds/diff check completed.
-- [ ] Validation report written.
-- [ ] Implementation state updated.
-- [ ] Commit or no-commit reason recorded.
+- [x] Required reading complete.
+- [x] Pre-coding gate recorded.
+- [x] Catalog quality preflight implemented.
+- [x] Runtime Catalog token mapping added.
+- [x] UI blockers surfaced.
+- [x] Focused tests added/passing.
+- [x] Builds/diff check completed.
+- [x] Validation report written.
+- [x] Implementation state updated.
+- [x] Commit or no-commit reason recorded.
