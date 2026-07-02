@@ -175,7 +175,8 @@ export const renderAppPage = (mode: AppMode) => {
   const navLabel = mode === 'admin' ? 'Administrace' : 'Klientský panel';
   const detailsLabel = mode === 'admin' ? 'Fronta ke kontrole' : 'Moje inzeráty';
   const clientTabs = mode === 'client'
-    ? `<button class="tab" data-view="publish" type="button">Publikovat</button>
+    ? `<button class="tab" data-view="orders" type="button">Objednávky</button>
+              <button class="tab" data-view="publish" type="button">Publikovat</button>
               <button class="tab" data-view="account" type="button">Účet Bazos.cz</button>`
     : '';
   const sidebarNav = mode === 'admin'
@@ -183,6 +184,7 @@ export const renderAppPage = (mode: AppMode) => {
           <a href="/client">${icon('client')}Klientský panel</a>`
     : `<a class="active" href="/client" data-sidebar-view="overview">${icon('client')}${navLabel}</a>
           <a href="#details" data-sidebar-view="details">${icon('catalog')}Moje inzeráty</a>
+          <a href="#orders" data-sidebar-view="orders">${icon('catalog')}Objednávky</a>
           <a href="#publish" data-sidebar-view="publish">${icon('catalog')}Publikovat</a>
           <a href="#account" data-sidebar-view="account">${icon('client')}Účet Bazos.cz</a>
           <a href="#bazos-settings" data-sidebar-view="settings">${icon('settings')}Nastavení Bazos.cz</a>
@@ -1483,7 +1485,7 @@ export const appScript = `
     const view = String(window.location.hash || '').replace('#', '');
     if (view === 'bazos-settings') return 'settings';
     if (catalogProductId) return 'catalog';
-    return ['overview', 'details', 'publish', 'account', 'settings', 'catalog'].includes(view) ? view : 'overview';
+    return ['overview', 'details', 'orders', 'publish', 'account', 'settings', 'catalog'].includes(view) ? view : 'overview';
   }
 
   const token = () => localStorage.getItem(tokenKey);
@@ -1615,6 +1617,21 @@ export const appScript = `
 
   function statusLabel(value) {
     const text = String(value || '').toLowerCase();
+    if (text.includes('unforwarded')) return 'Nepředáno';
+    if (text.includes('stale')) return 'Zastaralé';
+    if (text.includes('unknown')) return 'Neznámé';
+    if (text.includes('ordered_unpaid')) return 'Objednáno / čeká platba';
+    if (text.includes('payment_failed')) return 'Platba selhala';
+    if (text.includes('paid_not_delivered')) return 'Zaplaceno / nedoručeno';
+    if (text.includes('warehouse_collecting')) return 'Sklad připravuje';
+    if (text.includes('warehouse_forming')) return 'Sklad formuje';
+    if (text.includes('warehouse_formed')) return 'Sklad připraven';
+    if (text.includes('warehouse_fulfillment_requested')) return 'Předáno skladu';
+    if (text.includes('handed_to_delivery')) return 'Předáno dopravě';
+    if (text.includes('in_delivery')) return 'V doručení';
+    if (text.includes('received')) return 'Převzato';
+    if (text.includes('not_received')) return 'Nepřevzato';
+    if (text.includes('returned')) return 'Vráceno';
     if (text.includes('deleted')) return 'Vymazáno';
     if (text.includes('verified')) return 'Ověřeno';
     if (text.includes('active')) return 'Aktivní';
@@ -1892,9 +1909,11 @@ export const appScript = `
   async function loadClientData(options) {
     const refreshExternal = Boolean(options?.refreshExternal);
     const queuePromise = request('/api/bazos/publish-queue?limit=50').catch(() => []);
+    const ordersPromise = request('/ui/orders?limit=25').catch((error) => ({ error: error.message }));
     const adsResult = await request(refreshExternal ? '/api/bazos/ads/refresh' : '/api/bazos/ads', refreshExternal ? { method: 'POST', body: '{}' } : undefined).catch((error) => ({ error: error.message }));
     const identitiesResult = await request('/api/bazos/identities').catch((error) => ({ error: error.message }));
     const queueResult = await queuePromise;
+    const ordersResult = await ordersPromise;
     return {
       ads: adsResult.error ? [] : asArray(adsResult, ['items', 'offers', 'ads']),
       refreshSummary: adsResult.error ? null : (adsResult.checked !== undefined ? { checked: adsResult.checked, deleted: adsResult.deleted, unknown: adsResult.unknown } : null),
@@ -1902,6 +1921,8 @@ export const appScript = `
       identities: identitiesResult.error ? [] : asArray(identitiesResult, ['items', 'identities']),
       identitiesError: identitiesResult.error,
       queue: asArray(queueResult, ['items', 'attempts', 'queue']),
+      orders: ordersResult.error ? [] : asArray(ordersResult, ['items', 'orders']),
+      ordersError: ordersResult.error,
     };
   }
 
@@ -1950,6 +1971,67 @@ export const appScript = `
       nextNotBefore,
       queued: queue.filter((item) => String(item.status || '').toLowerCase().includes('queued')).length,
     };
+  }
+
+  function orderSummary(orders) {
+    const rows = Array.isArray(orders) ? orders : [];
+    return {
+      total: rows.length,
+      centralOk: rows.filter((order) => centralOrderState(order) === 'ok').length,
+      unforwarded: rows.filter((order) => centralOrderState(order) === 'unforwarded').length,
+      staleOrUnknown: rows.filter((order) => ['stale', 'unknown'].includes(centralOrderState(order))).length,
+    };
+  }
+
+  function centralOrderRead(order) {
+    return order?.centralOrder || {};
+  }
+
+  function centralOrderState(order) {
+    return String(centralOrderRead(order).state || 'unknown').toLowerCase();
+  }
+
+  function centralOrderTone(order) {
+    const state = centralOrderState(order);
+    if (state === 'ok') return statusClass(centralOrderRead(order).status || centralOrderRead(order).lifecycleStage);
+    if (state === 'unforwarded') return 'wait';
+    return 'risk';
+  }
+
+  function centralOrderLabel(order) {
+    const central = centralOrderRead(order);
+    const state = centralOrderState(order);
+    if (state === 'ok') return statusLabel(central.lifecycleStage || central.status);
+    return statusLabel(state);
+  }
+
+  function centralOrderNote(order) {
+    const central = centralOrderRead(order);
+    if (centralOrderState(order) !== 'ok') return central.reason || 'Centrální stav není dostupný.';
+    return [
+      central.orderId ? 'Orders ID: ' + central.orderId : '',
+      central.status ? 'Status: ' + statusLabel(central.status) : '',
+      central.paymentStatus ? 'Platba: ' + statusLabel(central.paymentStatus) : '',
+      central.deliveryStatus ? 'Doručení: ' + statusLabel(central.deliveryStatus) : '',
+    ].filter(Boolean).join(' / ');
+  }
+
+  function orderDisplayId(order) {
+    return order.bazosOrderId || order.id;
+  }
+
+  function orderTotal(order) {
+    return cell(order.total || 0) + ' ' + cell(order.currency || 'CZK');
+  }
+
+  function orderTable(rows, emptyText) {
+    return tableOnly([
+      { label: 'Objednávka', render: (r) => '<strong>' + cell(orderDisplayId(r)) + '</strong><small class="card-note">Lokální ID: ' + cell(r.id) + '</small>' },
+      { label: 'Bazoš stav', render: (r) => '<span class="status ' + statusClass(r.status) + '">' + statusLabel(r.status || 'pending') + '</span><small class="card-note">' + (r.forwarded ? 'Forwarded' : 'Lokální') + '</small>' },
+      { label: 'Centrální Orders', render: (r) => '<span class="status ' + centralOrderTone(r) + '">' + centralOrderLabel(r) + '</span><small class="card-note">' + cell(centralOrderNote(r)) + '</small>' },
+      { label: 'Celkem', render: (r) => orderTotal(r) },
+      { label: 'Aktualizováno', render: (r) => cell(r.updatedAt || r.createdAt) },
+    ], rows, emptyText);
   }
 
   function renderIdentityOptions(identities) {
