@@ -1217,6 +1217,20 @@ button, input { font: inherit; }
 .preview-warning {
   color: #8a4b00;
 }
+.preview-review-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.preview-review-badge {
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 760;
+}
+.preview-review-badge.manual { background: #e8f1ff; color: #174ea6; }
+.preview-review-badge.stale { background: #fff4d6; color: #8a4b00; }
+.preview-review-badge.review { background: #ffe4e6; color: #9f1239; }
 .manual-media-panel {
   display: grid;
   gap: 10px;
@@ -3148,6 +3162,40 @@ export const appScript = `
     const previewDescription = (product) => previewContent().plainText || productDescription(product);
     const previewLabel = () => contentPreview?.label || contentPreview?.marketplace || 'Bazoš';
     const previewWarnings = () => Array.isArray(contentPreview?.warnings) ? contentPreview.warnings.filter(Boolean) : [];
+    const previewReview = () => {
+      const preview = contentPreview || {};
+      const fields = Array.isArray(preview.fields) ? preview.fields : [];
+      const propagation = preview.propagation || {};
+      const profile = preview.profile || {};
+      const manualOverrides = profile.manualOverrides || preview.manualOverrides || {};
+      const staleManualFields = [
+        ...(Array.isArray(propagation.staleManualFields) ? propagation.staleManualFields : []),
+        ...(Array.isArray(profile.staleManualFields) ? profile.staleManualFields : []),
+        ...(Array.isArray(preview.staleManualFields) ? preview.staleManualFields : []),
+        ...fields.filter((field) => field?.manualOverride && field?.stale).map((field) => field.key || field.name || field.field).filter(Boolean),
+      ].filter(Boolean);
+      const hasManualOverride = Boolean(
+        preview.manualOverride ||
+        preview.hasManualOverrides ||
+        profile.hasManualOverrides ||
+        Object.keys(manualOverrides).length ||
+        fields.some((field) => field?.manualOverride)
+      );
+      const stale = Boolean(
+        preview.stale ||
+        preview.sourceChanged ||
+        propagation.status === 'manual_review_required' ||
+        staleManualFields.length ||
+        fields.some((field) => field?.stale)
+      );
+      const requiresManualReview = Boolean(
+        preview.requiresManualReview ||
+        propagation.status === 'manual_review_required' ||
+        staleManualFields.length ||
+        (hasManualOverride && stale)
+      );
+      return { hasManualOverride, stale, requiresManualReview, staleManualFields: Array.from(new Set(staleManualFields)) };
+    };
     const selectedMediaUrls = () => Array.from(document.querySelectorAll('[data-media-choice]:checked')).map((input) => String(input.value || '').trim()).filter(Boolean);
     const selectedIdentityId = () => document.getElementById('catalog-draft-form')?.elements.identityId?.value || data.identities[0]?.id || '';
 
@@ -3201,8 +3249,16 @@ export const appScript = `
         source.legacyDescriptionFallback ? 'Použit fallback katalogového popisu' : '',
       ].filter(Boolean);
       const warnings = previewWarnings();
+      const review = previewReview();
+      const reviewBadges = [
+        review.hasManualOverride ? '<span class="preview-review-badge manual">Manual override</span>' : '',
+        review.stale ? '<span class="preview-review-badge stale">Source changed</span>' : '',
+        review.requiresManualReview ? '<span class="preview-review-badge review">Review required</span>' : '',
+      ].filter(Boolean).join('');
       return '<div class="preview-source"><strong>Kanonický obsah: ' + cell(previewLabel()) + '</strong>' +
         (sourceBits.length ? '<span>' + sourceBits.map(cell).join(', ') + '</span>' : '') +
+        (reviewBadges ? '<span class="preview-review-badges">' + reviewBadges + '</span>' : '') +
+        (review.requiresManualReview ? '<span class="preview-warning">Catalog source changed after manual Bazoš edits. Review these fields before publishing: ' + cell(review.staleManualFields.length ? review.staleManualFields.join(', ') : 'manual marketplace fields') + '.</span>' : '') +
         (warnings.length ? '<span class="preview-warning">' + warnings.map(cell).join(', ') + '</span>' : '') +
         '</div>';
     }
