@@ -3,6 +3,8 @@ import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { LoggerService } from '../logger/logger.service';
 
+type CatalogScope = 'own' | 'effective' | 'alfares' | 'community' | 'all';
+
 /**
  * API client for catalog-microservice
  * Fetches product data from the central catalog
@@ -21,10 +23,14 @@ export class CatalogClientService {
   /**
    * Get product by ID
    */
-  async getProductById(productId: string): Promise<any> {
+  async getProductById(productId: string, authorization?: string, catalogScope?: CatalogScope): Promise<any> {
     try {
+      const params = new URLSearchParams();
+      if (catalogScope) params.set('catalogScope', catalogScope);
+      const queryString = params.toString();
+      const productPath = `${this.baseUrl}/api/products/${encodeURIComponent(productId)}${queryString ? `?${queryString}` : ''}`;
       const response = await firstValueFrom(
-        this.httpService.get(`${this.baseUrl}/api/products/${productId}`)
+        this.httpService.get(productPath, this.authOptions(authorization))
       );
       return response.data.data;
     } catch (error: unknown) {
@@ -90,19 +96,21 @@ export class CatalogClientService {
     search?: string;
     isActive?: boolean;
     categoryId?: string;
+    catalogScope?: CatalogScope;
     page?: number;
     limit?: number;
-  }): Promise<{ items: any[]; total: number; page: number; limit: number }> {
+  }, authorization?: string): Promise<{ items: any[]; total: number; page: number; limit: number }> {
     try {
       const params = new URLSearchParams();
       if (query.search) params.append('search', query.search);
       if (query.isActive !== undefined) params.append('isActive', String(query.isActive));
       if (query.categoryId) params.append('categoryId', query.categoryId);
+      if (query.catalogScope) params.append('catalogScope', query.catalogScope);
       if (query.page) params.append('page', String(query.page));
       if (query.limit) params.append('limit', String(query.limit));
 
       const response = await firstValueFrom(
-        this.httpService.get(`${this.baseUrl}/api/products?${params.toString()}`)
+        this.httpService.get(`${this.baseUrl}/api/products?${params.toString()}`, this.authOptions(authorization))
       );
       return {
         items: response.data.data || [],
@@ -115,6 +123,26 @@ export class CatalogClientService {
       const errorStack = error instanceof Error ? error.stack : undefined;
       this.logger.error(`Failed to search products: ${errorMessage}`, errorStack, 'CatalogClient');
       return { items: [], total: 0, page: 1, limit: 20 };
+    }
+  }
+
+  /**
+   * Provision idempotent user Catalog access after hosted Auth login.
+   */
+  async provisionAccess(authorization: string, sourceApplication = 'bazos'): Promise<any> {
+    try {
+      const response = await firstValueFrom(
+        this.httpService.post(
+          `${this.baseUrl}/api/catalog/access/provision`,
+          { sourceApplication },
+          this.authOptions(authorization),
+        )
+      );
+      return response.data;
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.warn(`Failed to provision Catalog access: ${errorMessage}`, 'CatalogClient');
+      throw new HttpException('Failed to provision Catalog access', HttpStatus.BAD_GATEWAY);
     }
   }
 

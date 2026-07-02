@@ -1,4 +1,4 @@
-import { Controller, ForbiddenException, Get, Param, Query, Request, Res, UnauthorizedException, UseGuards } from '@nestjs/common';
+import { Controller, ForbiddenException, Get, Param, Post, Query, Request, Res, UnauthorizedException, UseGuards } from '@nestjs/common';
 import { AuthService, CatalogClientService, JwtAuthGuard } from '@bazos/shared';
 import { appScript, appStyles, renderAppPage, renderAuthCallbackPage, renderLandingPage } from './ui.assets';
 
@@ -6,6 +6,7 @@ const ADMIN_ROLE_NAMES = new Set(['admin', 'administrator', 'owner']);
 const ADMIN_GLOBAL_ROLES = new Set(['global:admin', 'global:superadmin', 'global:platform_admin']);
 const ADMIN_PERMISSION_CLAIMS = new Set(['admin', 'administrator', 'owner', 'bazos:admin', 'bazos-service:admin']);
 const ADMIN_APPLICATION_IDS = new Set(['bazos-service', 'bazos']);
+const CATALOG_SOURCE_APPLICATION = 'bazos';
 
 @Controller()
 export class UiController {
@@ -61,11 +62,12 @@ export class UiController {
     @Query('limit') limit?: string,
     @Query('activeOnly') activeOnly?: string,
     @Query('productId') productId?: string,
+    @Request() req?: any,
   ) {
     const cleanProductId = productId?.trim();
     if (cleanProductId) {
-      const product = await this.catalogClient.getProductById(cleanProductId);
-      return { items: product ? [product] : [], total: product ? 1 : 0, page: 1, limit: 1 };
+      const product = await this.catalogClient.getProductById(cleanProductId, req?.headers?.authorization, 'effective');
+      return { items: product ? [product] : [], total: product ? 1 : 0, page: 1, limit: 1, catalogScope: 'effective' };
     }
 
     const parsedPage = Number(page || 1);
@@ -73,12 +75,17 @@ export class UiController {
     return this.catalogClient.searchProducts({
       search: search?.trim() || undefined,
       isActive: activeOnly === 'false' ? undefined : true,
+      catalogScope: 'effective',
       page: Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1,
       limit: Number.isFinite(parsedLimit) ? parsedLimit : 20,
-    });
+    }, req?.headers?.authorization);
   }
 
-
+  @Post('ui/catalog/access/provision')
+  @UseGuards(JwtAuthGuard)
+  async provisionCatalogAccess(@Request() req: any) {
+    return this.catalogClient.provisionAccess(req.headers.authorization, CATALOG_SOURCE_APPLICATION);
+  }
 
   @Get('ui/catalog/products/:productId/content-preview')
   @UseGuards(JwtAuthGuard)

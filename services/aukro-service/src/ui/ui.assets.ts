@@ -1350,11 +1350,14 @@ button, input { font: inherit; }
 `;
 
 export const authCallbackScript = `
-(function () {
+(async function () {
   const tokenKey = 'bazosServiceToken';
   const refreshTokenKey = 'bazosServiceRefreshToken';
   const authStateKey = 'bazosAuthState';
   const authReturnKey = 'bazosAuthReturnPath';
+  const catalogProvisionWarningKey = 'bazosCatalogProvisionWarning';
+  const catalogProvisionPath = '/ui/catalog/access/provision';
+  const catalogSourceApplication = 'bazos';
   const message = document.getElementById('callback-message');
   const setMessage = (text) => { if (message) message.textContent = text; };
 
@@ -1365,6 +1368,20 @@ export const authCallbackScript = `
   function clearPendingAuth() {
     sessionStorage.removeItem(authStateKey);
     sessionStorage.removeItem(authReturnKey);
+  }
+
+  async function provisionCatalogAccess(accessToken) {
+    setMessage('Připravuje se osobní katalog...');
+    const response = await fetch(catalogProvisionPath, {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sourceApplication: catalogSourceApplication }),
+    });
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      const raw = body.message || body.error?.message || 'Katalog se nepodařilo připravit.';
+      throw new Error(Array.isArray(raw) ? raw.join(', ') : raw);
+    }
   }
 
   try {
@@ -1388,6 +1405,9 @@ export const authCallbackScript = `
 
     localStorage.setItem(tokenKey, accessToken);
     if (refreshToken) localStorage.setItem(refreshTokenKey, refreshToken);
+    await provisionCatalogAccess(accessToken).catch((provisionError) => {
+      sessionStorage.setItem(catalogProvisionWarningKey, provisionError.message || 'Katalog se nepodařilo připravit. Můžete pokračovat, ale výběr produktů nemusí být dostupný.');
+    });
     clearPendingAuth();
     window.location.replace(returnPath);
   } catch (error) {
@@ -1406,6 +1426,7 @@ export const appScript = `
   const refreshTokenKey = 'bazosServiceRefreshToken';
   const authStateKey = 'bazosAuthState';
   const authReturnKey = 'bazosAuthReturnPath';
+  const catalogProvisionWarningKey = 'bazosCatalogProvisionWarning';
   const authClientId = 'bazos-service';
   const authBaseUrl = 'https://auth.alfares.cz';
   const authCallbackUrl = 'https://bazos.alfares.cz/auth/callback';
@@ -1452,6 +1473,13 @@ export const appScript = `
 
   const token = () => localStorage.getItem(tokenKey);
   const setMessage = (value) => { if (message) message.textContent = value || ''; };
+
+  function showCatalogProvisionWarning() {
+    const warning = sessionStorage.getItem(catalogProvisionWarningKey);
+    if (!warning) return;
+    sessionStorage.removeItem(catalogProvisionWarningKey);
+    setMessage(warning);
+  }
 
   function createState() {
     const bytes = new Uint8Array(16);
@@ -2924,6 +2952,15 @@ export const appScript = `
     };
     const productDescription = (product) => product?.description || product?.shortDescription || '';
     const productTitle = (product) => product?.name || product?.title || product?.sku || product?.id || '';
+    const productOriginLabel = (product) => {
+      if (!product) return "Katalog effective";
+      if (!product.ownerUserId) return "Alfares katalog";
+      return product.resaleEnabled ? "Komunitni resale" : "Soukromy produkt";
+    };
+    const productOriginNote = (product) => {
+      if (!product?.ownerUserId) return "vychozi zdroj podle nastaveni katalogu";
+      return product.resaleEnabled ? "resaleEnabled=true" : "viditelne pouze vlastnikovi";
+    };
     const productMedia = (product) => asArray(product, ['media']).filter((item) => String(item?.type || 'image').toLowerCase() === 'image' && item?.url).sort((a, b) => Number(Boolean(b.isPrimary)) - Number(Boolean(a.isPrimary)) || Number(a.position || 0) - Number(b.position || 0));
     const normalizeMedia = (items) => asArray({ items }, ['items']).filter((item) => item?.url).slice(0, 20).map((item, index) => ({ id: item.id || item.url, url: item.url, thumbnailUrl: item.thumbnailUrl || item.url, altText: item.altText || item.title || '', title: item.title || item.altText || '', position: Number(item.position ?? index) }));
     const previewContent = () => contentPreview?.content || {};
@@ -2939,7 +2976,7 @@ export const appScript = `
     let catalogSearchRequestId = 0;
 
     async function loadProducts(search) {
-      const query = new URLSearchParams({ limit: '20', activeOnly: 'true' });
+      const query = new URLSearchParams({ limit: '20', activeOnly: 'true', catalogScope: 'effective' });
       if (catalogProductId && !search) query.set('productId', catalogProductId);
       else if (search) query.set('search', search);
       const catalog = await request('/ui/catalog/products?' + query.toString()).catch((error) => ({ error: error.message }));
@@ -3037,7 +3074,7 @@ export const appScript = `
       const media = normalizeMedia(prepared?.draft?.media?.length ? prepared.draft.media : productMedia(selected));
       const mediaPicker = media.length ? '<div class="wide"><label>Fotky pro Bazoš</label><div class="media-picker">' + media.map((item, index) => '<div class="media-choice"><label><input data-media-choice type="checkbox" value="' + escapeHtml(item.url) + '"' + (prepared?.draft?.media?.length || index < 5 ? ' checked' : '') + '><img src="' + escapeHtml(item.thumbnailUrl || item.url) + '" alt="' + escapeHtml(item.altText || item.title || 'Foto') + '"><span>' + cell(item.title || item.altText || ('Foto ' + (index + 1))) + '</span></label></div>').join('') + '</div></div>' : '<p class="form-message wide">Katalog nevrátil žádné produktové fotky pro tento produkt.</p>';
       content.innerHTML = '<div class="catalog-flow"><div class="data-panel flow-column"><h2>Katalog</h2><div class="search-row"><input class="input" id="catalog-search" value="' + escapeHtml(searchValue || '') + '" placeholder="Hledat produkt podle názvu, SKU nebo značky"><button class="button button-secondary" id="catalog-search-button" type="button">Hledat</button></div><div class="product-list">' +
-        products.map((product, index) => '<button class="product-option' + (product === selected ? ' active' : '') + '" type="button" data-product-index="' + index + '"><span class="product-thumb"></span><span><strong>' + cell(product === selected ? previewTitle(product) : productTitle(product)) + '</strong><small class="card-note">' + cell(product.sku || product.id) + '</small>' + (product === selected && contentPreview ? '<small class="card-note">Kanonický obsah: ' + cell(previewLabel()) + '</small>' : '') + '</span></button>').join('') +
+        products.map((product, index) => '<button class="product-option' + (product === selected ? ' active' : '') + '" type="button" data-product-index="' + index + '"><span class="product-thumb"></span><span><strong>' + cell(product === selected ? previewTitle(product) : productTitle(product)) + '</strong><small class="card-note">' + cell(product.sku || product.id) + '</small><small class="card-note">' + cell(productOriginLabel(product)) + ' - ' + cell(productOriginNote(product)) + '</small>' + (product === selected && contentPreview ? '<small class="card-note">Kanonický obsah: ' + cell(previewLabel()) + '</small>' : '') + '</span></button>').join('') +
         '</div></div><div class="flow-column"><form class="form-panel panel-stack" id="catalog-draft-form"><div><h2>Publikovat z katalogu</h2><p class="card-note">Produkt se nejdříve převede do Bazoš konceptu. Teprve po náhledu a schválení se odešle do hlídané publikační fronty.</p>' + renderContentPreviewSource() + '</div><div class="form-grid"><label>Účet / telefon<select name="identityId" required>' + options + '</select></label><label>Cena v Kč<input name="price" type="number" min="0" step="1" required></label><label>Volba ceny<select name="priceOption">' + priceOptionOptions('fixed_price') + '</select></label><label>Rubrika<select name="rubric" data-bazos-rubric required>' + rubricOptions('auto') + '</select></label><label>Kategorie Bazos.cz<select name="category" data-bazos-category required>' + categoryOptions('auto', '') + '</select></label><div class="category-suggestions wide" data-category-suggestions></div><label class="wide">Název<input name="title" maxlength="500" required></label><label class="wide">Popis<textarea name="description" maxlength="' + BAZOS_DESCRIPTION_MAX_LENGTH + '"></textarea></label>' + mediaPicker + '<label>Lokalita<input name="location" maxlength="200"></label></div><p class="form-message" data-form-message></p><button class="button button-primary" type="submit">Sformovat inzerát</button></form>' + renderPreview() + '</div></div>';
       fillForm(selected);
       const searchInput = document.getElementById('catalog-search');
@@ -3208,6 +3245,7 @@ export const appScript = `
     try {
       const me = await request('/ui/auth/me?mode=' + encodeURIComponent(mode));
       showWorkspace(me.user, me.access);
+      showCatalogProvisionWarning();
       syncActiveTabs();
       if (mode === 'admin') await renderAdmin();
       else await renderClient();
