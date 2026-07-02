@@ -5,7 +5,8 @@
   "private": true,
   "scripts": {
     "start:dev": "concurrently -n \"API-GW,BAZOS\" -c \"blue,yellow\" \"cd services/api-gateway && npm run start:dev\" \"cd services/bazos-service && npm run start:dev\"",
-    "test": "npm --prefix shared test"
+    "test": "npm --prefix shared test",
+    "reconcile:availability": "ts-node --skip-ignore --compiler-options '{\"experimentalDecorators\":true,\"emitDecoratorMetadata\":true,\"types\":[\"node\"]}' scripts/reconcile_bazos_availability.ts"
   },
   "dependencies": {
     "@nestjs/axios": "^3.0.1",
@@ -47,4 +48,3 @@
     "typescript": "^5.3.3"
   }
 }
-

@@ -14,6 +14,7 @@ import { BazosCatalogSellActionService } from './catalog/bazos-catalog-sell-acti
 import { BazosCatalogSellActionController } from './catalog/bazos-catalog-sell-action.controller';
 import { BazosMonitoringService } from './monitoring/bazos-monitoring.service';
 import { BazosMonitoringController } from './monitoring/bazos-monitoring.controller';
+import { BazosAvailabilityReconciliationService } from './reconciliation/bazos-availability-reconciliation.service';
 import { ClientsModule } from '../clients/clients.module';
 
 @Module({
@@ -26,6 +27,7 @@ import { ClientsModule } from '../clients/clients.module';
     BazosPublisherQueueService,
     BazosCatalogSellActionService,
     BazosMonitoringService,
+    BazosAvailabilityReconciliationService,
   ],
   controllers: [
     BazosIdentityController,
@@ -42,6 +44,7 @@ import { ClientsModule } from '../clients/clients.module';
     BazosPublisherQueueService,
     BazosCatalogSellActionService,
     BazosMonitoringService,
+    BazosAvailabilityReconciliationService,
   ],
 })
 export class BazosModule {}

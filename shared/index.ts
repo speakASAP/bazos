@@ -29,4 +29,4 @@ export * from './bazos/policy/publish-policy.types';
 export * from './bazos/ad/bazos-ad.service';
 export * from './bazos/ad/bazos-ad.dto';
 export * from './bazos/ad/bazos-ad.controller';
-
+export * from './bazos/reconciliation/bazos-availability-reconciliation.service';
