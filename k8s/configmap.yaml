@@ -29,6 +29,8 @@ data:
   WAREHOUSE_SERVICE_URL: "http://warehouse-microservice:3201"
   ORDER_SERVICE_URL: "http://orders-microservice:3203"
   NOTIFICATION_SERVICE_URL: "http://notifications-microservice:3368"
+  RABBITMQ_URL: "amqp://guest:guest@statex_rabbitmq:5672"
+  CATALOG_EVENTS_EXCHANGE: "catalog.events"
   API_GATEWAY_PORT: "3901"
   GATEWAY_PROXY_PORT: "3904"
   HTTP_TIMEOUT: "30000"
