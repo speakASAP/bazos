@@ -1477,6 +1477,9 @@ export const appScript = `
   let currentUser = null;
   let publishWorkerBusy = false;
   let publishWorkerTimer = null;
+  let orderRefreshTimer = null;
+  let orderRefreshBusy = false;
+  let orderRefreshQueued = false;
   let accountBulkOpen = false;
   let editingIdentityId = null;
   let pendingSettingsGuide = false;
@@ -1484,6 +1487,7 @@ export const appScript = `
   const BAZOS_TITLE_MAX_LENGTH = 500;
   const BAZOS_DESCRIPTION_MAX_LENGTH = 5000;
   const BAZOS_MEDIA_LIMIT = 20;
+  const ORDER_REFRESH_INTERVAL_MS = 30000;
   const BAZOS_RUBRICS = [{"slug":"auto","label":"Auto","categories":[{"name":"Alfa Romeo"},{"name":"Audi"},{"name":"BMW"},{"name":"Citroën"},{"name":"Dacia"},{"name":"Fiat"},{"name":"Ford"},{"name":"Honda"},{"name":"Hyundai"},{"name":"Chevrolet"},{"name":"Kia"},{"name":"Mazda"},{"name":"Mercedes-Benz"},{"name":"Mitsubishi"},{"name":"Nissan"},{"name":"Opel"},{"name":"Peugeot"},{"name":"Renault"},{"name":"Seat"},{"name":"Suzuki"},{"name":"Škoda"},{"name":"Toyota"},{"name":"Volkswagen"},{"name":"Volvo"},{"name":"Ostatní značky"},{"name":"Autorádia"},{"name":"GPS navigace"},{"name":"Havarovaná auta"},{"name":"Náhradní díly"},{"name":"Pneumatiky, kola"},{"name":"Příslušenství"},{"name":"Tuning"},{"name":"Veteráni"},{"name":"Autobusy"},{"name":"Dodávky"},{"name":"Mikrobusy"},{"name":"Karavany, obytná auta"},{"name":"Nákladní auta"},{"name":"Pick-up"},{"name":"Vozíky, přívěsy"},{"name":"Stroje"},{"name":"Ostatní"},{"name":"Havarovaná"},{"name":"Náhradní díly"},{"name":"Motorky, Skútry"}]},{"slug":"deti","label":"Děti","categories":[{"name":"Autosedačky"},{"name":"Baby monitory, chůvičky"},{"name":"Dětská literatura"},{"name":"Hračky"},{"name":"Hlídání dětí"},{"name":"Chodítka a hopsadla"},{"name":"Kočárky"},{"name":"Kojenecké potřeby"},{"name":"Kola"},{"name":"Lego"},{"name":"Nábytek pro děti"},{"name":"Nosítka"},{"name":"Odrážedla"},{"name":"Sedačky na kolo"},{"name":"Sportovní potřeby"},{"name":"Školní potřeby"},{"name":"Ostatní"},{"name":"Body, dupačky a overaly"},{"name":"Bundy a kabátky"},{"name":"Čepice a kloboučky"},{"name":"Kalhoty, kraťasy a tepláky"},{"name":"Kombinézy"},{"name":"Komplety"},{"name":"Mikiny a svetry"},{"name":"Obuv"},{"name":"Plavky"},{"name":"Ponožky a punčocháče"},{"name":"Pyžámka a župánky"},{"name":"Rukavice a šály"},{"name":"Spodní prádlo"},{"name":"Sukýnky a šatičky"},{"name":"Těhotenské oblečení"},{"name":"Trička a košile"},{"name":"Ostatní oblečení"}]},{"slug":"dum","label":"Dům a zahrada","categories":[{"name":"Bazény"},{"name":"Čerpadla"},{"name":"Dveře, vrata"},{"name":"Klimatizace"},{"name":"Kotle, Kamna, Bojlery"},{"name":"Malotraktory, Kultivátory"},{"name":"Míchačky"},{"name":"Nářadí"},{"name":"Okna"},{"name":"Pily"},{"name":"Radiátory"},{"name":"Rostliny"},{"name":"Sekačky"},{"name":"Sněžná technika"},{"name":"Stavební materiál"},{"name":"Vybavení dílen"},{"name":"Vysavače/Foukače"},{"name":"Zahradní grily"},{"name":"Zahradní nábytek"},{"name":"Zahradní technika"},{"name":"Ostatní"}]},{"slug":"elektro","label":"Elektro","categories":[{"name":"Digestoře"},{"name":"Ledničky"},{"name":"Mikrovlnné trouby"},{"name":"Mrazáky"},{"name":"Myčky"},{"name":"Pračky"},{"name":"Sporáky"},{"name":"Sušičky"},{"name":"Ostatní - bílá"},{"name":"Autorádia"},{"name":"Domácí kina"},{"name":"Fotoaparáty"},{"name":"GPS navigace"},{"name":"Hifi systémy, Rádia"},{"name":"Hudební nástroje"},{"name":"Projektory"},{"name":"Repro soustavy"},{"name":"Sluchátka"},{"name":"Televizory"},{"name":"Video, DVD přehrávače"},{"name":"Videokamery"},{"name":"Zesilovače"},{"name":"Ostatní audio video"},{"name":"Epilátory, Depilátory"},{"name":"Fény, Kulmy"},{"name":"Holící strojky"},{"name":"Kávovary"},{"name":"Nabíječky baterií"},{"name":"Ruční šlehače, Mixéry"},{"name":"Svítidla, Lampy"},{"name":"Šicí stroje"},{"name":"Vysavače"},{"name":"Vysílačky"},{"name":"Zvlhčovače vzduchu"},{"name":"Žehličky"},{"name":"Ostatní drobné"}]},{"slug":"foto","label":"Foto","categories":[{"name":"Analogové fotoaparáty"},{"name":"Digitální fotoaparáty"},{"name":"Drony"},{"name":"Videokamery"},{"name":"Zrcadlovky"},{"name":"Baterie"},{"name":"Blesky a osvětlení"},{"name":"Brašny a pouzdra"},{"name":"Datové kabely"},{"name":"Filtry"},{"name":"Nabíječky baterií"},{"name":"Objektivy"},{"name":"Paměťové karty"},{"name":"Stativy"},{"name":"Ostatní"}]},{"slug":"hudba","label":"Hudba","categories":[{"name":"Bicí nástroje"},{"name":"Dechové nástroje"},{"name":"Klávesové nástroje"},{"name":"Smyčcové nástroje"},{"name":"Strunné nástroje"},{"name":"Ostatní nástroje"},{"name":"DVD, CD, MC, LP"},{"name":"Hudebníci a skupiny"},{"name":"Koncerty"},{"name":"Noty, texty"},{"name":"Světelná technika"},{"name":"Vstupenky"},{"name":"Výuka hudby"},{"name":"Zkušebny"},{"name":"Zvuková technika"},{"name":"Ostatní"}]},{"slug":"knihy","label":"Knihy","categories":[{"name":"Beletrie"},{"name":"Detektivky, thrillery"},{"name":"Historické romány"},{"name":"Humor"},{"name":"Knihy pro ženy"},{"name":"Komiksy"},{"name":"Poezie"},{"name":"Sci-fi, Fantasy"},{"name":"Životopisy"},{"name":"Pro nejmenší"},{"name":"Pro děti"},{"name":"Pro mládež"},{"name":"Cestování, mapy"},{"name":"Dítě, rodina a vztahy"},{"name":"Encyklopedie"},{"name":"Esoterika"},{"name":"Hobby, odborné knihy"},{"name":"Kuchařky"},{"name":"Počítačová literatura"},{"name":"Rozvoj osobnosti"},{"name":"Učebnice, skripta - ZŠ"},{"name":"Učebnice, skripta - SŠ"},{"name":"Učebnice, skripta - VŠ"},{"name":"Učebnice, skripta - Jazykové"},{"name":"Zdravý životní styl"},{"name":"Cizojazyčná literatura"},{"name":"Časopisy"},{"name":"Ostatní"}]},{"slug":"mobil","label":"Mobily","categories":[{"name":"Apple"},{"name":"Google"},{"name":"Huawei, Honor"},{"name":"Motorola, Lenovo"},{"name":"Nokia, Microsoft"},{"name":"Realme"},{"name":"Samsung"},{"name":"Sony"},{"name":"Xiaomi"},{"name":"Ostatní značky"},{"name":"Baterie"},{"name":"Bezdrátové telefony"},{"name":"Datové kabely"},{"name":"Faxy"},{"name":"GPS navigace"},{"name":"Headsety"},{"name":"HF Sady do auta"},{"name":"Chytré hodinky"},{"name":"Kryty"},{"name":"Nabíječky"},{"name":"Paměťové karty"},{"name":"Stolní telefony"},{"name":"Ostatní"}]},{"slug":"motorky","label":"Motorky","categories":[{"name":"Cestovní motocykly"},{"name":"Čtyřkolky"},{"name":"Chopper"},{"name":"Enduro"},{"name":"Minibike"},{"name":"Mopedy"},{"name":"Silniční motocykly"},{"name":"Skútry"},{"name":"Skútry vodní"},{"name":"Skútry sněžné"},{"name":"Tříkolky"},{"name":"Veteráni"},{"name":"Náhradní díly"},{"name":"Oblečení, obuv, helmy"},{"name":"Ostatní"}]},{"slug":"nabytek","label":"Nábytek","categories":[{"name":"Dětský nábytek"},{"name":"Dveře, vrata"},{"name":"Jídelní kouty"},{"name":"Knihovny"},{"name":"Koberce a podlah. krytina"},{"name":"Koupelny"},{"name":"Křesla a gauče"},{"name":"Kuchyně"},{"name":"Lampy, osvětlení"},{"name":"Ložnice"},{"name":"Matrace"},{"name":"Obývací stěny"},{"name":"Postele"},{"name":"Sedací soupravy"},{"name":"Skříně"},{"name":"Stoly"},{"name":"Zahradní nábytek"},{"name":"Židle"},{"name":"Doplňky"},{"name":"Ostatní nábytek"}]},{"slug":"obleceni","label":"Oblečení","categories":[{"name":"Bundy a Kabáty"},{"name":"Čepice a Šátky"},{"name":"Džíny"},{"name":"Halenky"},{"name":"Kalhoty"},{"name":"Košile"},{"name":"Kožené oděvy"},{"name":"Mikiny"},{"name":"Obleky a Saka"},{"name":"Plavky"},{"name":"Rukavice a Šály"},{"name":"Spodní prádlo"},{"name":"Sportovní oblečení"},{"name":"Sukně"},{"name":"Svatební šaty"},{"name":"Svetry"},{"name":"Šaty, Kostýmky"},{"name":"Šortky"},{"name":"Těhotenské oblečení"},{"name":"Termo prádlo"},{"name":"Trička, Tílka"},{"name":"Batohy, Kufry"},{"name":"Boty"},{"name":"Doplňky"},{"name":"Hodinky"},{"name":"Kabelky"},{"name":"Šperky"},{"name":"Ostatní"}]},{"slug":"pc","label":"PC","categories":[{"name":"DVD, Blu-ray mechaniky"},{"name":"Fotoaparáty"},{"name":"GPS navigace"},{"name":"Grafické karty"},{"name":"Hard disky, SSD"},{"name":"Herní konzole"},{"name":"Herní zařízení"},{"name":"Hry"},{"name":"Chladiče"},{"name":"Klávesnice"},{"name":"Kopírovací stroje"},{"name":"LCD monitory"},{"name":"Mobilní telefony"},{"name":"Modemy"},{"name":"Myši"},{"name":"Notebooky"},{"name":"Paměti"},{"name":"PC, Počítače"},{"name":"Procesory"},{"name":"Síťové prvky"},{"name":"Scanery"},{"name":"Skříně, zdroje"},{"name":"Software"},{"name":"Spotřební materiál"},{"name":"Tablety, E-čtečky"},{"name":"Tiskárny"},{"name":"Wireless, WiFi"},{"name":"Základní desky"},{"name":"Záložní zdroje"},{"name":"Zvukové karty"},{"name":"Ostatní"}]},{"slug":"prace","label":"Práce","categories":[{"name":"Administrativa"},{"name":"Chemie a potravinářství"},{"name":"Doprava a logistika"},{"name":"Finance a ekonomika"},{"name":"IT a telekomunikace"},{"name":"Marketing a reklama"},{"name":"Management"},{"name":"Obchod a prodej"},{"name":"Obrana a bezpečnost"},{"name":"Pohostinství a ubytování"},{"name":"Práce v domácnosti"},{"name":"Právo, legislativa"},{"name":"Průmysl a výroba"},{"name":"Řemeslné práce"},{"name":"Servis a služby"},{"name":"Stavebnictví"},{"name":"Technika a energetika"},{"name":"Tisk a polygrafie"},{"name":"Výzkum a vývoj"},{"name":"Vzdělávání a personalistika"},{"name":"Zdravotnictví"},{"name":"Zemědělství"},{"name":"Brigády"},{"name":"Ostatní"}]},{"slug":"reality","label":"Reality","categories":[{"name":"Prodej"},{"name":"Byty"},{"name":"Domy"},{"name":"Nové projekty"},{"name":"Garáže"},{"name":"Hotely, penziony, restaurace"},{"name":"Chalupy, Chaty"},{"name":"Kanceláře"},{"name":"Obchodní prostory"},{"name":"Pozemky"},{"name":"Sklady"},{"name":"Zahrady"},{"name":"Ostatní"},{"name":"Pronájem"},{"name":"Byty"},{"name":"Domy"},{"name":"Nové projekty"},{"name":"Podnájem, spolubydlící"},{"name":"Garáže"},{"name":"Hotely, penziony, restaurace"},{"name":"Ubytování"},{"name":"Kanceláře"},{"name":"Obchodní prostory"},{"name":"Pozemky"},{"name":"Sklady"},{"name":"Zahrady"},{"name":"Ostatní"}]},{"slug":"sluzby","label":"Služby","categories":[{"name":"Auto Moto"},{"name":"Cestování"},{"name":"Domácí práce"},{"name":"Esoterika"},{"name":"Hlídání dětí"},{"name":"IT, webdesign"},{"name":"Koně - služby"},{"name":"Kurzy a školení"},{"name":"Opravy, servis"},{"name":"Pořádání akcí"},{"name":"Právo a bezpečnost"},{"name":"Překladatelství"},{"name":"Přeprava a Stěhování"},{"name":"Půjčovny"},{"name":"Realitní služby"},{"name":"Reklama na auto"},{"name":"Reklamní plochy ostatní"},{"name":"Řemeslné a stavební práce"},{"name":"Služby pro zvířata"},{"name":"Tvůrčí služby"},{"name":"Ubytování"},{"name":"Účetnictví, poradenství"},{"name":"Úklid"},{"name":"Výroba"},{"name":"Výuka, doučování"},{"name":"Výuka hudby"},{"name":"Zdraví a krása"},{"name":"Zprostředkovatelské služby"},{"name":"Ostatní"}]},{"slug":"sport","label":"Sport","categories":[{"name":"Fitness, jogging"},{"name":"Golf"},{"name":"Fotbal"},{"name":"In-lines, Skateboarding"},{"name":"Kempink"},{"name":"Letectví"},{"name":"Míčové hry"},{"name":"Myslivost, lov"},{"name":"Paintball"},{"name":"Rybaření"},{"name":"Společenské hry"},{"name":"Tenis, squash, badminton"},{"name":"Turistika, horolezectví"},{"name":"Vodní sporty, potápění"},{"name":"Vše ostatní"},{"name":"Dětská kola"},{"name":"Koloběžky"},{"name":"Horská kola"},{"name":"Elektrokola"},{"name":"Silniční kola"},{"name":"Součástky a díly"},{"name":"Ostatní cyklistika"},{"name":"Běžkování"},{"name":"Lyžování"},{"name":"Skialpy"},{"name":"Snowboarding"},{"name":"Hokej, bruslení"},{"name":"Ostatní zimní"}]},{"slug":"stroje","label":"Stroje","categories":[{"name":"Čerpadla"},{"name":"Čistící stroje"},{"name":"Dřevoobráběcí stroje"},{"name":"Generátory"},{"name":"Historické stroje"},{"name":"Komunální technika"},{"name":"Kovoobráběcí stroje"},{"name":"Lesní technika"},{"name":"Motory"},{"name":"Potravinářské stroje"},{"name":"Skladová technika"},{"name":"Stavební stroje"},{"name":"Textilní stroje"},{"name":"Tiskařské stroje"},{"name":"Vybavení provozoven"},{"name":"Výrobní linky"},{"name":"Zemědělská technika"},{"name":"Náhradní díly"},{"name":"Ostatní"}]},{"slug":"vstupenky","label":"Vstupenky","categories":[{"name":"Dálniční známky"},{"name":"Dárkové poukazy"},{"name":"Jízdenky"},{"name":"Letenky"},{"name":"Permanentky"},{"name":"Divadlo"},{"name":"Festivaly"},{"name":"Hudba, Koncerty"},{"name":"Pro děti"},{"name":"Společenské akce"},{"name":"Sport"},{"name":"Výstavy"},{"name":"Ostatní"}]},{"slug":"zvirata","label":"Zvířata","categories":[{"name":"Akvarijní ryby"},{"name":"Drobní savci"},{"name":"Kočky"},{"name":"Koně"},{"name":"Koně - potřeby"},{"name":"Koně - služby"},{"name":"Psi"},{"name":"Ptactvo"},{"name":"Terarijní zvířata"},{"name":"Ostatní domácí"},{"name":"Krytí"},{"name":"Ztraceni a nalezeni"},{"name":"Chovatelské potřeby"},{"name":"Služby pro zvířata"},{"name":"Drůbež"},{"name":"Králíci"},{"name":"Ovce a kozy"},{"name":"Prasata"},{"name":"Skot"},{"name":"Ostatní hospodářská"}]},{"slug":"ostatni","label":"Ostatní","categories":[{"name":"Mince, bankovky"},{"name":"Modelářství"},{"name":"Potraviny"},{"name":"Sběratelství"},{"name":"Sklo, keramika"},{"name":"Starožitnosti"},{"name":"Šperky, hodinky"},{"name":"Umělecké předměty"},{"name":"Zdraví a krása"},{"name":"Známky, pohlednice"},{"name":"Ostatní"}]}];
   const BAZOS_PRICE_OPTIONS = [
     { value: 'fixed_price', label: 'Zadat cenu' },
@@ -2250,8 +2254,8 @@ export const appScript = `
     openConnectionWizard(true);
   }
 
-  async function renderAdmin() {
-    content.innerHTML = '<div class="data-panel empty-state">Načítají se administrátorská data...</div>';
+  async function renderAdmin(options) {
+    if (!options?.silent) content.innerHTML = '<div class="data-panel empty-state">Načítají se administrátorská data...</div>';
     const summary = await request('/api/bazos/monitoring/summary').catch((error) => ({ error: error.message }));
     const blocked = await request('/api/bazos/monitoring/blocked-attempts?limit=25').catch(() => []);
     const ordersResult = await request('/ui/orders?scope=admin&limit=25').catch((error) => ({ error: error.message }));
@@ -3442,7 +3446,7 @@ export const appScript = `
   }
 
   async function renderClient(options) {
-    content.innerHTML = '<div class="data-panel empty-state">Načítají se data Bazos.cz...</div>';
+    if (!options?.silent) content.innerHTML = '<div class="data-panel empty-state">Načítají se data Bazos.cz...</div>';
     const data = await loadClientData(options);
     renderConnectionBanner(data);
     maybeAutoOpenConnectionWizard(data);
@@ -3529,6 +3533,42 @@ export const appScript = `
     }, 15000);
   }
 
+  function hasVisibleOrderData() {
+    if (document.hidden || root.dataset.authPending !== 'false' || !token()) return false;
+    if (workspace.classList.contains('hidden')) return false;
+    if (mode === 'admin') return activeView === 'overview';
+    return activeView === 'overview' || activeView === 'orders';
+  }
+
+  async function refreshVisibleOrderData() {
+    if (!hasVisibleOrderData()) return;
+    if (orderRefreshBusy) {
+      orderRefreshQueued = true;
+      return;
+    }
+    orderRefreshBusy = true;
+    try {
+      if (mode === 'admin') await renderAdmin({ silent: true });
+      else await renderClient({ silent: true });
+    } catch {
+      // The existing render paths surface request errors inside the order UI.
+    } finally {
+      orderRefreshBusy = false;
+      if (orderRefreshQueued) {
+        orderRefreshQueued = false;
+        refreshVisibleOrderData();
+      }
+    }
+  }
+
+  function startOrderRefreshTimer() {
+    if (orderRefreshTimer) return;
+    orderRefreshTimer = window.setInterval(refreshVisibleOrderData, ORDER_REFRESH_INTERVAL_MS);
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) refreshVisibleOrderData();
+    });
+  }
+
   const requestedAuthAction = new URLSearchParams(window.location.search).get('auth');
   if (mode === 'client' && !token()) {
     const action = requestedAuthAction === 'register' ? 'register' : 'login';
@@ -3538,6 +3578,7 @@ export const appScript = `
   }
 
   startPublishWorkerTimer();
+  startOrderRefreshTimer();
 
   refresh.addEventListener('click', () => {
     if (mode === 'client') return renderClient({ refreshExternal: true });
