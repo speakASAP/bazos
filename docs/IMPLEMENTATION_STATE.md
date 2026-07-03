@@ -5,7 +5,7 @@ id: BAZOS-IMPLEMENTATION-STATE
 status: approved
 owner: project owner
 created: 2026-06-12
-last_updated: 2026-07-02
+last_updated: 2026-07-03
 completeness_level: complete
 ```
 
@@ -109,6 +109,8 @@ Blockers: none.
 Commit or no-commit reason: merge commit to be created and pushed to origin/main.
 Next command: Select the next owner-approved goal; no unstarted implementation goal is currently listed in implementation-goals/README.md.
 ```
+
+2026-07-03: Goal 24 Bazos order-affinity replay producer implemented as protected fail-closed source on branch `codex/goal24-order-affinity-replay-producer`. The endpoint returns contract `marketplace.order_affinity_candidate.v1`, channel `bazos`, zero events, and explicit blockers `[MISSING: Bazos persisted order item replay source]` plus `[MISSING: Bazos order item ingestion contract]`; no Bazos publishing/compliance behavior changed. Validation: focused service spec pass, service build pass, `git diff --check` pass. Report: reports/validation/2026-07-03-goal24-bazos-order-affinity-replay-producer.md.
 
 ## Required Session Report
 

@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService, LoggerService, OrderClientService } from '@bazos/shared';
 
+export const BAZOS_ORDER_AFFINITY_REPLAY_CONTRACT = 'marketplace.order_affinity_candidate.v1';
+const BAZOS_ORDER_AFFINITY_REPLAY_SOURCE_MISSING = '[MISSING: Bazos persisted order item replay source]';
 const BAZOS_ORDER_ITEM_CONTRACT_MISSING = '[MISSING: Bazos order item ingestion contract]';
 const BAZOS_ORDER_ITEM_MAPPING_UNAVAILABLE = 'BAZOS_ORDER_ITEM_MAPPING_UNAVAILABLE';
 const BAZOS_ORDER_WAREHOUSE_ID_MISSING = '[MISSING: Warehouse-owned warehouseId for Bazos order item]';
@@ -145,6 +147,32 @@ export class OrdersService {
     });
     if (!order || !this.shouldIncludeCentralStatus(query)) return order;
     return this.attachCentralReadModel(order);
+  }
+
+  async getOrderAffinityReplayCandidates(query: any = {}) {
+    const limit = this.parseLimit(query.limit);
+    const from = this.isoOrNull(query.from);
+    const to = this.isoOrNull(query.to);
+    return {
+      sourceOwner: 'bazos-service',
+      consumerOwner: 'marketing-microservice',
+      contract: BAZOS_ORDER_AFFINITY_REPLAY_CONTRACT,
+      channel: 'bazos',
+      filters: {
+        from,
+        to,
+        limit,
+        cursor: query.cursor || null,
+        dryRun: query.dryRun === true || query.dryRun === 'true',
+      },
+      cursorBefore: query.cursor || null,
+      cursorAfter: null,
+      count: 0,
+      events: [],
+      skippedRecords: 0,
+      failClosed: true,
+      blockers: [BAZOS_ORDER_AFFINITY_REPLAY_SOURCE_MISSING, BAZOS_ORDER_ITEM_CONTRACT_MISSING],
+    };
   }
 
   async create(data: any) {
@@ -322,6 +350,13 @@ export class OrdersService {
       || this.parseOptionalBoolean(query.central)
       || this.parseOptionalBoolean(query.withCentral)
       || false;
+  }
+
+  private isoOrNull(value: unknown): string | null {
+    const cleaned = this.cleanIdentifier(value);
+    if (!cleaned) return null;
+    const parsed = new Date(cleaned);
+    return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
   }
 
   private parseOptionalBoolean(value: unknown): boolean | undefined {

@@ -1,4 +1,4 @@
-import { OrdersService } from './orders.service';
+import { BAZOS_ORDER_AFFINITY_REPLAY_CONTRACT, OrdersService } from './orders.service';
 
 function makeLogger() {
   return {
@@ -153,6 +153,26 @@ describe('OrdersService', () => {
       status: 'stale',
       lifecycleStage: 'stale',
     }));
+  });
+
+  it('returns a protected replay contract that fails closed when no persisted item source exists', async () => {
+    const prisma = makePrisma();
+    const { service } = makeService(prisma);
+
+    const result = await service.getOrderAffinityReplayCandidates({ limit: 10, dryRun: 'true', from: '2026-07-01T00:00:00.000Z' });
+
+    expect(result).toEqual(expect.objectContaining({
+      sourceOwner: 'bazos-service',
+      consumerOwner: 'marketing-microservice',
+      contract: BAZOS_ORDER_AFFINITY_REPLAY_CONTRACT,
+      channel: 'bazos',
+      count: 0,
+      events: [],
+      failClosed: true,
+    }));
+    expect(result.blockers).toContain('[MISSING: Bazos persisted order item replay source]');
+    expect(result.blockers).toContain('[MISSING: Bazos order item ingestion contract]');
+    expect(JSON.stringify(result)).not.toContain('customer@example.test');
   });
 
   it('does not forward when the order has no item/ad line contract', async () => {
