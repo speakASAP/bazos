@@ -187,6 +187,26 @@ describe('OrdersService', () => {
     expect(response.data.blockers).toContain('[MISSING: Bazos order item ingestion contract]');
   });
 
+  it('accepts the deployed JWT_TOKEN alias for internal replay auth', async () => {
+    const prisma = makePrisma();
+    const { service } = makeService(prisma);
+    const config = {
+      get: jest.fn((key: string) => key === 'JWT_TOKEN' ? 'runtime-replay-token' : undefined),
+    } as any;
+    const controller = new InternalOrderAffinityController(service, config);
+
+    const response = await controller.getReplayCandidates({ limit: '10', dryRun: 'true' }, 'runtime-replay-token', 'marketing-microservice');
+
+    expect(response.success).toBe(true);
+    expect(response.data).toEqual(expect.objectContaining({
+      sourceOwner: 'bazos-service',
+      consumerOwner: 'marketing-microservice',
+      count: 0,
+      events: [],
+      failClosed: true,
+    }));
+  });
+
   it('returns a protected replay contract that fails closed when no persisted item source exists', async () => {
     const prisma = makePrisma();
     const { service } = makeService(prisma);
