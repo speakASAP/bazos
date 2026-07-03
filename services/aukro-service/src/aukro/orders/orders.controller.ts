@@ -51,6 +51,7 @@ export class InternalOrderAffinityController {
     const expected = (
       this.configService.get<string>('BAZOS_INTERNAL_SERVICE_TOKEN')
       || this.configService.get<string>('INTERNAL_SERVICE_TOKEN')
+      || this.configService.get<string>('JWT_TOKEN')
       || ''
     ).trim();
     const supplied = String(token || '').replace(/^Bearer\s+/i, '').trim();
