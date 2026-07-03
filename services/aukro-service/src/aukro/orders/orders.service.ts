@@ -1,12 +1,13 @@
+import { createHash } from 'crypto';
 import { Injectable } from '@nestjs/common';
 import { PrismaService, LoggerService, OrderClientService } from '@bazos/shared';
 
 export const BAZOS_ORDER_AFFINITY_REPLAY_CONTRACT = 'marketplace.order_affinity_candidate.v1';
-const BAZOS_PAID_ORDER_HISTORY_SOURCE_MISSING = '[MISSING: Bazos paid order history source]';
-const BAZOS_ORDER_AFFINITY_REPLAY_SOURCE_MISSING = '[MISSING: Bazos persisted order item replay source]';
-const BAZOS_ORDER_ITEM_CONTRACT_MISSING = '[MISSING: Bazos order item ingestion contract]';
 const BAZOS_ORDER_ITEM_MAPPING_UNAVAILABLE = 'BAZOS_ORDER_ITEM_MAPPING_UNAVAILABLE';
+const BAZOS_ORDER_ITEM_CONTRACT_MISSING = '[MISSING: Bazos order item ingestion contract]';
 const BAZOS_ORDER_WAREHOUSE_ID_MISSING = '[MISSING: Warehouse-owned warehouseId for Bazos order item]';
+const BAZOS_REPLAY_PAYMENT_STATUSES = ['paid', 'completed', 'confirmed'];
+const BAZOS_REPLAY_ORDER_STATUSES = ['paid', 'confirmed', 'processing', 'shipped', 'delivered', 'completed', 'fulfilled'];
 const LIVE_BAZOS_WEBHOOK_SUPPORT = '[UNKNOWN: live Bazos marketplace webhook support]';
 const CENTRAL_ORDER_UNFORWARDED = 'unforwarded';
 const CENTRAL_ORDER_UNKNOWN = 'unknown';
@@ -49,6 +50,15 @@ interface CentralOrderItem {
   quantity: number;
   unitPrice: number;
   totalPrice: number;
+}
+
+interface ReplayItemSnapshot {
+  catalogProductId: string;
+  sku?: string;
+  quantity: number;
+  unitPrice?: number;
+  totalPrice?: number;
+  currency?: string;
 }
 
 type ItemMappingResult =
@@ -154,6 +164,25 @@ export class OrdersService {
     const limit = this.parseLimit(query.limit);
     const from = this.isoOrNull(query.from);
     const to = this.isoOrNull(query.to);
+    const where: any = {
+      paymentStatus: { in: BAZOS_REPLAY_PAYMENT_STATUSES },
+      status: { in: BAZOS_REPLAY_ORDER_STATUSES },
+    };
+    if (from || to) {
+      where.createdAt = {};
+      if (from) where.createdAt.gte = new Date(from);
+      if (to) where.createdAt.lte = new Date(to);
+    }
+
+    const orders = await this.prisma.bazosOrder.findMany({
+      where,
+      orderBy: { createdAt: 'asc' },
+      take: limit,
+    });
+    const events = orders
+      .map((order: any) => this.toOrderAffinityReplayEvent(order))
+      .filter((event: any) => event !== null);
+
     return {
       sourceOwner: 'bazos-service',
       consumerOwner: 'marketing-microservice',
@@ -168,15 +197,11 @@ export class OrdersService {
       },
       cursorBefore: query.cursor || null,
       cursorAfter: null,
-      count: 0,
-      events: [],
-      skippedRecords: 0,
-      failClosed: true,
-      blockers: [
-        BAZOS_PAID_ORDER_HISTORY_SOURCE_MISSING,
-        BAZOS_ORDER_AFFINITY_REPLAY_SOURCE_MISSING,
-        BAZOS_ORDER_ITEM_CONTRACT_MISSING,
-      ],
+      count: events.length,
+      events,
+      skippedRecords: orders.length - events.length,
+      failClosed: false,
+      blockers: [],
     };
   }
 
@@ -198,6 +223,12 @@ export class OrdersService {
         },
       };
     }
+
+    const itemSnapshots = this.buildReplayItemSnapshots(itemMapping.items, order.currency);
+    const replaySourceOrder = await this.prisma.bazosOrder.update({
+      where: { id: order.id },
+      data: { itemSnapshots: itemSnapshots as any },
+    });
 
     try {
       const itemTotal = itemMapping.items.reduce((sum, item) => sum + item.totalPrice, 0);
@@ -225,6 +256,7 @@ export class OrdersService {
         data: {
           orderId: centralOrder.id,
           forwarded: true,
+          itemSnapshots: itemSnapshots as any,
         },
       });
 
@@ -239,7 +271,7 @@ export class OrdersService {
       };
     } catch (error: any) {
       this.logger.error(`Failed to forward order to orders-microservice: ${error.message}`);
-      return order;
+      return replaySourceOrder;
     }
   }
 
@@ -441,7 +473,93 @@ export class OrdersService {
       total: this.resolveOrderTotal(data),
       currency: this.cleanIdentifier(data.currency) || 'CZK',
       status: this.cleanIdentifier(data.status) || 'pending',
+      paymentStatus: this.resolvePaymentStatus(data),
+      paidAt: this.resolvePaidAt(data),
     };
+  }
+
+  private buildReplayItemSnapshots(items: CentralOrderItem[], currency: string): ReplayItemSnapshot[] {
+    return items.map((item) => ({
+      catalogProductId: item.productId,
+      sku: item.sku,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      totalPrice: item.totalPrice,
+      currency,
+    }));
+  }
+
+  private toOrderAffinityReplayEvent(order: any) {
+    const snapshots = this.replaySnapshots(order?.itemSnapshots);
+    const distinctProducts = new Set(snapshots.map((item) => item.catalogProductId));
+    if (distinctProducts.size < 2) return null;
+
+    const safeOrderId = this.safeReplayOrderId(order);
+    return {
+      eventId: `bazos.order-affinity:${safeOrderId}`,
+      eventType: BAZOS_ORDER_AFFINITY_REPLAY_CONTRACT,
+      source: 'bazos-service',
+      occurredAt: this.orderOccurredAt(order),
+      payload: {
+        orderId: `bazos-replay:${safeOrderId}`,
+        channel: 'bazos',
+        currency: this.cleanIdentifier(order?.currency),
+        items: snapshots,
+      },
+    };
+  }
+
+  private replaySnapshots(value: unknown): ReplayItemSnapshot[] {
+    if (!Array.isArray(value)) return [];
+    const snapshots: ReplayItemSnapshot[] = [];
+    for (const raw of value) {
+      const item = this.jsonObject(raw);
+      const catalogProductId = this.cleanIdentifier(item.catalogProductId || item.productId);
+      const quantity = this.toPositiveNumber(item.quantity, 0);
+      if (!catalogProductId || quantity <= 0) continue;
+      const unitPrice = this.toPositiveNumber(item.unitPrice, 0);
+      const totalPrice = this.toPositiveNumber(item.totalPrice, 0);
+      snapshots.push({
+        catalogProductId,
+        sku: this.cleanIdentifier(item.sku),
+        quantity,
+        unitPrice: unitPrice > 0 ? unitPrice : undefined,
+        totalPrice: totalPrice > 0 ? totalPrice : undefined,
+        currency: this.cleanIdentifier(item.currency),
+      });
+    }
+    return snapshots;
+  }
+
+  private safeReplayOrderId(order: any): string {
+    return createHash('sha256')
+      .update(String(order?.id || order?.bazosOrderId || order?.orderId || order?.createdAt || 'bazos-order'))
+      .digest('hex')
+      .slice(0, 32);
+  }
+
+  private orderOccurredAt(order: any): string {
+    const candidate = order?.paidAt || order?.createdAt;
+    const parsed = candidate instanceof Date ? candidate : new Date(candidate);
+    return Number.isNaN(parsed.getTime()) ? new Date(0).toISOString() : parsed.toISOString();
+  }
+
+  private resolvePaymentStatus(data: any): string {
+    const explicit = this.cleanIdentifier(
+      data?.paymentStatus
+        ?? data?.payment?.status
+        ?? data?.payment?.paymentStatus
+        ?? data?.checkoutStatus,
+    );
+    if (explicit) return explicit.toLowerCase();
+    if (data?.paid === true || data?.isPaid === true) return 'paid';
+    return 'unknown';
+  }
+
+  private resolvePaidAt(data: any): Date | undefined {
+    const raw = data?.paidAt ?? data?.payment?.paidAt ?? data?.payment?.completedAt ?? data?.payment?.finishedAt;
+    const iso = this.isoOrNull(raw);
+    return iso ? new Date(iso) : undefined;
   }
 
   private resolveOrderTotal(data: any): number {

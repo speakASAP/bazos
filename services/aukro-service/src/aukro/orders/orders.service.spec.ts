@@ -21,6 +21,9 @@ const order = {
   total: 1000,
   currency: 'CZK',
   status: 'pending',
+  paymentStatus: 'unknown',
+  paidAt: null,
+  itemSnapshots: null,
   forwarded: false,
   createdAt: new Date('2026-06-26T12:00:00.000Z'),
   updatedAt: new Date('2026-06-26T12:00:00.000Z'),
@@ -180,11 +183,9 @@ describe('OrdersService', () => {
       channel: 'bazos',
       count: 0,
       events: [],
-      failClosed: true,
+      failClosed: false,
+      blockers: [],
     }));
-    expect(response.data.blockers).toContain('[MISSING: Bazos paid order history source]');
-    expect(response.data.blockers).toContain('[MISSING: Bazos persisted order item replay source]');
-    expect(response.data.blockers).toContain('[MISSING: Bazos order item ingestion contract]');
   });
 
   it('accepts the deployed JWT_TOKEN alias for internal replay auth', async () => {
@@ -203,16 +204,23 @@ describe('OrdersService', () => {
       consumerOwner: 'marketing-microservice',
       count: 0,
       events: [],
-      failClosed: true,
+      failClosed: false,
+      blockers: [],
     }));
   });
 
-  it('returns a protected replay contract that fails closed when no persisted item source exists', async () => {
+  it('returns the protected replay contract with no blockers when no paid local source rows match', async () => {
     const prisma = makePrisma();
     const { service } = makeService(prisma);
 
     const result = await service.getOrderAffinityReplayCandidates({ limit: 10, dryRun: 'true', from: '2026-07-01T00:00:00.000Z' });
 
+    expect(prisma.bazosOrder.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        paymentStatus: { in: ['paid', 'completed', 'confirmed'] },
+        status: { in: ['paid', 'confirmed', 'processing', 'shipped', 'delivered', 'completed', 'fulfilled'] },
+      }),
+    }));
     expect(result).toEqual(expect.objectContaining({
       sourceOwner: 'bazos-service',
       consumerOwner: 'marketing-microservice',
@@ -220,12 +228,61 @@ describe('OrdersService', () => {
       channel: 'bazos',
       count: 0,
       events: [],
-      failClosed: true,
+      failClosed: false,
+      blockers: [],
     }));
-    expect(result.blockers).toContain('[MISSING: Bazos paid order history source]');
-    expect(result.blockers).toContain('[MISSING: Bazos persisted order item replay source]');
-    expect(result.blockers).toContain('[MISSING: Bazos order item ingestion contract]');
     expect(JSON.stringify(result)).not.toContain('customer@example.test');
+  });
+
+  it('emits bounded order-affinity events from paid multi-product Bazos snapshots only', async () => {
+    const prisma = makePrisma({
+      orders: [
+        {
+          ...order,
+          id: 'paid-order-1',
+          status: 'completed',
+          paymentStatus: 'paid',
+          paidAt: new Date('2026-07-03T08:00:00.000Z'),
+          itemSnapshots: [
+            { catalogProductId: 'product-1', sku: 'SKU-1', quantity: 1, unitPrice: 100, totalPrice: 100, currency: 'CZK' },
+            { catalogProductId: 'product-2', quantity: 2, unitPrice: 50, totalPrice: 100, currency: 'CZK' },
+          ],
+        },
+        {
+          ...order,
+          id: 'single-product-order',
+          status: 'completed',
+          paymentStatus: 'paid',
+          itemSnapshots: [{ catalogProductId: 'product-1', quantity: 1 }],
+        },
+      ],
+    });
+    const { service } = makeService(prisma);
+
+    const result = await service.getOrderAffinityReplayCandidates({ limit: 20, dryRun: 'true' });
+
+    expect(result).toEqual(expect.objectContaining({
+      count: 1,
+      skippedRecords: 1,
+      failClosed: false,
+      blockers: [],
+    }));
+    expect(result.events[0]).toEqual(expect.objectContaining({
+      eventType: BAZOS_ORDER_AFFINITY_REPLAY_CONTRACT,
+      source: 'bazos-service',
+      occurredAt: '2026-07-03T08:00:00.000Z',
+      payload: expect.objectContaining({
+        orderId: expect.stringMatching(/^bazos-replay:[a-f0-9]{32}$/),
+        channel: 'bazos',
+        currency: 'CZK',
+        items: [
+          { catalogProductId: 'product-1', sku: 'SKU-1', quantity: 1, unitPrice: 100, totalPrice: 100, currency: 'CZK' },
+          { catalogProductId: 'product-2', sku: undefined, quantity: 2, unitPrice: 50, totalPrice: 100, currency: 'CZK' },
+        ],
+      }),
+    }));
+    expect(JSON.stringify(result)).not.toContain('customer@example.test');
+    expect(JSON.stringify(result)).not.toContain('bazos-order-1');
   });
 
   it('does not forward when the order has no item/ad line contract', async () => {
@@ -327,7 +384,7 @@ describe('OrdersService', () => {
     }));
     expect(prisma.bazosOrder.update).toHaveBeenCalledWith(expect.objectContaining({
       where: { id: order.id },
-      data: { orderId: 'central-order-1', forwarded: true },
+      data: { orderId: 'central-order-1', forwarded: true, itemSnapshots: expect.any(Array) },
     }));
     expect(result.forwarding).toEqual({ forwarded: true, orderId: 'central-order-1', itemCount: 1 });
   });
@@ -364,6 +421,64 @@ describe('OrdersService', () => {
       total: 750,
     }));
     expect(result.forwarding).toEqual({ forwarded: true, orderId: 'central-order-1', itemCount: 1 });
+  });
+
+  it('persists paid order eligibility and bounded item snapshots at ingestion', async () => {
+    const prisma = makePrisma({ ad: null });
+    const { service } = makeService(prisma);
+
+    await service.create({
+      accountId: 'account-1',
+      bazosOrderId: 'paid-synthetic-1',
+      status: 'completed',
+      paymentStatus: 'paid',
+      paidAt: '2026-07-03T08:00:00.000Z',
+      items: [
+        {
+          catalogProductId: '33333333-3333-4333-8333-333333333333',
+          warehouseId: 'warehouse-1',
+          sku: 'SKU-1',
+          quantity: 1,
+          unitPrice: 250,
+        },
+        {
+          productId: '44444444-4444-4444-8444-444444444444',
+          warehouseId: 'warehouse-1',
+          quantity: 2,
+          unitPrice: 125,
+        },
+      ],
+    }) as any;
+
+    expect(prisma.bazosOrder.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        paymentStatus: 'paid',
+        paidAt: new Date('2026-07-03T08:00:00.000Z'),
+      }),
+    });
+    expect(prisma.bazosOrder.update).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: order.id },
+      data: {
+        itemSnapshots: [
+          {
+            catalogProductId: '33333333-3333-4333-8333-333333333333',
+            sku: 'SKU-1',
+            quantity: 1,
+            unitPrice: 250,
+            totalPrice: 250,
+            currency: 'CZK',
+          },
+          {
+            catalogProductId: '44444444-4444-4444-8444-444444444444',
+            sku: undefined,
+            quantity: 2,
+            unitPrice: 125,
+            totalPrice: 250,
+            currency: 'CZK',
+          },
+        ],
+      },
+    }));
   });
 
   it('ingests synthetic/internal webhook envelopes while keeping live Bazos webhook support unknown', async () => {

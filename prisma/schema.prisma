@@ -80,6 +80,9 @@ model BazosOrder {
   total         Decimal      @db.Decimal(10, 2) @default(0)
   currency      String       @db.VarChar(10) @default("CZK")
   status        String       @db.VarChar(50) @default("pending")
+  paymentStatus String       @db.VarChar(50) @default("unknown")
+  paidAt        DateTime?    @db.Timestamp(6)
+  itemSnapshots Json?
   forwarded     Boolean      @default(false)
   createdAt     DateTime     @default(now()) @db.Timestamp(6)
   updatedAt     DateTime     @updatedAt @db.Timestamp(6)
@@ -88,6 +91,8 @@ model BazosOrder {
   @@index([accountId])
   @@index([bazosOrderId])
   @@index([status])
+  @@index([paymentStatus])
+  @@index([paidAt])
   @@index([forwarded])
   @@map("bazos_orders")
 }

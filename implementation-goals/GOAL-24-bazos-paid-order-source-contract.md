@@ -66,8 +66,12 @@ Bazos replay may emit an event only when all of the following Bazos-owned facts 
 
 ## Current Decision
 
-The current endpoint must remain fail-closed. The runtime auth and HTTP route are complete, but the replay source remains blocked by:
+Owner approval on 2026-07-03 confirmed the Bazos paid order source contract and DB migration window. The implementation now stores a bounded Bazos-local paid order projection:
 
-- `[MISSING: Bazos paid order history source]`
-- `[MISSING: Bazos persisted order item replay source]`
-- `[MISSING: Bazos order item ingestion contract]`
+- `paymentStatus` and `paidAt` on `BazosOrder` for replay eligibility.
+- `itemSnapshots` JSON on `BazosOrder` containing only Catalog product IDs, optional SKU, quantity, optional prices, and currency.
+- Replay output hashes the local order reference and excludes customer contact, address, payment provider, raw marketplace, token, cookie, and verification data.
+
+The runtime route must remain a dry-run/pruning source until live data proves a paid multi-product Bazos order exists and the integration owner approves schedule activation. Remaining activation blocker:
+
+- `[MISSING: live Bazos paid multi-product order replay evidence]`
