@@ -292,6 +292,27 @@ describe('PublishPolicyService', () => {
       expect(result.failures.find((f) => f.gate === POLICY_GATE.CATALOG_QUALITY_BLOCKED)?.message).toContain('missing_description');
     });
 
+    it('blocks Catalog bundle aggregates from one-listing Bazos publication', async () => {
+      const prisma = makePrismaStub({ identity: baseIdentity() });
+      const catalog = makeCatalog({
+        readiness: {
+          contractVersion: 'catalog.bundle.v1',
+          bundleId: 'bundle-1',
+          publishable: true,
+          issues: [],
+        },
+      });
+      const svc = makePolicyService(prisma, makeWarehouse(), catalog);
+
+      const result = await svc.evaluate(input);
+
+      expect(result.allowed).toBe(false);
+      expect(result.failures).toEqual([expect.objectContaining({
+        gate: POLICY_GATE.CATALOG_BUNDLE_PUBLICATION_BLOCKED,
+      })]);
+      expect(result.failures[0].message).toContain('catalog.bundle.v1');
+    });
+
     it('fails closed when Catalog quality readiness is unavailable', async () => {
       const prisma = makePrismaStub({ identity: baseIdentity() });
       const svc = makePolicyService(prisma, makeWarehouse(), makeCatalog({ reject: new Error('catalog down') }));

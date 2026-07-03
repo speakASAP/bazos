@@ -13,6 +13,7 @@ export const POLICY_GATE = {
   LOCAL_DUPLICATE: 'local_duplicate',
   WAREHOUSE_STOCK_UNAVAILABLE: 'warehouse_stock_unavailable',
   CATALOG_QUALITY_BLOCKED: 'catalog_quality_blocked',
+  CATALOG_BUNDLE_PUBLICATION_BLOCKED: 'catalog_bundle_publication_blocked',
   PUBLIC_DUPLICATE_CHECK_MISSING: 'public_duplicate_check_missing',
   PUBLIC_DUPLICATE: 'public_duplicate',
   CATEGORY_MISSING_OR_BLOCKED: 'category_missing_or_blocked',

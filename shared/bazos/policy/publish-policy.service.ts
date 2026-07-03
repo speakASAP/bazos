@@ -20,6 +20,8 @@ import {
 
 type EvidenceSource = 'manual_review' | 'trusted_backend';
 
+const CATALOG_BUNDLE_CONTRACT_VERSION = 'catalog.bundle.v1';
+
 export interface PolicyCheckInput {
   identityId: string;
   bazosCategory: string;
@@ -284,6 +286,14 @@ export class PublishPolicyService {
 
     try {
       const readiness = await this.catalogClient.getProductReadiness(productId);
+      if (this.isCatalogBundleReadiness(readiness)) {
+        failures.push({
+          gate: POLICY_GATE.CATALOG_BUNDLE_PUBLICATION_BLOCKED,
+          message: `Bazos cannot publish Catalog ${CATALOG_BUNDLE_CONTRACT_VERSION} bundles as one external listing without an owner-approved Bazos bundle publication policy`,
+        });
+        return;
+      }
+
       const issues = Array.isArray(readiness?.issues) ? readiness.issues : [];
       const blockingIssues = issues.filter((issue: any) => String(issue?.severity || '').toLowerCase() === 'blocking');
       const publishable = readiness?.publishable !== false;
@@ -304,6 +314,21 @@ export class PublishPolicyService {
         message: `Catalog product quality readiness check failed for product ${productId}: ${errorMessage}`,
       });
     }
+  }
+
+  private isCatalogBundleReadiness(readiness: any): boolean {
+    const markers = [
+      readiness?.contractVersion,
+      readiness?.contract,
+      readiness?.policyId,
+      readiness?.type,
+      readiness?.kind,
+      readiness?.resourceType,
+    ].map((value) => String(value || '').toLowerCase());
+    return markers.includes(CATALOG_BUNDLE_CONTRACT_VERSION)
+      || markers.includes('bundle')
+      || markers.includes('catalog_bundle')
+      || Boolean(readiness?.bundleId);
   }
 
   private async evaluateWarehouseAvailability(productId: string | undefined, failures: PolicyGateFailure[]) {

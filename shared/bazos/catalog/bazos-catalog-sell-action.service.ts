@@ -16,6 +16,9 @@ const REUSABLE_DRAFT_STATUSES = ['draft', 'blocked_policy', 'failed', 'challenge
 const HUMAN_ACTION_ATTEMPT_STATUSES = ['policy_blocked', 'challenge_required', 'failed'];
 const ACTIVE_PUBLISHED_STATUSES = ['published', 'publishing', 'queued'];
 const PRODUCT_QUALITY_POLICY_ID = 'catalog.product_quality.v1';
+const CATALOG_BUNDLE_CONTRACT_VERSION = 'catalog.bundle.v1';
+const BAZOS_BUNDLE_PUBLICATION_POLICY_ID = 'bazos.catalog_bundle_publication.v1';
+const BAZOS_BUNDLE_PUBLICATION_BLOCKER = 'bazos_catalog_bundle_external_listing_blocked';
 const NON_QUALITY_READINESS_BLOCKERS = new Set<string>(['draft_product', 'inactive_product']);
 const MANUAL_CONFIRMATION_GATES = new Set<string>([
   POLICY_GATE.PUBLIC_DUPLICATE_CHECK_MISSING,
@@ -318,6 +321,8 @@ export class BazosCatalogSellActionService {
       }
 
       const issues = readiness.issues.map((issue) => this.describeCatalogQualityIssue(issue));
+      const bundlePublicationIssue = this.catalogBundlePublicationIssue(readiness, productId);
+      if (bundlePublicationIssue) issues.push(bundlePublicationIssue);
       const blockingIssues = issues.filter((issue) => this.isCatalogQualityBlocker(issue));
       const optionalOpportunities = issues.filter((issue) => !this.isCatalogQualityBlocker(issue));
       const blockingMissingFields = Array.from(new Set(blockingIssues.map((issue) => this.catalogQualityFieldKey(issue))));
@@ -378,6 +383,32 @@ export class BazosCatalogSellActionService {
       message: String(issue?.message || issue?.code || 'Catalog product quality issue'),
       source: issue?.source || PRODUCT_QUALITY_POLICY_ID,
     };
+  }
+
+  private catalogBundlePublicationIssue(readiness: any, requestedId: string) {
+    if (!this.isCatalogBundleReadiness(readiness)) return null;
+    return {
+      code: BAZOS_BUNDLE_PUBLICATION_BLOCKER,
+      field: 'catalog_bundle',
+      severity: 'blocking',
+      message: `Bazos cannot publish Catalog ${CATALOG_BUNDLE_CONTRACT_VERSION} bundle ${readiness?.bundleId || readiness?.productId || requestedId} as one external listing without an owner-approved Bazos bundle publication policy.`,
+      source: BAZOS_BUNDLE_PUBLICATION_POLICY_ID,
+    };
+  }
+
+  private isCatalogBundleReadiness(readiness: any) {
+    const markers = [
+      readiness?.contractVersion,
+      readiness?.contract,
+      readiness?.policyId,
+      readiness?.type,
+      readiness?.kind,
+      readiness?.resourceType,
+    ].map((value) => String(value || '').toLowerCase());
+    return markers.includes(CATALOG_BUNDLE_CONTRACT_VERSION)
+      || markers.includes('bundle')
+      || markers.includes('catalog_bundle')
+      || Boolean(readiness?.bundleId);
   }
 
   private isCatalogQualityBlocker(issue: any) {
