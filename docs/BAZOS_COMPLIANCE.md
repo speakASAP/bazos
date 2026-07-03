@@ -69,6 +69,13 @@ Because Bazos can change these rules, the implementation must be conservative. I
 - Duplicate detection should compare title, normalized product identifiers, seller phone/name, location, and image/product metadata where available.
 - If a duplicate is likely, publishing must stop and request human review.
 
+### Catalog Bundle Publication Policy
+
+- Bazos must not publish a Catalog `catalog.bundle.v1` aggregate as one external Bazos listing without an owner-approved Bazos-specific bundle publication contract.
+- When Catalog readiness identifies `catalog.bundle.v1`, `bundle`, `catalog_bundle`, or returns a `bundleId`, Bazos must fail closed before draft creation/update and before publish queueing.
+- The canonical blocker is `bazos_catalog_bundle_external_listing_blocked` under policy `bazos.catalog_bundle_publication.v1`.
+- Component products, order-affinity candidates, storefront bundle copy, checkout metadata, or Catalog bundle presentation fields must not be used to infer a compliant Bazos listing.
+
 ### Content Rules
 
 - Ads must be in Czech or Slovak.

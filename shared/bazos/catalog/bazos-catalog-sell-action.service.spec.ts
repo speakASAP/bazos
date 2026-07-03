@@ -301,6 +301,38 @@ describe('BazosCatalogSellActionService', () => {
     expect(result.nextAction).toBe('resolve_catalog_quality_blockers');
   });
 
+  it('fails closed before draft mutation when Catalog identifies a catalog.bundle.v1 aggregate', async () => {
+    const bundleReadiness = {
+      contractVersion: 'catalog.bundle.v1',
+      bundleId: draft.productId,
+      publishable: true,
+      issues: [],
+    };
+    const prisma = makePrisma({ existingDraft: null });
+    const { service, ads, queue } = makeService(prisma, allowedPolicy, 60, bundleReadiness);
+
+    const result = await service.prepare('user-1', draft.productId, {
+      identityId: identity.id,
+      title: 'Bundle listing',
+      price: 1000,
+      category: 'elektro',
+    });
+
+    expect(ads.createDraftFromCatalog).not.toHaveBeenCalled();
+    expect(prisma.bazosAd.update).not.toHaveBeenCalled();
+    expect(queue.enqueueDraft).not.toHaveBeenCalled();
+    expect(result.catalogQuality.allowed).toBe(false);
+    expect(result.catalogQuality.policyId).toBe('catalog.product_quality.v1');
+    expect(result.catalogQuality.blockingIssues[0]).toEqual(expect.objectContaining({
+      code: 'bazos_catalog_bundle_external_listing_blocked',
+      field: 'catalog_bundle',
+      source: 'bazos.catalog_bundle_publication.v1',
+      severity: 'blocking',
+    }));
+    expect(result.canQueueAfterConfirmation).toBe(false);
+    expect(result.nextAction).toBe('resolve_catalog_quality_blockers');
+  });
+
   it('fails closed when Catalog product quality readiness is unavailable', async () => {
     const prisma = makePrisma({ existingDraft: null });
     const { service, ads } = makeService(prisma, allowedPolicy, 60, new Error('catalog unavailable'));
