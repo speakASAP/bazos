@@ -52,5 +52,5 @@ Replay storage/output contains only hashed order references, channel, currency, 
 
 ## Blockers
 
-- `[MISSING: live Bazos paid multi-product order replay evidence]`
+- `[RESOLVED: live Bazos paid multi-product order replay evidence via budget source dry-run goal24-bazos-budget-paid-source-20260703-001]`
 - `[MISSING: owner approval to activate recurring Bazos affinity publish after live dry-run evidence]`

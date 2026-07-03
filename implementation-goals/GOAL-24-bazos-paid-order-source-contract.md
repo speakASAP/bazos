@@ -74,4 +74,5 @@ Owner approval on 2026-07-03 confirmed the Bazos paid order source contract and 
 
 The runtime route must remain a dry-run/pruning source until live data proves a paid multi-product Bazos order exists and the integration owner approves schedule activation. Remaining activation blocker:
 
-- `[MISSING: live Bazos paid multi-product order replay evidence]`
+- `[RESOLVED: live Bazos paid multi-product order replay evidence via budget source dry-run goal24-bazos-budget-paid-source-20260703-001]`
+- `[MISSING: owner approval to activate recurring Bazos affinity publish after live dry-run evidence]`
