@@ -133,6 +133,33 @@ Conclusion:
 The runtime auth/HTTP 401 blocker is resolved. Bazos is now compatible with Marketing's marketplace replay contract at the protected endpoint level. Recurring Bazos publish activation must remain blocked until Bazos has a real paid order history and persisted order-item replay source.
 
 
+## Final Merged Runtime Deployment And Branch Cleanup
+
+Date: 2026-07-03
+
+Commands and evidence:
+
+- `main` merged `origin/codex/goal24-bazos-runtime-token-repair` with merge commit `9059605`.
+- `git push origin main` pushed `9059605` to `origin/main`.
+- Post-merge validation on `main`: focused orders spec passed 15 tests, ExternalSecret server dry run passed, `git diff --check` passed, and service build passed.
+- `./scripts/deploy.sh` from Bazos `main` at `9059605` passed, built and pushed image `localhost:5000/bazos-service:9059605`, and rolled out successfully.
+- Runtime pod after deploy: `bazos-service-784697b5d6-zjhl8`, ready `true`, restarts `0`, image `localhost:5000/bazos-service:9059605`.
+- Secret key-presence check showed `BAZOS_INTERNAL_SERVICE_TOKEN` and `JWT_TOKEN`; values were not printed.
+- Marketing dry-run from the live Marketing pod returned `status=dry_run_passed`, `inputRecords=0`, `acceptedCreatedEvents=0`, `aggregatePairs=0`, `totalPairEvidence=0`, and `candidates=[]`.
+- No Catalog publish occurred; dry-run ledger recorded zero idempotency keys.
+- Worker branch cleanup completed: `origin/codex/goal24-bazos-runtime-token-repair` deleted, local branch deleted, and isolated worktree removed.
+
+Final resolved blocker:
+
+- `[RESOLVED: Bazos runtime internal replay token env accepted by /internal/bazos/order-affinity/replay-candidates]`
+
+Remaining Bazos producer blockers:
+
+- `[MISSING: Bazos paid order history source]`
+- `[MISSING: Bazos persisted order item replay source]`
+- `[MISSING: Bazos order item ingestion contract]`
+
+
 ## Recommendation
 
 Merge and push the Bazos branch after validation. The source-level HTTP 404 blocker is addressed by the existing endpoint plus controller-level contract coverage. Do not schedule recurring Bazos publishes until a runtime dry-run proves the protected route and token mapping from the Marketing pod.
