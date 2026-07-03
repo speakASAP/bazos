@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService, LoggerService, OrderClientService } from '@bazos/shared';
 
 export const BAZOS_ORDER_AFFINITY_REPLAY_CONTRACT = 'marketplace.order_affinity_candidate.v1';
+const BAZOS_PAID_ORDER_HISTORY_SOURCE_MISSING = '[MISSING: Bazos paid order history source]';
 const BAZOS_ORDER_AFFINITY_REPLAY_SOURCE_MISSING = '[MISSING: Bazos persisted order item replay source]';
 const BAZOS_ORDER_ITEM_CONTRACT_MISSING = '[MISSING: Bazos order item ingestion contract]';
 const BAZOS_ORDER_ITEM_MAPPING_UNAVAILABLE = 'BAZOS_ORDER_ITEM_MAPPING_UNAVAILABLE';
@@ -171,7 +172,11 @@ export class OrdersService {
       events: [],
       skippedRecords: 0,
       failClosed: true,
-      blockers: [BAZOS_ORDER_AFFINITY_REPLAY_SOURCE_MISSING, BAZOS_ORDER_ITEM_CONTRACT_MISSING],
+      blockers: [
+        BAZOS_PAID_ORDER_HISTORY_SOURCE_MISSING,
+        BAZOS_ORDER_AFFINITY_REPLAY_SOURCE_MISSING,
+        BAZOS_ORDER_ITEM_CONTRACT_MISSING,
+      ],
     };
   }
 
