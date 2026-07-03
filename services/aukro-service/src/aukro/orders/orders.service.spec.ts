@@ -1,3 +1,5 @@
+import { UnauthorizedException } from '@nestjs/common';
+import { InternalOrderAffinityController } from './orders.controller';
 import { BAZOS_ORDER_AFFINITY_REPLAY_CONTRACT, OrdersService } from './orders.service';
 
 function makeLogger() {
@@ -153,6 +155,35 @@ describe('OrdersService', () => {
       status: 'stale',
       lifecycleStage: 'stale',
     }));
+  });
+
+  it('requires Marketing service auth on the internal replay controller', async () => {
+    const prisma = makePrisma();
+    const { service } = makeService(prisma);
+    const config = {
+      get: jest.fn((key: string) => key === 'BAZOS_INTERNAL_SERVICE_TOKEN' ? 'bazos-replay-token' : undefined),
+    } as any;
+    const controller = new InternalOrderAffinityController(service, config);
+
+    await expect(controller.getReplayCandidates({ limit: '10' }, 'wrong-token', 'marketing-microservice'))
+      .rejects.toBeInstanceOf(UnauthorizedException);
+    await expect(controller.getReplayCandidates({ limit: '10' }, 'bazos-replay-token', 'other-service'))
+      .rejects.toBeInstanceOf(UnauthorizedException);
+
+    const response = await controller.getReplayCandidates({ limit: '10', dryRun: 'true' }, 'Bearer bazos-replay-token', 'marketing-microservice');
+
+    expect(response.success).toBe(true);
+    expect(response.data).toEqual(expect.objectContaining({
+      sourceOwner: 'bazos-service',
+      consumerOwner: 'marketing-microservice',
+      contract: BAZOS_ORDER_AFFINITY_REPLAY_CONTRACT,
+      channel: 'bazos',
+      count: 0,
+      events: [],
+      failClosed: true,
+    }));
+    expect(response.data.blockers).toContain('[MISSING: Bazos persisted order item replay source]');
+    expect(response.data.blockers).toContain('[MISSING: Bazos order item ingestion contract]');
   });
 
   it('returns a protected replay contract that fails closed when no persisted item source exists', async () => {
