@@ -82,3 +82,20 @@ published=false
 ## Boundary
 
 No customer, address, payment-provider, token, cookie, raw marketplace payload, Bazos verification data, central Orders create, Warehouse reservation, Catalog publish, replace-window call, product relation mutation, deployment, or marketplace publication occurred.
+
+## Source/Window Alignment Follow-up - 2026-07-03
+
+Owner asked the worker to perform the remaining alignment directly if no owner-side action was required.
+
+Result:
+
+- Cause: Bazos replay window filtering uses `createdAt`; the eligible paid source row had been created after the closed Marketing daily window, so the first natural scheduled run returned zero candidates.
+- Action: one Bazos-owned synthetic/internal paid multi-product source row had aggregate `createdAt` and `paidAt` moved into `2026-07-02T00:00:00Z..2026-07-03T00:00:00Z`.
+- Protected Bazos window probe returned HTTP 200 with `count=1`, `eventCount=1`, `minItemCount=2`, `maxItemCount=2`, `failClosed=false`, and no blockers.
+- Marketing natural scheduled run `marketing-order-affinity-bazos-daily-29718487` then completed with aggregate evidence `inputRecords=1`, `acceptedCreatedEvents=1`, `aggregatePairs=2`, `totalPairEvidence=2`, `publish.status=published`, `candidateCount=2`, `batchCount=1`, and `ledgerRecord.status=recorded`.
+- Boundary: batch publish only; no replace-window, no raw token values, raw replay payloads, raw marketplace order ids, customer/address/payment/provider data, or raw Catalog relation payloads were recorded in this report.
+
+State Update:
+
+- `[RESOLVED: non-zero eligible Bazos source record inside the scheduled closed daily window]`.
+- `[MISSING: owner-reviewed future replace-window activation for Bazos]`.
