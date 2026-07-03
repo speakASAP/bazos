@@ -42,7 +42,13 @@ Replay storage/output contains only hashed order references, channel, currency, 
 - Bazos service build passed: `npm --prefix services/aukro-service run build`.
 - Pre-migration live metadata check confirmed existing `bazos_orders` columns use quoted camelCase names.
 - Owner-approved live DB migration applied from the Bazos pod through idempotent raw SQL; verified columns: `itemSnapshots`, `paidAt`, `paymentStatus`.
-- `git diff --check` passed before final commit.
+- `git diff --check` and `git diff --cached --check` passed before final commit.
+- Branch commit pushed: `7365edc feat: persist bazos paid order replay source` on `codex/goal24-bazos-paid-order-source`.
+- Deployment from branch commit `7365edc` passed with `./scripts/deploy.sh`; image `localhost:5000/bazos-service:7365edc` built, pushed, applied, and rolled out successfully.
+- Post-deploy pod status: `bazos-service-5c96b8ff7c-lv5x4`, image `localhost:5000/bazos-service:7365edc`, ready `true`, restarts `0`.
+- Production health check: `https://bazos.alfares.cz/health` returned HTTP 200.
+- Protected endpoint aggregate probe from the Bazos pod returned HTTP 200, `success=true`, `contract=marketplace.order_affinity_candidate.v1`, `channel=bazos`, `count=0`, `skippedRecords=0`, `failClosed=false`, `blockers=[]`, `eventSampleCount=0`.
+- Marketing pod dry-run against `http://bazos-service:3900` returned `dry_run_passed`, `inputRecords=0`, `acceptedCreatedEvents=0`, `rejectedRecords=0`, `aggregatePairs=0`, `candidateCount=0`, and `idempotencyKeyCount=0`.
 
 ## Blockers
 
