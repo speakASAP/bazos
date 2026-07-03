@@ -244,7 +244,7 @@ describe('OrdersService', () => {
           paymentStatus: 'paid',
           paidAt: new Date('2026-07-03T08:00:00.000Z'),
           itemSnapshots: [
-            { catalogProductId: 'product-1', sku: 'SKU-1', quantity: 1, unitPrice: 100, totalPrice: 100, currency: 'CZK' },
+            { productId: 'product-1', sku: 'SKU-1', quantity: 1, unitPrice: 100, totalPrice: 100 },
             { catalogProductId: 'product-2', quantity: 2, unitPrice: 50, totalPrice: 100, currency: 'CZK' },
           ],
         },
@@ -268,7 +268,8 @@ describe('OrdersService', () => {
       blockers: [],
     }));
     expect(result.events[0]).toEqual(expect.objectContaining({
-      eventType: BAZOS_ORDER_AFFINITY_REPLAY_CONTRACT,
+      type: BAZOS_ORDER_AFFINITY_REPLAY_CONTRACT,
+      eventVersion: 1,
       source: 'bazos-service',
       occurredAt: '2026-07-03T08:00:00.000Z',
       payload: expect.objectContaining({
@@ -276,8 +277,8 @@ describe('OrdersService', () => {
         channel: 'bazos',
         currency: 'CZK',
         items: [
-          { catalogProductId: 'product-1', sku: 'SKU-1', quantity: 1, unitPrice: 100, totalPrice: 100, currency: 'CZK' },
-          { catalogProductId: 'product-2', sku: undefined, quantity: 2, unitPrice: 50, totalPrice: 100, currency: 'CZK' },
+          { productId: 'product-1', sku: 'SKU-1', quantity: 1, unitPrice: 100, totalPrice: 100 },
+          { productId: 'product-2', sku: undefined, quantity: 2, unitPrice: 50, totalPrice: 100 },
         ],
       }),
     }));

@@ -497,15 +497,22 @@ export class OrdersService {
 
     const safeOrderId = this.safeReplayOrderId(order);
     return {
+      type: BAZOS_ORDER_AFFINITY_REPLAY_CONTRACT,
+      eventVersion: 1,
       eventId: `bazos.order-affinity:${safeOrderId}`,
-      eventType: BAZOS_ORDER_AFFINITY_REPLAY_CONTRACT,
-      source: 'bazos-service',
       occurredAt: this.orderOccurredAt(order),
+      source: "bazos-service",
       payload: {
         orderId: `bazos-replay:${safeOrderId}`,
-        channel: 'bazos',
+        channel: "bazos",
         currency: this.cleanIdentifier(order?.currency),
-        items: snapshots,
+        items: snapshots.map((item) => ({
+          productId: item.catalogProductId,
+          sku: item.sku,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          totalPrice: item.totalPrice,
+        })),
       },
     };
   }
