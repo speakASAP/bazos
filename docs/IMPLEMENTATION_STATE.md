@@ -131,6 +131,9 @@ Commit or no-commit reason:
 Next command:
 ```
 
+
+2026-07-03: Goal 24 Bazos affinity eligibility mapping resolved the Catalog blocker `[MISSING: Bazos paid multi-product replay eligibility mapping]` into exact fail-closed Bazos blockers on branch `codex/goal24-bazos-affinity-replay-contract`. Source inspection found no Bazos paid order-history source, no persisted order-item replay source, and no Bazos order item ingestion contract; the protected replay endpoint now reports `[MISSING: Bazos paid order history source]` plus the existing item-source blockers while emitting zero events and no customer/address/payment/provider/raw marketplace/secret data. Validation evidence is recorded in `reports/validation/2026-07-03-goal24-bazos-affinity-eligibility-mapping.md`. Remaining blockers: `[MISSING: Bazos paid order history source]`, `[MISSING: Bazos persisted order item replay source]`, `[MISSING: Bazos order item ingestion contract]`, `[MISSING: runtime deployment and Marketing pod dry-run evidence for Bazos replay endpoint]`.
+
 ## Next Action
 
 Completed branch stack is merged to `main`; push `main` after the merge commit is created.

@@ -182,6 +182,7 @@ describe('OrdersService', () => {
       events: [],
       failClosed: true,
     }));
+    expect(response.data.blockers).toContain('[MISSING: Bazos paid order history source]');
     expect(response.data.blockers).toContain('[MISSING: Bazos persisted order item replay source]');
     expect(response.data.blockers).toContain('[MISSING: Bazos order item ingestion contract]');
   });
@@ -201,6 +202,7 @@ describe('OrdersService', () => {
       events: [],
       failClosed: true,
     }));
+    expect(result.blockers).toContain('[MISSING: Bazos paid order history source]');
     expect(result.blockers).toContain('[MISSING: Bazos persisted order item replay source]');
     expect(result.blockers).toContain('[MISSING: Bazos order item ingestion contract]');
     expect(JSON.stringify(result)).not.toContain('customer@example.test');
