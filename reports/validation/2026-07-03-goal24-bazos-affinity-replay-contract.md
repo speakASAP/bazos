@@ -105,6 +105,34 @@ Validation target:
 - Marketing Bazos dry-run should return HTTP 200 with `inputRecords=0`, `acceptedCreatedEvents=0`, `aggregatePairs=0`, and Bazos producer blockers for missing persisted order items, with no Catalog write.
 
 
+## Runtime Token Alias Deployment And Marketing Dry-Run
+
+Date: 2026-07-03
+
+Commands and evidence:
+
+- `kubectl apply --dry-run=server -f k8s/external-secret.yaml` -> pass.
+- `kubectl apply -f k8s/external-secret.yaml` -> configured `bazos-service-secret`.
+- ExternalSecret sync key-presence check -> `BAZOS_INTERNAL_SERVICE_TOKEN_PRESENT=true`.
+- `./scripts/deploy.sh` from Bazos `main` at `fc14157` -> pass, image `localhost:5000/bazos-service:fc14157`, total deployment time 24.67s.
+- Bazos rollout -> `READY=1/1`, image `localhost:5000/bazos-service:fc14157`, pod `bazos-service-7547b4455f-dx2ps`, restarts `0`.
+- Bazos pod env-name check -> `BAZOS_INTERNAL_SERVICE_TOKEN=true`, `JWT_TOKEN=true`, `INTERNAL_SERVICE_TOKEN=false`; no values printed.
+- Production health -> `https://bazos.alfares.cz/health` returned `status=ok`.
+- Marketing dry-run -> `node dist/order-affinity-backfill.js --marketplace-url http://bazos-service:3900 --channel=bazos --limit=20 --dry-run --pretty` returned HTTP 200 behavior with `inputRecords=0`, `acceptedCreatedEvents=0`, `aggregatePairs=0`, `totalPairEvidence=0`, `candidates=[]`.
+- Marketing ledger behavior -> aggregate-only dry-run ledger recorded `status=recorded`, `idempotencyKeyCount=0`; no Catalog publish and no Catalog idempotency key.
+- Direct Marketing-to-Bazos protected endpoint probe returned HTTP 200, `contract=marketplace.order_affinity_candidate.v1`, `sourceOwner=bazos-service`, `channel=bazos`, `count=0`, `events=[]`, `failClosed=true`.
+
+Remaining Bazos producer blockers from the endpoint:
+
+- `[MISSING: Bazos paid order history source]`
+- `[MISSING: Bazos persisted order item replay source]`
+- `[MISSING: Bazos order item ingestion contract]`
+
+Conclusion:
+
+The runtime auth/HTTP 401 blocker is resolved. Bazos is now compatible with Marketing's marketplace replay contract at the protected endpoint level. Recurring Bazos publish activation must remain blocked until Bazos has a real paid order history and persisted order-item replay source.
+
+
 ## Recommendation
 
 Merge and push the Bazos branch after validation. The source-level HTTP 404 blocker is addressed by the existing endpoint plus controller-level contract coverage. Do not schedule recurring Bazos publishes until a runtime dry-run proves the protected route and token mapping from the Marketing pod.
