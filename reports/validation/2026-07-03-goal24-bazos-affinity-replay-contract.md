@@ -66,6 +66,29 @@ No customer/contact/address/payment/provider/token/raw order/raw marketplace pay
 - `[MISSING: runtime deployment and Marketing pod dry-run evidence for Bazos replay endpoint]`
 - `[MISSING: Bazos replay token mapping in Marketing runtime, if not already provided by the integration owner]`
 
+## Runtime Deployment And Dry-Run Follow-Up
+
+Date: 2026-07-03
+
+Commands and evidence:
+
+- `./scripts/deploy.sh` from Bazos `main` at `d91c361` built and pushed `localhost:5000/bazos-service:d91c361`.
+- The deploy script initially timed out while the new pod was still pulling the image.
+- Read-only follow-up `kubectl -n statex-apps rollout status deployment/bazos-service --timeout=180s` later passed.
+- Deployment image: `localhost:5000/bazos-service:d91c361`.
+- New pod: `bazos-service-75f86fc7f-fbcgj`, `READY=1/1`, `STATUS=Running`, `RESTARTS=0`.
+- Marketing token-name check: `ORDER_AFFINITY_BAZOS_REPLAY_TOKEN=true`, `ORDER_AFFINITY_MARKETPLACE_REPLAY_TOKEN=true`, `BAZOS_INTERNAL_SERVICE_TOKEN=false`.
+- Bazos token-name check: `BAZOS_INTERNAL_SERVICE_TOKEN=false`, `INTERNAL_SERVICE_TOKEN=false`.
+- Marketing dry-run command: `node dist/order-affinity-backfill.js --marketplace-url http://bazos-service:3900 --channel=bazos --limit=20 --dry-run --pretty`.
+- Marketing dry-run result: fail-closed HTTP 401, no Catalog write, no raw event/customer/address/payment/provider/token output.
+
+Runtime blocker:
+
+- `[MISSING: Bazos runtime internal replay token env accepted by /internal/bazos/order-affinity/replay-candidates]`
+
+The source-level route compatibility blocker is resolved, but recurring Bazos replay must remain inactive until Bazos runtime receives the matching accepted internal token and Marketing dry-run returns HTTP 200 with the fail-closed zero-event contract.
+
+
 ## Recommendation
 
 Merge and push the Bazos branch after validation. The source-level HTTP 404 blocker is addressed by the existing endpoint plus controller-level contract coverage. Do not schedule recurring Bazos publishes until a runtime dry-run proves the protected route and token mapping from the Marketing pod.
