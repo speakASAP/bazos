@@ -248,6 +248,7 @@ export class OrdersService {
         taxAmount: 0,
         total: centralTotal,
         currency: order.currency,
+        paymentStatus: order.paymentStatus,
         orderedAt: order.createdAt,
       });
 
