@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query, Req, UseGuards } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { JwtAuthGuard } from '@bazos/shared';
 
@@ -8,13 +8,13 @@ export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
   @Get()
-  async getOrders(@Query() query: any) {
-    return this.ordersService.findAll(query);
+  async getOrders(@Query() query: any, @Req() req: { user?: any }) {
+    return this.ordersService.findVisibleForActor(req.user || {}, query);
   }
 
   @Get(':id')
-  async getOrder(@Param('id') id: string, @Query() query: any) {
-    return this.ordersService.findOne(id, query);
+  async getOrder(@Param('id') id: string, @Query() query: any, @Req() req: { user?: any }) {
+    return this.ordersService.findOneVisibleForActor(id, req.user || {}, query);
   }
 
   @Post()

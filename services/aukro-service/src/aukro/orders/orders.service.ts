@@ -8,6 +8,13 @@ const LIVE_BAZOS_WEBHOOK_SUPPORT = '[UNKNOWN: live Bazos marketplace webhook sup
 const CENTRAL_ORDER_UNFORWARDED = 'unforwarded';
 const CENTRAL_ORDER_UNKNOWN = 'unknown';
 const CENTRAL_ORDER_STALE = 'stale';
+const BAZOS_ORDER_READ_ADMIN_ROLES = new Set([
+  'global:superadmin',
+  'global:platform_admin',
+  'app:bazos-service:admin',
+  'app:bazos:admin',
+  'bazos:admin',
+]);
 
 interface SourceOrderLine {
   adId?: string;
@@ -52,6 +59,13 @@ interface FindOrdersOptions {
   limit: number;
 }
 
+interface OrdersReadActor {
+  id?: string | null;
+  sub?: string | null;
+  userId?: string | null;
+  roles?: string[] | null;
+}
+
 @Injectable()
 export class OrdersService {
   private readonly logger: LoggerService;
@@ -94,6 +108,34 @@ export class OrdersService {
       limit: this.parseLimit(query.limit),
     });
     return this.attachCentralReadModels(orders, this.shouldIncludeCentralStatus(query));
+  }
+
+  async findVisibleForActor(actor: OrdersReadActor, query: any = {}) {
+    if (this.hasOrderReadAdminRole(actor)) {
+      return this.findAll(query);
+    }
+    return this.findForUser(this.actorUserId(actor), query);
+  }
+
+  async findOneVisibleForActor(id: string, actor: OrdersReadActor, query: any = {}) {
+    if (this.hasOrderReadAdminRole(actor)) {
+      return this.findOne(id, query);
+    }
+
+    const userId = this.actorUserId(actor);
+    if (!userId) return null;
+    const accountIds = await this.accountIdsForUser(userId);
+    if (accountIds.length === 0) return null;
+
+    const order = await this.prisma.bazosOrder.findFirst({
+      where: {
+        id,
+        accountId: accountIds.length === 1 ? accountIds[0] : { in: accountIds },
+      },
+      include: { account: { select: { id: true, name: true, email: true, isActive: true, userId: true } } },
+    });
+    if (!order || !this.shouldIncludeCentralStatus(query)) return order;
+    return this.attachCentralReadModel(order);
   }
 
   async findOne(id: string, query: any = {}) {
@@ -178,6 +220,14 @@ export class OrdersService {
       orderId: order.id,
       forwarding: order.forwarding,
     };
+  }
+
+  private actorUserId(actor: OrdersReadActor): string {
+    return this.cleanIdentifier(actor?.id || actor?.sub || actor?.userId);
+  }
+
+  private hasOrderReadAdminRole(actor: OrdersReadActor): boolean {
+    return Array.isArray(actor?.roles) && actor.roles.some((role) => BAZOS_ORDER_READ_ADMIN_ROLES.has(role));
   }
 
   private async findOrders(options: FindOrdersOptions) {

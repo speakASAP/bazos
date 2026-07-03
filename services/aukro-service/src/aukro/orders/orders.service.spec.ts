@@ -93,6 +93,36 @@ describe('OrdersService', () => {
     }));
   });
 
+  it('scopes order detail reads to the authenticated Bazos account owner', async () => {
+    const prisma = makePrisma({
+      accounts: [{ id: 'account-1' }],
+      order: { ...order, forwarded: true, orderId: 'central-order-1' },
+    });
+    prisma.bazosOrder.findFirst = jest.fn().mockResolvedValue({ ...order, forwarded: true, orderId: 'central-order-1' });
+    const { service, orderClient } = makeService(prisma);
+
+    const result = await service.findOneVisibleForActor('order-1', { id: 'user-1', roles: [] }, { centralStatus: 'true' }) as any;
+
+    expect(prisma.bazosOrder.findUnique).not.toHaveBeenCalled();
+    expect(prisma.bazosOrder.findFirst).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: 'order-1', accountId: 'account-1' },
+    }));
+    expect(orderClient.getOrderLifecycleStatus).toHaveBeenCalledWith('central-order-1');
+    expect(result.centralOrder.state).toBe('ok');
+  });
+
+  it('leaves admin order reads unscoped', async () => {
+    const prisma = makePrisma({ orders: [{ ...order }] });
+    const { service } = makeService(prisma);
+
+    await service.findVisibleForActor({ id: 'admin-1', roles: ['app:bazos-service:admin'] }, { status: 'pending' });
+
+    expect(prisma.bazosAccount.findMany).not.toHaveBeenCalled();
+    expect(prisma.bazosOrder.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { status: 'pending', forwarded: undefined },
+    }));
+  });
+
   it('marks local orders without central ids as unforwarded in the read model', async () => {
     const prisma = makePrisma({ orders: [{ ...order, forwarded: false, orderId: null }] });
     const { service, orderClient } = makeService(prisma);
