@@ -89,6 +89,22 @@ Runtime blocker:
 The source-level route compatibility blocker is resolved, but recurring Bazos replay must remain inactive until Bazos runtime receives the matching accepted internal token and Marketing dry-run returns HTTP 200 with the fail-closed zero-event contract.
 
 
+## Runtime Token Alias Follow-Up
+
+Date: 2026-07-03
+
+Planned fix:
+
+- Add `BAZOS_INTERNAL_SERVICE_TOKEN` to `bazos-service-secret` from the existing `secret/prod/bazos-service#JWT_TOKEN` Vault property.
+- Do not print, rotate, or create a new token value.
+- Preserve Marketing's existing `ORDER_AFFINITY_BAZOS_REPLAY_TOKEN` mapping from the same Bazos Vault property.
+- Apply ExternalSecret, wait for the Kubernetes Secret key by name only, redeploy Bazos, then rerun the Marketing dry-run.
+
+Validation target:
+
+- Marketing Bazos dry-run should return HTTP 200 with `inputRecords=0`, `acceptedCreatedEvents=0`, `aggregatePairs=0`, and Bazos producer blockers for missing persisted order items, with no Catalog write.
+
+
 ## Recommendation
 
 Merge and push the Bazos branch after validation. The source-level HTTP 404 blocker is addressed by the existing endpoint plus controller-level contract coverage. Do not schedule recurring Bazos publishes until a runtime dry-run proves the protected route and token mapping from the Marketing pod.
