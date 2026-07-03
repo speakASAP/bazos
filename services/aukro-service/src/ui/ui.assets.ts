@@ -1650,6 +1650,7 @@ export const appScript = `
     if (text.includes('received')) return 'Převzato';
     if (text.includes('not_received')) return 'Nepřevzato';
     if (text.includes('returned')) return 'Vráceno';
+    if (text.includes('cancelled')) return 'Zrušeno';
     if (text.includes('deleted')) return 'Vymazáno';
     if (text.includes('verified')) return 'Ověřeno';
     if (text.includes('active')) return 'Aktivní';
