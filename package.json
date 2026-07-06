@@ -9,7 +9,8 @@
     "reconcile:availability": "ts-node --skip-ignore --compiler-options '{\"experimentalDecorators\":true,\"emitDecoratorMetadata\":true,\"types\":[\"node\"]}' scripts/reconcile_bazos_availability.ts",
     "verify:orders-lifecycle-ui": "node scripts/verify-orders-lifecycle-ui.js",
     "verify:bazos-provider-proof-gate": "node scripts/verify-bazos-provider-proof-gate.js",
-    "verify:bazos-provider-proof-boundary": "node scripts/verify-bazos-provider-proof-boundary.js"
+    "verify:bazos-provider-proof-boundary": "node scripts/verify-bazos-provider-proof-boundary.js",
+    "verify:bazos-product-decision-intake": "node scripts/verify-bazos-product-decision-intake.js"
   },
   "dependencies": {
     "@nestjs/axios": "^3.0.1",
