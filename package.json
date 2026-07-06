@@ -10,7 +10,8 @@
     "verify:orders-lifecycle-ui": "node scripts/verify-orders-lifecycle-ui.js",
     "verify:bazos-provider-proof-gate": "node scripts/verify-bazos-provider-proof-gate.js",
     "verify:bazos-provider-proof-boundary": "node scripts/verify-bazos-provider-proof-boundary.js",
-    "verify:bazos-product-decision-intake": "node scripts/verify-bazos-product-decision-intake.js"
+    "verify:bazos-product-decision-intake": "node scripts/verify-bazos-product-decision-intake.js",
+    "verify:business-health-bazos-channel-contract": "node scripts/verify-business-health-bazos-channel-contract.js"
   },
   "dependencies": {
     "@nestjs/axios": "^3.0.1",

@@ -10,6 +10,8 @@ import { BazosModule, PrismaModule, LoggerModule, HealthModule, RabbitMQModule }
 import { HealthController } from './health/health.controller';
 import { UiModule } from './ui/ui.module';
 
+import { BusinessHealthModule } from './business-health/business-health.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -23,6 +25,7 @@ import { UiModule } from './ui/ui.module';
     UiModule,
     AukroModule,
     BazosModule,
+    BusinessHealthModule,
   ],
   controllers: [HealthController],
 })
