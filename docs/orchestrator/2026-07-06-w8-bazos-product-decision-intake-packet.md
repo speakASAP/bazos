@@ -79,4 +79,4 @@ allowed_options:
 
 ## Current Status Link
 
-This packet is a local Bazos intake artifact linked to `docs/orchestrator/2026-07-05-runtime-gate-packet-handoff.md`, which already records the Orders W8 runtime gate source and abort condition: provider support is unknown and no product decision exists.
+This packet is a local Bazos intake artifact linked to `docs/orchestrator/2026-07-05-runtime-gate-packet-handoff.md`, which is aligned to Orders runtime gate contract commit `6f0332c` and records the W8 abort condition: no product decision exists.

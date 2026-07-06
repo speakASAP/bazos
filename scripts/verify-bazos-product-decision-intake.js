@@ -91,7 +91,9 @@ const failures = [
     "[UNKNOWN: live Bazos marketplace webhook support]",
     "[MISSING: approved provider-backed non-secret fixture or live provider smoke packet]",
     "[MISSING: provider-backed Bazos order item/status ingestion contract]",
-    "Provider support is unknown and no product decision exists.",
+    "orders_packet_contract_commit: 6f0332c",
+    "No product decision exists.",
+    "Provider-backed proof is blocked until one allowed product option is owner-selected",
   ]),
 ];
 

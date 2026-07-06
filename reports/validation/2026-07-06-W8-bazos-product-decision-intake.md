@@ -26,7 +26,7 @@ Validation -> `npm run verify:bazos-product-decision-intake`, `npm run verify:ba
 
 ## Source Evidence
 
-- Existing runtime handoff `docs/orchestrator/2026-07-05-runtime-gate-packet-handoff.md` requires a product decision and records the abort condition: provider support is unknown and no product decision exists.
+- Existing runtime handoff `docs/orchestrator/2026-07-05-runtime-gate-packet-handoff.md` is aligned to Orders runtime gate contract commit `6f0332c`, requires exactly one product decision option, and records the abort condition: no product decision exists.
 - Existing W8 gate reports preserve `[UNKNOWN: live Bazos marketplace webhook support]` and provider packet blockers.
 - New intake packet adds only an owner decision surface. It does not choose an option on behalf of the owner.
 
