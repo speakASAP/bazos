@@ -33,7 +33,7 @@ Packet section: W8 Bazos Provider-Backed Proof Packet in Orders runtime gate pac
 
 Required owner decision before runtime proof:
 
-- [MISSING: Bazos owner must select exactly one allowed product decision option]
+- Selected option: `bounded_synthetic_accepted_for_now`
 - [UNKNOWN: live Bazos marketplace webhook support]
 - Allowed options: `provider_backed_supported`, `provider_backed_not_supported`, `provider_backed_out_of_scope`, or `bounded_synthetic_accepted_for_now`.
 
@@ -50,7 +50,7 @@ Scope-only options `provider_backed_not_supported`, `provider_backed_out_of_scop
 
 ## Abort Conditions
 
-- No product decision exists.
+- The current release records the scope-only option `bounded_synthetic_accepted_for_now`; provider-backed proof remains unclaimed.
 - `provider_backed_supported` is selected while provider item identity or Warehouse ownership is missing.
 - Scope-only options are relabeled as provider-backed proof.
 - Proof requires raw provider payload output.

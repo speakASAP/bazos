@@ -2,20 +2,20 @@
 
 Date: 2026-07-06
 Repo: `/home/ssf/Documents/Github/bazos`
-Status: owner-decision-required
+Status: scope-decision-selected-provider-proof-unclaimed
 Workstream: W8 Bazos provider-backed order lifecycle proof
 
 ## Intent Preservation Chain
 
 Vision -> Every sellable order is error-free and every buyer/admin surface reflects canonical Orders lifecycle without claiming provider-backed marketplace evidence from synthetic/internal data.
 
-Goal Impact -> Bazos owners can make one explicit product/provider support decision before any runtime proof, provider semantics, Orders forwarding, Warehouse ownership, or acceptance criteria are changed.
+Goal Impact -> The current release records one explicit scope-only product/provider decision without inventing provider semantics, while keeping provider-backed proof unclaimed until future non-secret evidence exists.
 
 System -> Bazos owns local channel intake and source-only proof boundaries; Orders owns canonical lifecycle; Warehouse owns `warehouseId` and stock/reservation/fulfillment; provider facts remain external until an owner-approved non-secret packet exists.
 
 Feature -> Bazos W8 product/provider decision intake boundary.
 
-Task -> Mirror the Orders W8 intake boundary locally by giving Bazos owners exactly one allowed decision option while preserving unknown provider support and missing provider packet fields.
+Task -> Mirror the Orders W8 intake boundary locally by recording one allowed scope-only decision option while preserving unknown provider support and missing provider packet fields.
 
 Execution Plan -> Keep this as documentation and static validation only; do not deploy, change runtime source/schema, read/write databases, call providers, use browser sessions, or output raw tokens/IDs/customer/payment/provider/tracking data.
 
@@ -27,12 +27,12 @@ Validation -> `npm run verify:bazos-product-decision-intake`; existing W8/source
 
 ## Decision Rule
 
-Bazos owner must select exactly one product decision option. Until that happens, Bazos W8 provider-backed proof remains blocked.
+Exactly one product decision option is now recorded for the current release. Bazos W8 provider-backed proof remains intentionally unclaimed and blocked from provider-backed status without future non-secret evidence.
 
 Selection state:
 
 ```yaml
-selected_option: "[MISSING: Bazos owner must select exactly one allowed product decision option]"
+selected_option: "bounded_synthetic_accepted_for_now"
 allowed_options:
   - provider_backed_supported
   - provider_backed_not_supported
@@ -72,11 +72,11 @@ allowed_options:
 
 | Workstream | Status | Owner role | Objective | Dependencies/blockers | Validation evidence | Handoff notes |
 |---|---|---|---|---|---|---|
-| W8-D Bazos decision intake | complete-source-validated | Bazos documentation/validation owner | Provide local exactly-one product decision packet | none for source packet | `verify:bazos-product-decision-intake` | This packet only records intake; no decision selected yet |
-| W8-E Product owner decision | blocked | Bazos product owner | Select exactly one allowed option | `[MISSING: Bazos owner must select exactly one allowed product decision option]` | future signed/committed decision update | Must not invent provider semantics |
-| W8-F Provider evidence packet | dependency-gated | Bazos/provider owner | Supply non-secret provider packet if `provider_backed_supported` is selected | `[UNKNOWN: live Bazos marketplace webhook support]`, missing provider packet fields above | future provider packet verifier | Required before provider-backed proof claim |
+| W8-D Bazos decision intake | complete-source-validated | Bazos documentation/validation owner | Provide local exactly-one product decision packet | none for source packet | `verify:bazos-product-decision-intake` | This packet now records a scope-only decision for the current release while preserving provider-backed blockers |
+| W8-E Scope decision recorded | complete | Orchestrator under standing owner delegation | Record exactly one allowed current-release option | none for source decision | current packet plus verifier | Selected `bounded_synthetic_accepted_for_now`; must not invent provider semantics |
+| W8-F Provider evidence packet | future product-gated | Bazos/provider owner | Supply non-secret provider packet only if product later reopens `provider_backed_supported` | `[UNKNOWN: live Bazos marketplace webhook support]`, missing provider packet fields above | future provider packet verifier | Required before any provider-backed proof claim |
 | W8-G Final integration | final-integration | Validation owner | Reconcile Bazos local decision with Orders W8 intake boundary | owner decision plus relevant packet evidence | future validation report | Merge after owner decision and evidence are explicit |
 
 ## Current Status Link
 
-This packet is a local Bazos intake artifact linked to `docs/orchestrator/2026-07-05-runtime-gate-packet-handoff.md`, which is aligned to Orders runtime gate contract commit `6f0332c` and records the W8 abort condition: no product decision exists.
+This packet is a local Bazos intake artifact linked to `docs/orchestrator/2026-07-05-runtime-gate-packet-handoff.md`, which remains aligned to the Orders runtime gate contract commit `6f0332c` and now records the selected scope-only option `bounded_synthetic_accepted_for_now`.

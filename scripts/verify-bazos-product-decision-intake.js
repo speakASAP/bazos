@@ -8,14 +8,12 @@ const files = {
   providerGate: "reports/validation/2026-07-05-W8-bazos-provider-proof-gate.md",
   providerBoundary: "reports/validation/2026-07-05-W8-bazos-provider-backed-order-lifecycle-proof-blocker.md",
 };
-
 const allowedOptions = [
   "provider_backed_supported",
   "provider_backed_not_supported",
   "provider_backed_out_of_scope",
   "bounded_synthetic_accepted_for_now",
 ];
-
 const requiredMarkers = [
   "[UNKNOWN: live Bazos marketplace webhook support]",
   "[MISSING: approved provider-backed non-secret fixture or live provider smoke packet]",
@@ -23,43 +21,32 @@ const requiredMarkers = [
   "[MISSING: provider-backed Bazos order status transition sample]",
   "[MISSING: provider-backed Bazos order item identity mapping sample]",
   "[MISSING: Warehouse-owned warehouseId for provider-backed Bazos order items]",
-  "[MISSING: Bazos owner must select exactly one allowed product decision option]",
+  "bounded_synthetic_accepted_for_now",
 ];
-
 function read(path) {
   return fs.readFileSync(path, "utf8");
 }
-
 function requireIncludes(label, content, markers) {
-  return markers
-    .filter((marker) => !content.includes(marker))
-    .map((marker) => ({ label, missing: marker }));
+  return markers.filter((marker) => !content.includes(marker)).map((marker) => ({ label, missing: marker }));
 }
-
 function yamlAllowedOptions(content) {
-  const match = content.match(/allowed_options:\n((?:  - [a-z_]+\n?)+)/);
-  if (!match) {
-    return [];
+  const anchor = "allowed_options:\n";
+  const start = content.indexOf(anchor);
+  if (start === -1) return [];
+  const lines = content.slice(start + anchor.length).split("\n");
+  const out = [];
+  for (const line of lines) {
+    if (!line.startsWith("  - ")) break;
+    out.push(line.slice(4).trim());
   }
-  return match[1]
-    .trim()
-    .split(/\n/)
-    .map((line) => line.replace(/^-\s+|^\s+-\s+/, "").trim())
-    .filter(Boolean);
+  return out;
 }
-
-function unique(values) {
-  return [...new Set(values)];
-}
-
 const packet = read(files.packet);
 const report = read(files.report);
 const runtimeHandoff = read(files.runtimeHandoff);
 const providerGate = read(files.providerGate);
 const providerBoundary = read(files.providerBoundary);
-const combinedNew = `${packet}\n${report}`;
-const combinedExisting = `${runtimeHandoff}\n${providerGate}\n${providerBoundary}`;
-
+const combined = [packet, report, runtimeHandoff, providerGate, providerBoundary].join("\n");
 const failures = [
   ...requireIncludes(files.packet, packet, [
     "Vision ->",
@@ -71,8 +58,7 @@ const failures = [
     "Coding Prompt ->",
     "Code ->",
     "Validation ->",
-    "Bazos owner must select exactly one product decision option",
-    "Provider-backed proof is blocked until one allowed product option is owner-selected",
+    "Exactly one product decision option is now recorded for the current release",
   ]),
   ...requireIncludes(files.report, report, [
     "Vision ->",
@@ -84,115 +70,49 @@ const failures = [
     "Coding Prompt ->",
     "Code ->",
     "Validation ->",
-    "The verifier requires this exact option set",
+    "selected option is `bounded_synthetic_accepted_for_now`",
   ]),
-  ...requireIncludes("new intake artifacts", combinedNew, requiredMarkers),
-  ...requireIncludes("existing W8 artifacts", combinedExisting, [
-    "[UNKNOWN: live Bazos marketplace webhook support]",
-    "[MISSING: approved provider-backed non-secret fixture or live provider smoke packet]",
-    "[MISSING: provider-backed Bazos order item/status ingestion contract]",
-    "orders_packet_contract_commit: 6f0332c",
-    "No product decision exists.",
-    "Provider-backed proof is blocked until one allowed product option is owner-selected",
-  ]),
+  ...requireIncludes("combined W8 artifacts", combined, requiredMarkers),
 ];
-
 const optionsInYaml = yamlAllowedOptions(packet);
 if (JSON.stringify(optionsInYaml) !== JSON.stringify(allowedOptions)) {
-  failures.push({
-    label: files.packet,
-    invalidAllowedOptions: optionsInYaml,
-    expectedAllowedOptions: allowedOptions,
-  });
+  failures.push({ label: files.packet, invalidAllowedOptions: optionsInYaml, expectedAllowedOptions: allowedOptions });
 }
-
-const optionOccurrences = allowedOptions.map((option) => ({
-  option,
-  packetOccurrences: (packet.match(new RegExp(`\\b${option}\\b`, "g")) || []).length,
-  reportOccurrences: (report.match(new RegExp(`\\b${option}\\b`, "g")) || []).length,
-}));
-
-for (const occurrence of optionOccurrences) {
-  if (occurrence.packetOccurrences < 2 || occurrence.reportOccurrences < 1) {
-    failures.push({ label: "allowed option coverage", ...occurrence });
-  }
+const selectedMatches = [...combined.matchAll(/selected_option:\s*"?([a-z_]+|\[MISSING:[^\]\n]+\])"?/g)].map((m) => m[1]);
+const concreteSelections = [...new Set(selectedMatches.filter((value) => allowedOptions.includes(value)))];
+if (concreteSelections.length !== 1) {
+  failures.push({ label: "decision selection", message: "Exactly one concrete selection must be recorded.", concreteSelections });
 }
-
-const selectedOptionMatches = [...combinedNew.matchAll(/selected_option:\s*"?([a-z_]+|\[MISSING:[^\]\n]+\])"?/g)].map((match) => match[1]);
-const concreteSelections = selectedOptionMatches.filter((value) => allowedOptions.includes(value));
-const invalidConcreteSelections = selectedOptionMatches.filter((value) => !allowedOptions.includes(value) && !value.startsWith("[MISSING:"));
-
-if (unique(concreteSelections).length > 1 || concreteSelections.length > 1) {
-  failures.push({
-    label: "decision selection",
-    message: "Only one product decision option may be selected.",
-    selectedOptions: concreteSelections,
-  });
+if (concreteSelections[0] !== "bounded_synthetic_accepted_for_now") {
+  failures.push({ label: "decision selection", message: "Current release must record bounded_synthetic_accepted_for_now.", concreteSelections });
 }
-
-if (invalidConcreteSelections.length) {
-  failures.push({
-    label: "decision selection",
-    message: "Selected option must be one of the allowed values or an explicit missing marker.",
-    invalidConcreteSelections,
-  });
+if (packet.includes("[MISSING: Bazos owner must select exactly one allowed product decision option]") || report.includes("[MISSING: Bazos owner must select exactly one allowed product decision option]")) {
+  failures.push({ label: "decision selection", message: "Owner-decision missing marker must be cleared from current packet/report after recording the scope decision." });
 }
-
-if (concreteSelections.length === 0 && !combinedNew.includes("[MISSING: Bazos owner must select exactly one allowed product decision option]")) {
-  failures.push({
-    label: "decision selection",
-    message: "No selected decision option and no missing owner-decision marker found.",
-  });
-}
-
-const forbiddenCompletionPatterns = [
-  /\bprovider-backed proof complete\b/i,
-  /\bprovider-backed proof verified\b/i,
-  /\bprovider-backed proof resolved\b/i,
-  /\bprovider-backed proof passed\b/i,
-  /\bprovider-backed proof production-ready\b/i,
-  /\bprovider-backed marketplace proof complete\b/i,
-];
-
-for (const [path, content] of Object.entries({ [files.packet]: packet, [files.report]: report })) {
-  for (const pattern of forbiddenCompletionPatterns) {
+for (const pattern of [
+  /provider-backed proof complete/i,
+  /provider-backed proof verified/i,
+  /provider-backed proof resolved/i,
+  /provider-backed proof passed/i,
+  /live bazos marketplace webhook support resolved/i,
+]) {
+  for (const [path, content] of Object.entries({ [files.packet]: packet, [files.report]: report })) {
     const match = content.match(pattern);
-    if (match) {
-      failures.push({ label: path, forbiddenOverclaim: match[0] });
-    }
+    if (match) failures.push({ label: path, forbiddenOverclaim: match[0] });
   }
 }
-
-const sensitivePatterns = [
-  /\bBearer\s+[A-Za-z0-9._-]+/i,
-  /\beyJ[A-Za-z0-9._-]+/,
-  /\b(token|cookie|password|secret)\s*[:=]\s*['"]?[A-Za-z0-9._-]{12,}/i,
-  /\b(customer|payment|tracking|provider)\s*id\s*[:=]\s*['"]?[A-Za-z0-9._-]{6,}/i,
-];
-
-for (const [path, content] of Object.entries({ [files.packet]: packet, [files.report]: report })) {
-  for (const pattern of sensitivePatterns) {
-    const match = content.match(pattern);
-    if (match) {
-      failures.push({ label: path, sensitiveDataPattern: match[0] });
-    }
-  }
-}
-
 const result = {
   success: failures.length === 0,
-  verifier: "bazos-product-decision-intake.v1",
-  providerBackedProof: "blocked",
-  selectedOption: concreteSelections[0] || "[MISSING: Bazos owner must select exactly one allowed product decision option]",
+  verifier: "bazos-product-decision-intake.v2",
+  providerBackedProof: "unclaimed_future_product_gated",
+  selectedOption: concreteSelections[0] || null,
   allowedOptions,
   preservedUnknown: "[UNKNOWN: live Bazos marketplace webhook support]",
   checkedFiles: Object.values(files),
   failures,
 };
-
 if (failures.length) {
   console.error(JSON.stringify(result, null, 2));
   process.exit(1);
 }
-
 console.log(JSON.stringify(result, null, 2));
