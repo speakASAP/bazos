@@ -2,6 +2,7 @@ import { Controller, ForbiddenException, Get, Param, Post, Query, Request, Res, 
 import { AuthService, CatalogClientService, JwtAuthGuard } from '@bazos/shared';
 import { OrdersService } from '../aukro/orders/orders.service';
 import { appScript, appStyles, renderAppPage, renderAuthCallbackPage, renderLandingPage } from './ui.assets';
+import { FAVICON_ICO } from './favicon.assets';
 
 const ADMIN_ROLE_NAMES = new Set(['admin', 'administrator', 'owner']);
 const ADMIN_GLOBAL_ROLES = new Set(['global:admin', 'global:superadmin', 'global:platform_admin']);
@@ -20,6 +21,11 @@ export class UiController {
   @Get()
   landing(@Res() res: any) {
     return res.type('html').send(renderLandingPage());
+  }
+
+  @Get('favicon.ico')
+  favicon(@Res() res: any) {
+    return res.set('Cache-Control', 'public, max-age=604800').type('image/x-icon').send(FAVICON_ICO);
   }
 
   @Get('admin')
