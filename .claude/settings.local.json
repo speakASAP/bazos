@@ -1,6 +1,14 @@
 {
+  "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
-    "docker"
+    "docker",
+    "postgres",
+    "github",
+    "stripe"
   ],
-  "enableAllProjectMcpServers": true
+  "permissions": {
+    "allow": [
+      "Bash(git check-ignore *)"
+    ]
+  }
 }
