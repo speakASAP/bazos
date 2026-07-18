@@ -74,8 +74,8 @@ Use idempotent attempt claiming. A retry must not submit the same listing twice 
 
 - `shared/bazos/policy/*`
 - `shared/bazos/publisher/*`
-- `services/aukro-service/src/aukro/publishing/*`
-- `services/aukro-service/src/ui/*`
+- `services/bazos-service/src/channel/publishing/*`
+- `services/bazos-service/src/ui/*`
 - `prisma/schema.prisma`
 - existing `GOAL-03`, `GOAL-09`, and validation reports
 

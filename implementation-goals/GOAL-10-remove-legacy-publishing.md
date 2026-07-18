@@ -1,7 +1,7 @@
-# GOAL-10: Remove Legacy Aukro Publishing Stack
+# GOAL-10: Remove Legacy Publishing Stack
 
 ```yaml
-id: GOAL-10-REMOVE-LEGACY-AUKRO-PUBLISHING
+id: GOAL-10-REMOVE-LEGACY-PUBLISHING
 status: completed
 owner: codex
 created: 2026-06-26
@@ -19,7 +19,7 @@ Keep one authoritative Bazos publishing implementation so compliance gates canno
 
 ## Goal Impact
 
-The `services/aukro-service/src/aukro/publishing/*` stack is removed from source. UI and modules now use the modern `shared/bazos` API surface under `/api/bazos/*`.
+The `services/bazos-service/src/channel/publishing/*` stack is removed from source. UI and modules now use the modern `shared/bazos` API surface under `/api/bazos/*`.
 
 ## System
 
@@ -31,11 +31,11 @@ Modern Bazos publishing, monitoring, identity, ad draft, queue, and catalog sell
 
 ## Task
 
-- Remove `PublishingModule` from `AukroModule`.
+- Remove `PublishingModule` from `ChannelModule`.
 - Remove publishing service dependencies and legacy publish endpoints from `OffersController`.
 - Remove `PublishingModule` from `OffersModule`.
 - Route UI monitoring, policy check, publish, and ad-list calls to `/api/bazos/*`.
-- Delete `services/aukro-service/src/aukro/publishing`.
+- Delete `services/bazos-service/src/channel/publishing`.
 
 ## Execution Plan
 
@@ -47,7 +47,7 @@ Modern Bazos publishing, monitoring, identity, ad draft, queue, and catalog sell
 
 ## Coding Prompt
 
-Replace the legacy Aukro publishing stack with the modern shared Bazos implementation and ensure TypeScript build fails if any legacy dependency remains.
+Replace the legacy publishing stack with the modern shared Bazos implementation and ensure TypeScript build fails if any legacy dependency remains.
 
 ## Code
 

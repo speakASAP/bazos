@@ -11,11 +11,11 @@ production_url: https://bazos.alfares.cz
 
 ## Goal
 
-Remove the legacy Aukro publishing implementation from the service and make modern `shared/bazos` APIs the active publishing surface.
+Remove the legacy publishing implementation from the service and make modern `shared/bazos` APIs the active publishing surface.
 
 ## Source Deployment
 
-- Deployed commit: `f7a60e6` (`Remove legacy Aukro publishing stack`).
+- Deployed commit: `f7a60e6` (`Remove legacy publishing stack`).
 - Image: `localhost:5000/bazos-service:f7a60e6`.
 - Image digest: `sha256:9d5f833c5c72b6dd7524b19a8ae272aabc3ac92ec9c432cc7b49e1b3b8dcef53`.
 - Runtime pod after rollout: `bazos-service-66f7859c6f-7ph6p`, `1/1 Running`, `0` restarts.
@@ -54,7 +54,7 @@ Validation for `67097bf`:
 - `git diff --check`: pass.
 - `npm test`: pass, 5 suites, 82 tests.
 - `npm --prefix shared run build`: pass.
-- `npm --prefix services/aukro-service run build`: pass.
+- `npm --prefix services/bazos-service run build`: pass.
 
 The first `67097bf` rollout was not completed because Kubernetes pod creation became blocked before container startup:
 

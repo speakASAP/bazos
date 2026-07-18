@@ -17,7 +17,7 @@ Remote-only Bazos repo work in `/home/ssf/Documents/Github/bazos`. Scope include
   - `checkedFiles=8`
   - `checkedSourceRefs=8`
   - `forbiddenPatternsChecked=22`
-- `npm --prefix services/aukro-service run build` -> pass (`tsc && tsc-alias`)
+- `npm --prefix services/bazos-service run build` -> pass (`tsc && tsc-alias`)
 - `git diff --check` -> pass, no output
 
 ## Gate Evidence
@@ -67,7 +67,7 @@ None.
 
 ## Deviations
 
-The repo's core service directory is named `services/aukro-service`; this is existing Bazos repo structure. The endpoint path is Bazos-owned: `/bazos/business-health/channel-readback`.
+The repo's core service directory is named `services/bazos-service`; this is existing Bazos repo structure. The endpoint path is Bazos-owned: `/bazos/business-health/channel-readback`.
 
 ## Safety Confirmation
 

@@ -1,7 +1,7 @@
 {
   "name": "@bazos/shared",
   "version": "1.0.0",
-  "description": "Shared utilities, types, and modules for Aukro integration microservices",
+  "description": "Shared utilities, types, and modules for Bazos integration microservices",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {

@@ -1,5 +1,5 @@
 /**
- * Aukro Service Main Entry Point
+ * Bazos Service Main Entry Point
  */
 
 import { config } from 'dotenv';
@@ -27,7 +27,7 @@ async function bootstrap() {
 
   const port = configService.get<string>('BAZOS_SERVICE_PORT') || '3900';
   await app.listen(parseInt(port));
-  console.log(`Aukro Service is running on: http://localhost:${port}`);
+  console.log(`Bazos Service is running on: http://localhost:${port}`);
 }
 
 bootstrap();

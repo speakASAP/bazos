@@ -38,7 +38,7 @@ No token values, raw order rows, customer contact values, address data, payment 
 ## Validation Commands
 
 - `git status --short --branch` in Bazos -> clean before docs edit.
-- Source inspection: `prisma/schema.prisma`, `services/aukro-service/src/aukro/orders/orders.service.ts`, existing Goal 24 docs.
+- Source inspection: `prisma/schema.prisma`, `services/bazos-service/src/channel/orders/orders.service.ts`, existing Goal 24 docs.
 - Runtime sanitized Orders lifecycle probe from Bazos pod -> HTTP 200, count `2`, cancelled/pending/single-item summary only.
 - Marketing central Orders Bazos dry-run -> zero records/candidates.
 - `git diff --check` -> pending final docs commit validation.

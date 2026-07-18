@@ -42,7 +42,7 @@ Pass. The implementation stops at operator-browser handoff and explicitly record
 
 - `ssh alfares 'cd /home/ssf/Documents/Github/bazos-service && git diff --check'`: pass, no output.
 - `ssh alfares 'cd /home/ssf/Documents/Github/bazos-service && npm --prefix shared run build'`: pass.
-- `ssh alfares 'cd /home/ssf/Documents/Github/bazos-service && npm --prefix services/aukro-service run build'`: pass.
+- `ssh alfares 'cd /home/ssf/Documents/Github/bazos-service && npm --prefix services/bazos-service run build'`: pass.
 - `ssh alfares 'cd /home/ssf/Documents/Github/bazos-service && npm test -- --runInBand shared/bazos/publisher/bazos-publisher-queue.service.spec.ts'`: pass, 10 tests.
 
 ### Runtime Validation Plan
@@ -67,7 +67,7 @@ After deploy:
 - `shared/bazos/publisher/bazos-publisher-queue.controller.ts`
 - `shared/bazos/publisher/bazos-publisher-queue.service.ts`
 - `shared/bazos/publisher/bazos-publisher-queue.service.spec.ts`
-- `services/aukro-service/src/ui/ui.assets.ts`
+- `services/bazos-service/src/ui/ui.assets.ts`
 
 ### Commit Or No-Commit Reason
 

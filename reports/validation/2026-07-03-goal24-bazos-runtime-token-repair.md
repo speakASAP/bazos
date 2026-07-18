@@ -28,8 +28,8 @@ State Update -> source/config blocker is resolved pending deployment and a Marke
 - `kubectl apply --dry-run=server -f k8s/external-secret.yaml` -> pass, `externalsecret.external-secrets.io/bazos-service-secret configured (server dry run)`.
 - Initial focused spec without dependency symlinks -> failed before tests with missing dependency/Jest type resolution in the isolated worktree.
 - Temporary validation symlinks to canonical `/home/ssf/Documents/Github/bazos` dependency installs were added for test/build only and removed before staging.
-- `NODE_PATH=/home/ssf/Documents/Github/codex-worktrees/bazos-goal24-runtime-token-repair/shared/node_modules:/home/ssf/Documents/Github/codex-worktrees/bazos-goal24-runtime-token-repair/node_modules ./shared/node_modules/.bin/jest --config services/aukro-service/jest.config.js services/aukro-service/src/aukro/orders/orders.service.spec.ts --runInBand` -> pass, 15 tests.
-- `NODE_PATH=/home/ssf/Documents/Github/codex-worktrees/bazos-goal24-runtime-token-repair/services/aukro-service/node_modules:/home/ssf/Documents/Github/codex-worktrees/bazos-goal24-runtime-token-repair/node_modules npm --prefix services/aukro-service run build` -> pass.
+- `NODE_PATH=/home/ssf/Documents/Github/codex-worktrees/bazos-goal24-runtime-token-repair/shared/node_modules:/home/ssf/Documents/Github/codex-worktrees/bazos-goal24-runtime-token-repair/node_modules ./shared/node_modules/.bin/jest --config services/bazos-service/jest.config.js services/bazos-service/src/channel/orders/orders.service.spec.ts --runInBand` -> pass, 15 tests.
+- `NODE_PATH=/home/ssf/Documents/Github/codex-worktrees/bazos-goal24-runtime-token-repair/services/bazos-service/node_modules:/home/ssf/Documents/Github/codex-worktrees/bazos-goal24-runtime-token-repair/node_modules npm --prefix services/bazos-service run build` -> pass.
 - `git diff --check` -> pass.
 
 ## Gate Evidence

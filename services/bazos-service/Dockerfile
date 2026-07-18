@@ -25,14 +25,14 @@ RUN npm run build
 
 # Copy service files
 WORKDIR /app
-COPY services/aukro-service/package*.json ./services/aukro-service/
-COPY services/aukro-service/tsconfig.json ./services/aukro-service/
-COPY services/aukro-service/src ./services/aukro-service/src
+COPY services/bazos-service/package*.json ./services/bazos-service/
+COPY services/bazos-service/tsconfig.json ./services/bazos-service/
+COPY services/bazos-service/src ./services/bazos-service/src
 COPY tsconfig.json ./
 COPY package*.json ./
 
 # Install dependencies and build
-WORKDIR /app/services/aukro-service
+WORKDIR /app/services/bazos-service
 RUN npm ci
 RUN npm run build
 
@@ -48,12 +48,12 @@ WORKDIR /app
 COPY --from=builder /app/shared ./shared
 
 # Copy service files maintaining directory structure for file: references
-COPY --from=builder /app/services/aukro-service ./services/aukro-service
+COPY --from=builder /app/services/bazos-service ./services/bazos-service
 
 # Copy root package.json for shared dependencies
 COPY --from=builder /app/package*.json ./
 
-WORKDIR /app/services/aukro-service
+WORKDIR /app/services/bazos-service
 
 EXPOSE 3700
 

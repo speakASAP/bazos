@@ -4,23 +4,23 @@ const path = require('path');
 const root = path.resolve(__dirname, '..');
 
 const requiredFiles = [
-  'services/aukro-service/src/business-health/business-health.controller.ts',
-  'services/aukro-service/src/business-health/business-health.module.ts',
-  'services/aukro-service/src/business-health/business-health.service.ts',
-  'services/aukro-service/src/business-health/business-health.types.ts',
-  'services/aukro-service/src/app.module.ts',
+  'services/bazos-service/src/business-health/business-health.controller.ts',
+  'services/bazos-service/src/business-health/business-health.module.ts',
+  'services/bazos-service/src/business-health/business-health.service.ts',
+  'services/bazos-service/src/business-health/business-health.types.ts',
+  'services/bazos-service/src/app.module.ts',
   'docs/orchestrator/2026-07-06-bazos-business-health-handoff.md',
   'implementation-goals/GOAL-26-bazos-business-health-channel-readback.md',
   'reports/validation/2026-07-06-bazos-business-health-channel-readback.md',
 ];
 
 const requiredSnippets = {
-  'services/aukro-service/src/business-health/business-health.controller.ts': [
+  'services/bazos-service/src/business-health/business-health.controller.ts': [
     "@Controller('bazos/business-health')",
     "@Get('channel-readback')",
     'getChannelReadback',
   ],
-  'services/aukro-service/src/business-health/business-health.service.ts': [
+  'services/bazos-service/src/business-health/business-health.service.ts': [
     "const CONTRACT_ID = 'bazos.channel_readback_business_health.v1' as const;",
     "const BUSINESS_HEALTH_CONTRACT = 'stock-order-marketplace-business-health.v1' as const;",
     "const ENDPOINT = '/bazos/business-health/channel-readback' as const;",
@@ -59,12 +59,12 @@ const requiredSnippets = {
     'shared/bazos/catalog/bazos-catalog-sell-action.service.ts',
     'shared/bazos/policy/publish-policy.service.ts',
     'shared/rabbitmq/stock-events.subscriber.ts',
-    'services/aukro-service/src/aukro/orders/orders.service.ts',
+    'services/bazos-service/src/channel/orders/orders.service.ts',
     'docs/BAZOS_COMPLIANCE.md',
     'docs/orchestrator/2026-07-05-runtime-gate-packet-handoff.md',
     'reports/validation/2026-07-05-W8-bazos-provider-proof-gate.md',
   ],
-  'services/aukro-service/src/business-health/business-health.types.ts': [
+  'services/bazos-service/src/business-health/business-health.types.ts': [
     'BazosChannelReadbackBusinessHealthEnvelope',
     "contractId: 'bazos.channel_readback_business_health.v1'",
     "businessHealthContract: 'stock-order-marketplace-business-health.v1'",
@@ -75,7 +75,7 @@ const requiredSnippets = {
     'importOrSyncAuthorized: false',
     'orderIngestionAuthorized: false',
   ],
-  'services/aukro-service/src/app.module.ts': [
+  'services/bazos-service/src/app.module.ts': [
     "import { BusinessHealthModule } from './business-health/business-health.module';",
     'BusinessHealthModule',
   ],
@@ -146,7 +146,7 @@ for (const [file, snippets] of Object.entries(requiredSnippets)) {
   }
 }
 
-const serviceContent = read('services/aukro-service/src/business-health/business-health.service.ts');
+const serviceContent = read('services/bazos-service/src/business-health/business-health.service.ts');
 for (const snippet of forbiddenSnippets) {
   if (serviceContent.includes(snippet)) {
     throw new Error(`Forbidden live/runtime pattern in business health service: ${snippet}`);

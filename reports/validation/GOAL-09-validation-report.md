@@ -10,7 +10,7 @@ branch: main
 
 ## Scope
 
-Compliance hardening for Bazos publishing, including shared policy gates and the older `services/aukro-service/src/aukro/publishing/*` route set.
+Compliance hardening for Bazos publishing, including shared policy gates and the older `services/bazos-service/src/channel/publishing/*` route set.
 
 ## Changed Files
 
@@ -19,13 +19,13 @@ Compliance hardening for Bazos publishing, including shared policy gates and the
 - `reports/validation/GOAL-09-validation-report.md`
 - `reports/validation/GOAL-09-intent-compliance-report.md`
 - `docs/IMPLEMENTATION_STATE.md`
-- `services/aukro-service/src/aukro/offers/offers.controller.ts`
-- `services/aukro-service/src/aukro/publishing/human-verification.service.ts`
-- `services/aukro-service/src/aukro/publishing/identities.service.ts`
-- `services/aukro-service/src/aukro/publishing/publisher-queue.controller.ts`
-- `services/aukro-service/src/aukro/publishing/publisher-queue.service.ts`
-- `services/aukro-service/src/aukro/publishing/publishing-policy.service.ts`
-- `services/aukro-service/src/aukro/publishing/publishing.controller.ts`
+- `services/bazos-service/src/channel/offers/offers.controller.ts`
+- `services/bazos-service/src/channel/publishing/human-verification.service.ts`
+- `services/bazos-service/src/channel/publishing/identities.service.ts`
+- `services/bazos-service/src/channel/publishing/publisher-queue.controller.ts`
+- `services/bazos-service/src/channel/publishing/publisher-queue.service.ts`
+- `services/bazos-service/src/channel/publishing/publishing-policy.service.ts`
+- `services/bazos-service/src/channel/publishing/publishing.controller.ts`
 - `shared/bazos/catalog/bazos-catalog-sell-action.service.spec.ts`
 - `shared/bazos/policy/publish-policy.service.spec.ts`
 - `shared/bazos/policy/publish-policy.service.ts`
@@ -37,7 +37,7 @@ Compliance hardening for Bazos publishing, including shared policy gates and the
 
 - `npm test`: pass, 5 suites, 82 tests.
 - `npm --prefix shared run build`: pass.
-- `npm --prefix services/aukro-service run build`: pass.
+- `npm --prefix services/bazos-service run build`: pass.
 - `git diff --check`: pass.
 - Static stale-marker scan for legacy `sessionState: 'ready'`, challenge `reviewState` reset to `clear`, raw `phoneNumber` in submission packet, and unquoted evidence source identifiers: no matches.
 

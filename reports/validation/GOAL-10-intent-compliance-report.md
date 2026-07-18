@@ -8,7 +8,7 @@ date: 2026-06-26
 
 ## Intent Chain
 
-Vision -> Goal Impact -> System -> Feature -> Task -> Execution Plan -> Coding Prompt -> Code -> Validation is recorded in `implementation-goals/GOAL-10-remove-legacy-aukro-publishing.md`.
+Vision -> Goal Impact -> System -> Feature -> Task -> Execution Plan -> Coding Prompt -> Code -> Validation is recorded in `implementation-goals/GOAL-10-remove-legacy-publishing.md`.
 
 ## Compliance Decision
 

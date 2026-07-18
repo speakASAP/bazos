@@ -37,14 +37,14 @@ The customer overview now explains whether the Alfares session is active, which 
 
 ## Parallel Execution
 
-- Workstream: Overview UI aggregation - status `ready now`; owner role `integration implementer`; files `services/aukro-service/src/ui/ui.assets.ts`; validation owner `original thread`.
+- Workstream: Overview UI aggregation - status `ready now`; owner role `integration implementer`; files `services/bazos-service/src/ui/ui.assets.ts`; validation owner `original thread`.
 - Workstream: Backend/API changes - status `blocked`; reason `not needed for requested overview because existing guarded endpoints expose the required fields`.
 - Workstream: Deploy/smoke - status `final integration`; dependency `source validation pass and commit`.
 - Shared contracts: existing Bazos ad and identity DTO shapes; integration owner: original thread; merge order: UI patch, validation, report/state update, commit, deploy.
 
 ## Validation
 
-- `npm --prefix services/aukro-service run build`
+- `npm --prefix services/bazos-service run build`
 - `npm --prefix shared run build`
 - `npm test`
 - `git diff --check`

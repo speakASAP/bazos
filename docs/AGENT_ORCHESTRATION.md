@@ -41,7 +41,7 @@ Implementation subagents are allowed only for development workflow tasks. They m
 Each worker must receive a disjoint write set. Examples:
 
 - `services/api-gateway/**` only;
-- `services/aukro-service/**` only until service naming is corrected;
+- `services/bazos-service/**` only;
 - `shared/**` only;
 - `prisma/**` only;
 - `k8s/**` only;

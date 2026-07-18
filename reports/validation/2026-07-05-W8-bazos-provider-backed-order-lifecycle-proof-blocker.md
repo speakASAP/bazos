@@ -28,9 +28,9 @@ Validation -> See command evidence below.
 ## Artifact Validated
 
 - `reports/validation/2026-07-05-W4-bazos-orders-lifecycle-cabinet-provider-proof.md`
-- `services/aukro-service/src/aukro/orders/orders.service.ts`
-- `services/aukro-service/src/aukro/orders/orders.controller.ts`
-- `services/aukro-service/src/aukro/orders/orders.service.spec.ts`
+- `services/bazos-service/src/channel/orders/orders.service.ts`
+- `services/bazos-service/src/channel/orders/orders.controller.ts`
+- `services/bazos-service/src/channel/orders/orders.service.spec.ts`
 - `scripts/verify-orders-lifecycle-ui.js`
 - `scripts/verify-bazos-provider-proof-boundary.js`
 
@@ -68,10 +68,10 @@ f808037 (HEAD -> main, origin/main) docs: add W4 Bazos orders lifecycle proof
 
 Source findings:
 
-- `services/aukro-service/src/aukro/orders/orders.service.ts` keeps `LIVE_BAZOS_WEBHOOK_SUPPORT = '[UNKNOWN: live Bazos marketplace webhook support]'`.
+- `services/bazos-service/src/channel/orders/orders.service.ts` keeps `LIVE_BAZOS_WEBHOOK_SUPPORT = '[UNKNOWN: live Bazos marketplace webhook support]'`.
 - `OrdersService.handleWebhook()` unwraps `order`/`payload`/raw data and returns `Synthetic/internal Bazos order ingested`, so the handler is not a real provider webhook contract.
-- `services/aukro-service/src/aukro/orders/orders.service.spec.ts` explicitly tests `ingests synthetic/internal webhook envelopes while keeping live Bazos webhook support unknown`.
-- `services/aukro-service/src/aukro/orders/orders.controller.ts` exposes guarded `POST /orders/webhook`; this does not establish a Bazos provider payload/status contract.
+- `services/bazos-service/src/channel/orders/orders.service.spec.ts` explicitly tests `ingests synthetic/internal webhook envelopes while keeping live Bazos webhook support unknown`.
+- `services/bazos-service/src/channel/orders/orders.controller.ts` exposes guarded `POST /orders/webhook`; this does not establish a Bazos provider payload/status contract.
 - Repo search found no non-secret Bazos provider order webhook fixture, provider status transition sample, provider order item identity mapping sample, or live provider smoke packet.
 
 ## Contract Evidence

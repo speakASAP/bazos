@@ -7,5 +7,5 @@ Feature -> marketplace sales-source and automation copy for Bazos.
 Task -> update landing copy only; avoid deploy.
 Execution Plan -> inspect dirty worktree, preserve existing UI asset edits, update only landing copy, validate syntax/build surface without touching unrelated files.
 Coding Prompt -> remote worker prompt dated 2026-07-02 for allegro/aukro/bazos landing sales copy.
-Code -> services/aukro-service/src/ui/ui.assets.ts.
-Validation -> git diff --check passed; npm --prefix services/aukro-service run build passed.
+Code -> services/bazos-service/src/ui/ui.assets.ts.
+Validation -> git diff --check passed; npm --prefix services/bazos-service run build passed.

@@ -31,8 +31,8 @@ Pass by scope. This change does not publish, mutate listings, automate Bazos bro
 
 ### Validation Evidence
 
-- `NODE_PATH=../../shared/node_modules ../../shared/node_modules/.bin/jest --config jest.config.js src/aukro/orders/orders.service.spec.ts --runInBand`: pass, 1 suite, 5 tests.
-- `npm --prefix services/aukro-service run build`: pass.
+- `NODE_PATH=../../shared/node_modules ../../shared/node_modules/.bin/jest --config jest.config.js src/channel/orders/orders.service.spec.ts --runInBand`: pass, 1 suite, 5 tests.
+- `npm --prefix services/bazos-service run build`: pass.
 - `npm --prefix shared run build`: pass.
 - `npm test`: pass, 5 suites, 83 tests.
 - `git diff --check`: pass.
@@ -41,21 +41,21 @@ Pass by scope. This change does not publish, mutate listings, automate Bazos bro
 
 - Remote repo preflight on `main`: clean before edits, latest commit `2b1c15a Record client overview statistics deployment`.
 - Inspected `BazosOrder` Prisma model: no line-item relation and no Catalog product mapping field.
-- Inspected existing forwarding: `services/aukro-service/src/aukro/orders/orders.service.ts` persisted `BazosOrder` then called Orders with `items: []`.
+- Inspected existing forwarding: `services/bazos-service/src/channel/orders/orders.service.ts` persisted `BazosOrder` then called Orders with `items: []`.
 - Inspected Bazos ad schema: `BazosAd.productId` is the local Catalog product ID available for safe mapping.
 
 ### Risks
 
 - The service now supports bounded ad-line and synthetic/internal Catalog product ID payload shapes, but actual live Bazos webhook semantics remain `[UNKNOWN: live Bazos marketplace webhook support]`.
 - Orders created without item/ad identifiers are stored locally but are not forwarded to central Orders.
-- `services/aukro-service/src/aukro/*` paths remain legacy Aukro-named wrappers around Bazos semantics.
+- `services/bazos-service/src/channel/*` paths were legacy-named wrappers around Bazos semantics at the time of this report; renamed to Bazos/channel naming on 2026-07-18.
 
 ### Files Changed
 
-- `services/aukro-service/src/aukro/orders/orders.service.ts`
-- `services/aukro-service/src/aukro/orders/orders.service.spec.ts`
-- `services/aukro-service/jest.config.js`
-- `services/aukro-service/tsconfig.json`
+- `services/bazos-service/src/channel/orders/orders.service.ts`
+- `services/bazos-service/src/channel/orders/orders.service.spec.ts`
+- `services/bazos-service/jest.config.js`
+- `services/bazos-service/tsconfig.json`
 - `implementation-goals/GOAL-17-bazos-order-forwarding.md`
 - `reports/validation/GOAL-17-bazos-order-forwarding-report.md`
 - `docs/IMPLEMENTATION_STATE.md`

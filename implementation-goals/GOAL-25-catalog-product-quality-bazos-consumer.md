@@ -102,7 +102,7 @@ Evidence: `reports/validation/2026-07-02-goal-25-bazos-product-quality-pre-codin
 git diff --check
 npm --prefix shared test -- bazos-catalog-sell-action.service.spec.ts
 npm --prefix shared run build
-npm --prefix services/aukro-service run build
+npm --prefix services/bazos-service run build
 ```
 
 ## Completion Report

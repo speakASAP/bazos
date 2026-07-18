@@ -17,7 +17,7 @@ Customer and admin Bazos UI surfaces now expose local Bazos orders through the e
 ### Implemented
 
 - Kept the existing guarded `/ui/orders` path, user scoping, admin scoping, and central Orders lifecycle attachment.
-- Added delivery statistics to `orderSummary()` in `services/aukro-service/src/ui/ui.assets.ts`.
+- Added delivery statistics to `orderSummary()` in `services/bazos-service/src/ui/ui.assets.ts`.
 - Added admin summary cards for pending delivery, in-delivery, and delivered/returned orders.
 - Added customer order summary cards for pending delivery, in-delivery, and received/returned orders.
 - Preserved the source guard that refuses to forward to Orders without item identifiers and Warehouse-owned `warehouseId`.
@@ -35,9 +35,9 @@ Pass by scope. The change only reads/display existing local order and central Or
 
 - `git diff --check`: pass.
 - `npm --prefix shared test -- order-client.service.spec.ts`: pass, 1 suite, 3 tests.
-- `cd services/aukro-service && NODE_PATH=../../shared/node_modules ../../shared/node_modules/.bin/jest --config jest.config.js src/aukro/orders/orders.service.spec.ts --runInBand`: pass, 1 suite, 10 tests.
+- `cd services/bazos-service && NODE_PATH=../../shared/node_modules ../../shared/node_modules/.bin/jest --config jest.config.js src/channel/orders/orders.service.spec.ts --runInBand`: pass, 1 suite, 10 tests.
 - `npm --prefix shared run build`: pass.
-- `npm --prefix services/aukro-service run build`: pass.
+- `npm --prefix services/bazos-service run build`: pass.
 
 ### Readiness Gate Evidence
 
@@ -55,7 +55,7 @@ Pass by scope. The change only reads/display existing local order and central Or
 
 ### Files Changed
 
-- `services/aukro-service/src/ui/ui.assets.ts`
+- `services/bazos-service/src/ui/ui.assets.ts`
 - `docs/IMPLEMENTATION_STATE.md`
 - `reports/validation/2026-07-02-orders-lifecycle-cabinet-bazos-report.md`
 

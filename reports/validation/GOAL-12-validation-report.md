@@ -6,7 +6,7 @@ Client catalog-to-Bazoš publishing user flow for `/client`.
 
 ## Commands
 
-- `npm --prefix services/aukro-service run build` - pass.
+- `npm --prefix services/bazos-service run build` - pass.
 - `node /tmp/bazos-ui-parse.js` - pass, `appScript parse ok`.
 - `npm test` - pass, 5 suites and 82 tests.
 - `git diff --check` - pass.

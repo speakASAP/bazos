@@ -62,7 +62,7 @@ Status: validated in source
 - `git diff --check` - PASS after removing one trailing blank line in this report.
 - `npm --prefix shared test` - PASS, 7 suites, 111 tests.
 - `npm test` - PASS, 7 suites, 111 tests.
-- `npm --prefix services/aukro-service run build` - PASS.
+- `npm --prefix services/bazos-service run build` - PASS.
 
 ### Deployment Evidence
 

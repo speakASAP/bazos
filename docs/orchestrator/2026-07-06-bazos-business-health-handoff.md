@@ -12,13 +12,13 @@ Vision -> Goal Impact -> System -> Feature -> Task -> Execution Plan -> Coding P
 - Execution Plan: this handoff and `implementation-goals/GOAL-26-bazos-business-health-channel-readback.md`
 - Coding Prompt: Codex prompt 2026-07-06 Bazos service-owned business-health channel readback envelope
 - Code:
-  - `services/aukro-service/src/business-health/business-health.controller.ts`
-  - `services/aukro-service/src/business-health/business-health.service.ts`
-  - `services/aukro-service/src/business-health/business-health.types.ts`
-  - `services/aukro-service/src/business-health/business-health.module.ts`
+  - `services/bazos-service/src/business-health/business-health.controller.ts`
+  - `services/bazos-service/src/business-health/business-health.service.ts`
+  - `services/bazos-service/src/business-health/business-health.types.ts`
+  - `services/bazos-service/src/business-health/business-health.module.ts`
 - Validation:
   - `npm run verify:business-health-bazos-channel-contract`
-  - `npm --prefix services/aukro-service run build`
+  - `npm --prefix services/bazos-service run build`
   - `git diff --check`
 
 ## Contract
@@ -53,7 +53,7 @@ The envelope states the Bazos channel invariant for marketplace availability and
 - `shared/bazos/catalog/bazos-catalog-sell-action.service.ts`
 - `shared/bazos/policy/publish-policy.service.ts`
 - `shared/rabbitmq/stock-events.subscriber.ts`
-- `services/aukro-service/src/aukro/orders/orders.service.ts`
+- `services/bazos-service/src/channel/orders/orders.service.ts`
 - `docs/BAZOS_COMPLIANCE.md`
 - `docs/orchestrator/2026-07-05-runtime-gate-packet-handoff.md`
 - `reports/validation/2026-07-05-W8-bazos-provider-proof-gate.md`
@@ -73,6 +73,6 @@ The envelope states the Bazos channel invariant for marketplace availability and
 
 Suggested BPCP sourceRefs:
 
-- `bazos/services/aukro-service/src/business-health/business-health.controller.ts`
-- `bazos/services/aukro-service/src/business-health/business-health.service.ts`
+- `bazos/services/bazos-service/src/business-health/business-health.controller.ts`
+- `bazos/services/bazos-service/src/business-health/business-health.service.ts`
 - `bazos/docs/orchestrator/2026-07-06-bazos-business-health-handoff.md`

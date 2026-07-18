@@ -72,7 +72,7 @@ export class BusinessHealthService {
             'Warehouse stock events project local Bazos ad stock state and explicitly do not mutate Warehouse or external Bazos.',
         },
         {
-          path: 'services/aukro-service/src/aukro/orders/orders.service.ts',
+          path: 'services/bazos-service/src/channel/orders/orders.service.ts',
           reason:
             'Bazos order read/forwarding preserves missing provider-backed item/status contracts and fails closed without Warehouse-owned item mapping.',
         },
@@ -117,13 +117,13 @@ export class BusinessHealthService {
         executionPlan: 'docs/orchestrator/2026-07-06-bazos-business-health-handoff.md',
         codingPrompt: 'Codex prompt 2026-07-06 Bazos service-owned business-health channel readback envelope',
         code: [
-          'services/aukro-service/src/business-health/business-health.controller.ts',
-          'services/aukro-service/src/business-health/business-health.service.ts',
-          'services/aukro-service/src/business-health/business-health.types.ts',
+          'services/bazos-service/src/business-health/business-health.controller.ts',
+          'services/bazos-service/src/business-health/business-health.service.ts',
+          'services/bazos-service/src/business-health/business-health.types.ts',
         ],
         validation: [
           'scripts/verify-business-health-bazos-channel-contract.js',
-          'npm --prefix services/aukro-service run build',
+          'npm --prefix services/bazos-service run build',
           'git diff --check',
         ],
       },

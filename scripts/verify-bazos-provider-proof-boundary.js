@@ -2,9 +2,9 @@
 const fs = require("fs");
 
 const files = {
-  service: "services/aukro-service/src/aukro/orders/orders.service.ts",
-  spec: "services/aukro-service/src/aukro/orders/orders.service.spec.ts",
-  controller: "services/aukro-service/src/aukro/orders/orders.controller.ts",
+  service: "services/bazos-service/src/channel/orders/orders.service.ts",
+  spec: "services/bazos-service/src/channel/orders/orders.service.spec.ts",
+  controller: "services/bazos-service/src/channel/orders/orders.controller.ts",
   w4Report: "reports/validation/2026-07-05-W4-bazos-orders-lifecycle-cabinet-provider-proof.md",
   w8Report: "reports/validation/2026-07-05-W8-bazos-provider-backed-order-lifecycle-proof-blocker.md",
 };

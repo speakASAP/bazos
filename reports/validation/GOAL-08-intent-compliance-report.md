@@ -42,8 +42,8 @@ See `reports/validation/GOAL-08-pre-coding-readiness.md`.
 
 ## Files Changed
 
-- `services/aukro-service/src/ui/ui.assets.ts`
-- `services/aukro-service/src/ui/ui.controller.ts`
+- `services/bazos-service/src/ui/ui.assets.ts`
+- `services/bazos-service/src/ui/ui.controller.ts`
 - `implementation-goals/GOAL-08-hosted-auth-ui.md`
 - `reports/validation/GOAL-08-pre-coding-readiness.md`
 - `reports/validation/GOAL-08-validation-report.md`

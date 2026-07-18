@@ -19,7 +19,7 @@ Feature -> protected Bazos replay endpoint with fail-closed zero-event behavior.
 Task -> inspect Bazos order/listing/sell-action source and expose exact Bazos paid-history blocker.
 Execution Plan -> Bazos-owned source/spec/docs only; no Catalog, Marketing, Orders, payment, deployment, secret, or runtime mutation.
 Coding Prompt -> do not invent backend fields, do not emit sensitive data, and replace ambiguous paid multi-product eligibility with exact `[MISSING: ...]` markers.
-Code -> `services/aukro-service/src/aukro/orders/orders.service.ts` and focused spec assertions.
+Code -> `services/bazos-service/src/channel/orders/orders.service.ts` and focused spec assertions.
 Validation -> focused spec, service build, and `git diff --check`.
 State Update -> Bazos paid multi-product replay is source-ineligible until the missing Bazos producer prerequisites exist.
 
@@ -44,8 +44,8 @@ The replay endpoint emits only owner/channel/filter/count/blocker metadata and a
 
 ## Commands Run
 
-- `NODE_PATH=/home/ssf/Documents/Github/codex-worktrees/bazos-goal24-affinity-replay-contract/shared/node_modules:/home/ssf/Documents/Github/codex-worktrees/bazos-goal24-affinity-replay-contract/node_modules ./shared/node_modules/.bin/jest --config services/aukro-service/jest.config.js services/aukro-service/src/aukro/orders/orders.service.spec.ts --runInBand` -> pass, 14 tests.
-- `NODE_PATH=/home/ssf/Documents/Github/codex-worktrees/bazos-goal24-affinity-replay-contract/services/aukro-service/node_modules:/home/ssf/Documents/Github/codex-worktrees/bazos-goal24-affinity-replay-contract/node_modules npm --prefix services/aukro-service run build` -> pass.
+- `NODE_PATH=/home/ssf/Documents/Github/codex-worktrees/bazos-goal24-affinity-replay-contract/shared/node_modules:/home/ssf/Documents/Github/codex-worktrees/bazos-goal24-affinity-replay-contract/node_modules ./shared/node_modules/.bin/jest --config services/bazos-service/jest.config.js services/bazos-service/src/channel/orders/orders.service.spec.ts --runInBand` -> pass, 14 tests.
+- `NODE_PATH=/home/ssf/Documents/Github/codex-worktrees/bazos-goal24-affinity-replay-contract/services/bazos-service/node_modules:/home/ssf/Documents/Github/codex-worktrees/bazos-goal24-affinity-replay-contract/node_modules npm --prefix services/bazos-service run build` -> pass.
 - `git diff --check` -> pass.
 
 Validation note: the isolated worktree used temporary uncommitted `node_modules` symlinks to the canonical `/home/ssf/Documents/Github/bazos` install for validation only; the symlinks were removed before staging.

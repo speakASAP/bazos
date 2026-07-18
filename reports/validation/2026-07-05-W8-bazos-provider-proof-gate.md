@@ -26,7 +26,7 @@ Validation -> `npm run verify:bazos-provider-proof-gate`, `npm run verify:orders
 
 ## Current Evidence
 
-- `services/aukro-service/src/aukro/orders/orders.service.ts` keeps `LIVE_BAZOS_WEBHOOK_SUPPORT = '[UNKNOWN: live Bazos marketplace webhook support]'`.
+- `services/bazos-service/src/channel/orders/orders.service.ts` keeps `LIVE_BAZOS_WEBHOOK_SUPPORT = '[UNKNOWN: live Bazos marketplace webhook support]'`.
 - `handleWebhook()` returns `message: 'Synthetic/internal Bazos order ingested'` and echoes the unknown live-webhook marker.
 - The order service fails closed when provider/order payloads lack a Bazos item/ad line contract: `[MISSING: Bazos order item ingestion contract]`.
 - The order service fails closed when mapped items lack Warehouse-owned routing: `[MISSING: Warehouse-owned warehouseId for Bazos order item]`.

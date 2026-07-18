@@ -17,7 +17,7 @@ const requiredStages = [
   "cancelled",
 ];
 
-const ui = fs.readFileSync("services/aukro-service/src/ui/ui.assets.ts", "utf8");
+const ui = fs.readFileSync("services/bazos-service/src/ui/ui.assets.ts", "utf8");
 const missing = requiredStages.filter((stage) => !ui.includes(stage));
 const refreshMarkers = [
   "data-refresh-client",

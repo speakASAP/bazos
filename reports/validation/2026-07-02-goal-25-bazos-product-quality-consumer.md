@@ -77,7 +77,7 @@ npm --prefix shared test -- bazos-catalog-sell-action.service.spec.ts publish-po
 npm --prefix shared run build
 # PASS, tsc
 
-npm --prefix services/aukro-service run build
+npm --prefix services/bazos-service run build
 # PASS, tsc && tsc-alias
 
 git push origin main
@@ -154,7 +154,7 @@ Blocked prepare performs no Bazos draft create/update and no queue operation. Co
 - `k8s/external-secret.yaml`
 - `reports/validation/2026-07-02-goal-25-bazos-product-quality-pre-coding.md`
 - `reports/validation/2026-07-02-goal-25-bazos-product-quality-consumer.md`
-- `services/aukro-service/src/ui/ui.assets.ts`
+- `services/bazos-service/src/ui/ui.assets.ts`
 - `shared/bazos/ad/bazos-ad.service.ts`
 - `shared/bazos/ad/bazos-ad.service.spec.ts`
 - `shared/bazos/catalog/bazos-catalog-sell-action.controller.ts`

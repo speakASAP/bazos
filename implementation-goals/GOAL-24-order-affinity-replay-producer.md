@@ -14,10 +14,10 @@ Marketing can distinguish an implemented-but-blocked Bazos producer from a missi
 
 ## Scope
 
-- `services/aukro-service/src/aukro/orders/orders.controller.ts`
-- `services/aukro-service/src/aukro/orders/orders.module.ts`
-- `services/aukro-service/src/aukro/orders/orders.service.ts`
-- `services/aukro-service/src/aukro/orders/orders.service.spec.ts`
+- `services/bazos-service/src/channel/orders/orders.controller.ts`
+- `services/bazos-service/src/channel/orders/orders.module.ts`
+- `services/bazos-service/src/channel/orders/orders.service.ts`
+- `services/bazos-service/src/channel/orders/orders.service.spec.ts`
 - Goal/report/state documentation
 
 ## Out Of Scope

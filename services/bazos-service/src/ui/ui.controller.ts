@@ -1,6 +1,6 @@
 import { Controller, ForbiddenException, Get, Param, Post, Query, Request, Res, UnauthorizedException, UseGuards } from '@nestjs/common';
 import { AuthService, CatalogClientService, JwtAuthGuard } from '@bazos/shared';
-import { OrdersService } from '../aukro/orders/orders.service';
+import { OrdersService } from '../channel/orders/orders.service';
 import { appScript, appStyles, renderAppPage, renderAuthCallbackPage, renderLandingPage } from './ui.assets';
 import { FAVICON_ICO } from './favicon.assets';
 

@@ -55,7 +55,7 @@ Intent chain:
 - Task: expose the bounded order panel/cabinet in the existing client/admin UI surfaces and cover central read behavior with focused specs.
 - Execution Plan: use stored `BazosOrder.orderId` and existing synthetic/internal records only; preserve provider-backed blockers as explicit `[MISSING]` / `[UNKNOWN]` facts.
 - Coding Prompt: B1 Bazos limited central Orders status read-model worker.
-- Code: current source state includes the read model in `shared/clients/order-client.service.ts`, `services/aukro-service/src/aukro/orders/orders.service.ts`, `services/aukro-service/src/aukro/orders/orders.controller.ts`, `services/aukro-service/src/ui/ui.controller.ts`, `services/aukro-service/src/ui/ui.module.ts`, and `services/aukro-service/src/ui/ui.assets.ts`; this worker added focused spec coverage.
+- Code: current source state includes the read model in `shared/clients/order-client.service.ts`, `services/bazos-service/src/channel/orders/orders.service.ts`, `services/bazos-service/src/channel/orders/orders.controller.ts`, `services/bazos-service/src/ui/ui.controller.ts`, `services/bazos-service/src/ui/ui.module.ts`, and `services/bazos-service/src/ui/ui.assets.ts`; this worker added focused spec coverage.
 - Validation: recorded in `reports/validation/2026-07-02-central-orders-status-read-model-worker.md`.
 
 Bounded implementation notes:
@@ -78,7 +78,7 @@ Validation evidence:
 - `git diff --check` passed.
 - `npm --prefix shared test -- order-client.service.spec.ts` passed: 1 suite, 3 tests.
 - `npm --prefix shared run build` passed.
-- `NODE_PATH=../../shared/node_modules ../../shared/node_modules/.bin/jest --config jest.config.js src/aukro/orders/orders.service.spec.ts --runInBand` passed: 1 suite, 10 tests.
-- `npm --prefix services/aukro-service run build` passed.
+- `NODE_PATH=../../shared/node_modules ../../shared/node_modules/.bin/jest --config jest.config.js src/channel/orders/orders.service.spec.ts --runInBand` passed: 1 suite, 10 tests.
+- `npm --prefix services/bazos-service run build` passed.
 
 No deploy or push was performed in this worker scope.

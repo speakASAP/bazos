@@ -13,8 +13,8 @@ function requireNotIncludes(source, needle, label) {
   assert.equal(source.includes(needle), false, `${label}: must not include ${needle}`);
 }
 
-const service = read('services/aukro-service/src/aukro/orders/orders.service.ts');
-const spec = read('services/aukro-service/src/aukro/orders/orders.service.spec.ts');
+const service = read('services/bazos-service/src/channel/orders/orders.service.ts');
+const spec = read('services/bazos-service/src/channel/orders/orders.service.spec.ts');
 const w4 = read('reports/validation/2026-07-05-W4-bazos-orders-lifecycle-cabinet-provider-proof.md');
 const goal17 = read('reports/validation/GOAL-17-bazos-order-forwarding-report.md');
 const report = read('reports/validation/2026-07-05-W8-bazos-provider-proof-gate.md');

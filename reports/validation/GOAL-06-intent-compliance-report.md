@@ -38,7 +38,7 @@ Pass. The landing and app copy explicitly preserve Bazos compliance constraints.
 
 ## Validation Evidence
 
-- `npm --prefix services/aukro-service run build`: pass.
+- `npm --prefix services/bazos-service run build`: pass.
 - `npm test`: pass, 5 suites and 79 tests.
 - `git diff --check`: pass.
 - Compiled asset checks: pass.
@@ -61,10 +61,10 @@ Pass. The landing and app copy explicitly preserve Bazos compliance constraints.
 - `reports/validation/GOAL-06-pre-coding-readiness.md`
 - `reports/validation/GOAL-06-validation-report.md`
 - `reports/validation/GOAL-06-intent-compliance-report.md`
-- `services/aukro-service/src/app.module.ts`
-- `services/aukro-service/src/ui/ui.module.ts`
-- `services/aukro-service/src/ui/ui.controller.ts`
-- `services/aukro-service/src/ui/ui.assets.ts`
+- `services/bazos-service/src/app.module.ts`
+- `services/bazos-service/src/ui/ui.module.ts`
+- `services/bazos-service/src/ui/ui.controller.ts`
+- `services/bazos-service/src/ui/ui.assets.ts`
 - `docs/IMPLEMENTATION_STATE.md`
 
 ## Commit Or No-Commit Reason
@@ -106,7 +106,7 @@ Pass. The change is UI/auth-shell only and preserves all Bazos compliance invari
 
 ### Validation Evidence
 
-- `npm --prefix services/aukro-service run build`: pass.
+- `npm --prefix services/bazos-service run build`: pass.
 - `npm test`: pass, 5 suites and 79 tests.
 - `git diff --check`: pass.
 - Compiled asset smoke checks: pass for landing pricing, separated admin/client nav, client register tab, and register endpoint script path.
@@ -126,8 +126,8 @@ Pass. The change is UI/auth-shell only and preserves all Bazos compliance invari
 - `reports/validation/GOAL-06-pre-coding-readiness.md`
 - `reports/validation/GOAL-06-validation-report.md`
 - `reports/validation/GOAL-06-intent-compliance-report.md`
-- `services/aukro-service/src/ui/ui.controller.ts`
-- `services/aukro-service/src/ui/ui.assets.ts`
+- `services/bazos-service/src/ui/ui.controller.ts`
+- `services/bazos-service/src/ui/ui.assets.ts`
 - `docs/IMPLEMENTATION_STATE.md`
 
 ### Commit Or No-Commit Reason

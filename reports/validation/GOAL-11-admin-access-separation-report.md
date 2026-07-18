@@ -30,7 +30,7 @@ Pass by scope. No Bazos publishing, browser automation, identity verification, e
 
 ### Validation Evidence
 
-- `npm --prefix services/aukro-service run build`: pass.
+- `npm --prefix services/bazos-service run build`: pass.
 - `npm --prefix shared run build`: pass.
 - `npm test`: pass, 5 suites and 82 tests.
 - `git diff --check`: pass.
@@ -56,8 +56,8 @@ Pass by scope. No Bazos publishing, browser automation, identity verification, e
 
 - `.env.example`
 - `k8s/configmap.yaml`
-- `services/aukro-service/src/ui/ui.assets.ts`
-- `services/aukro-service/src/ui/ui.controller.ts`
+- `services/bazos-service/src/ui/ui.assets.ts`
+- `services/bazos-service/src/ui/ui.controller.ts`
 - `implementation-goals/GOAL-11-admin-access-separation.md`
 - `reports/validation/GOAL-11-admin-access-separation-report.md`
 - `implementation-goals/README.md`

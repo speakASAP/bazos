@@ -26,7 +26,7 @@ The admin and client sections use Auth microservice JWTs through the existing sh
 - Serve app shells at `/admin` and `/client`.
 - Add `/ui/auth/login`, `/ui/auth/register`, and `/ui/auth/me` for Auth microservice-backed session handling.
 - Add static CSS and JavaScript routes under `/ui/*`.
-- Wire the UI module into `services/aukro-service/src/app.module.ts`.
+- Wire the UI module into `services/bazos-service/src/app.module.ts`.
 
 ## Out Of Scope
 
@@ -72,7 +72,7 @@ See `reports/validation/GOAL-06-pre-coding-readiness.md`.
 
 ## Execution Steps
 
-1. Create UI module/controller/static assets in `services/aukro-service/src/ui`.
+1. Create UI module/controller/static assets in `services/bazos-service/src/ui`.
 2. Register UI module in `AppModule`.
 3. Validate TypeScript build and shared tests.
 4. Verify root and UI routes locally or against a started service when available.
@@ -81,7 +81,7 @@ See `reports/validation/GOAL-06-pre-coding-readiness.md`.
 
 ## Validation
 
-- `npm --prefix services/aukro-service run build`
+- `npm --prefix services/bazos-service run build`
 - `npm test`
 - `git diff --check`
 - Route smoke checks when the service can be started safely.

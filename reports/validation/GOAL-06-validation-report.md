@@ -13,16 +13,16 @@ Validated that the public landing page now presents 49 Kc/month customer pricing
 
 ### Commands Run
 
-- `ssh alfares 'cd /home/ssf/Documents/Github/bazos-service && npm --prefix services/aukro-service run build'`
+- `ssh alfares 'cd /home/ssf/Documents/Github/bazos-service && npm --prefix services/bazos-service run build'`
 - `ssh alfares 'cd /home/ssf/Documents/Github/bazos-service && npm test'`
 - `ssh alfares 'cd /home/ssf/Documents/Github/bazos-service && git diff --check'`
-- Compiled asset smoke check using `services/aukro-service/dist/ui/ui.assets.js`.
+- Compiled asset smoke check using `services/bazos-service/dist/ui/ui.assets.js`.
 
 ### Gate Evidence
 
 | Gate | Result | Evidence |
 |---|---|---|
-| TypeScript build | pass | `npm --prefix services/aukro-service run build` completed. |
+| TypeScript build | pass | `npm --prefix services/bazos-service run build` completed. |
 | Shared tests | pass | `npm test` completed: 5 suites, 79 tests passed. |
 | Whitespace diff | pass | `git diff --check` completed with no output. |
 | Compiled UI content | pass | Landing pricing, separated admin/client nav, client register tab, and `/ui/auth/register` script path all passed static checks. |
@@ -90,10 +90,10 @@ Validation of the Bazos landing page, administrator UI shell, customer UI shell,
 
 ## Commands Run
 
-- `ssh alfares 'cd /home/ssf/Documents/Github/bazos-service && npm --prefix services/aukro-service run build'`
+- `ssh alfares 'cd /home/ssf/Documents/Github/bazos-service && npm --prefix services/bazos-service run build'`
 - `ssh alfares 'cd /home/ssf/Documents/Github/bazos-service && npm test'`
 - `ssh alfares 'cd /home/ssf/Documents/Github/bazos-service && git diff --check'`
-- `ssh alfares 'cd /home/ssf/Documents/Github/bazos-service/services/aukro-service && node ... dist/ui/ui.assets.js checks'`
+- `ssh alfares 'cd /home/ssf/Documents/Github/bazos-service/services/bazos-service && node ... dist/ui/ui.assets.js checks'`
 - Temporary service startup on `BAZOS_SERVICE_PORT=3919`
 - Playwright static-render screenshots from compiled UI assets.
 
@@ -101,7 +101,7 @@ Validation of the Bazos landing page, administrator UI shell, customer UI shell,
 
 | Gate | Result | Evidence |
 |---|---|---|
-| TypeScript build | pass | `npm --prefix services/aukro-service run build` completed. |
+| TypeScript build | pass | `npm --prefix services/bazos-service run build` completed. |
 | Shared tests | pass | `npm test` completed: 5 suites, 79 tests passed. |
 | Whitespace diff | pass | `git diff --check` completed with no output. |
 | Route registration | pass | Temporary startup logs mapped `/`, `/admin`, `/client`, `/ui/app.css`, `/ui/app.js`, `/ui/auth/login`, and `/ui/auth/me`. |
@@ -118,7 +118,7 @@ The implementation does not modify publishing policy, publisher queue, browser s
 Scan command:
 
 ```bash
-grep -RIn --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=dist -E "cookie|verification code|password|payment|captcha|bypass|raw" services/aukro-service/src/ui implementation-goals/GOAL-06-landing-admin-client-ui.md reports/validation/GOAL-06-*
+grep -RIn --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=dist -E "cookie|verification code|password|payment|captcha|bypass|raw" services/bazos-service/src/ui implementation-goals/GOAL-06-landing-admin-client-ui.md reports/validation/GOAL-06-*
 ```
 
 Findings were expected and acceptable:

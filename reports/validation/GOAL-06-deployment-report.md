@@ -16,7 +16,7 @@ Explicit owner approval received on 2026-06-13 in response: "Yes, I want it. Do 
 
 - `ssh alfares 'cd /home/ssf/Documents/Github/bazos-service && ./scripts/deploy.sh'`
 - `ssh alfares 'kubectl set image deployment/bazos-service app=localhost:5000/bazos-service:ed28c56 -n statex-apps && kubectl rollout status deployment/bazos-service -n statex-apps --timeout=180s'`
-- `ssh alfares 'cd /home/ssf/Documents/Github/bazos-service && npm --prefix services/aukro-service run build'`
+- `ssh alfares 'cd /home/ssf/Documents/Github/bazos-service && npm --prefix services/bazos-service run build'`
 - `ssh alfares 'cd /home/ssf/Documents/Github/bazos-service && npm test'`
 - `ssh alfares 'cd /home/ssf/Documents/Github/bazos-service && git diff --check'`
 - `ssh alfares 'cd /home/ssf/Documents/Github/bazos-service && git commit -m "Fix Bazos UI auth status endpoint"'`

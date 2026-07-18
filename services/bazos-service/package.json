@@ -1,7 +1,7 @@
 {
   "name": "bazos-service",
   "version": "1.0.0",
-  "description": "Aukro Service for Aukro Integration System",
+  "description": "Bazos Service for Bazos classifieds automation",
   "main": "dist/main.js",
   "scripts": {
     "build": "tsc && tsc-alias",

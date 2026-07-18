@@ -87,7 +87,7 @@ The platform becomes a shared commerce network instead of isolated channel tools
 
 ## Known Dirty Worktree Caveats At Plan Creation
 
-- `bazos`: branch ahead by one commit and `services/aukro-service/src/ui/ui.assets.ts` is dirty; do not overwrite unless owning that exact UI fix.
+- `bazos`: branch ahead by one commit and `services/bazos-service/src/ui/ui.assets.ts` is dirty; do not overwrite unless owning that exact UI fix.
 - `heureka`, `allegro`, `aukro`: branch ahead by one commit; inspect before new commits or deploys.
 - `flipflop`: active unrelated GOAL-12 upsell/product-detail edits are present; do not touch or revert them.
 - `catalog-microservice`: clean at initial preflight.

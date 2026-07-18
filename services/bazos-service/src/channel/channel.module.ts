@@ -1,5 +1,5 @@
 /**
- * Aukro Module
+ * Channel Module (accounts, offers, orders)
  */
 
 import { Module } from '@nestjs/common';
@@ -10,4 +10,4 @@ import { OrdersModule } from './orders/orders.module';
 @Module({
   imports: [AccountsModule, OffersModule, OrdersModule],
 })
-export class AukroModule {}
+export class ChannelModule {}

@@ -24,9 +24,9 @@ Coding Prompt -> Remote-only W4 Bazos proof agent; allowed Bazos shared order cl
 Code -> No runtime code changes in this pass. Existing source proof points are:
 
 - `shared/clients/order-client.service.ts`: `getOrderLifecycleStatus()` reads Orders detail by central order id and normalizes lifecycle/payment/fulfillment/delivery fields from Orders.
-- `services/aukro-service/src/ui/ui.controller.ts`: guarded `/ui/orders` forces `centralStatus: true`; client reads are scoped to the authenticated Bazos user, while admin reads require admin access.
-- `services/aukro-service/src/aukro/orders/orders.service.ts`: customer/admin order reads attach `centralOrder`; forwarded rows read central Orders, unforwarded/stale rows are explicit states; create forwarding uses central Orders and fails closed when item or Warehouse evidence is missing.
-- `services/aukro-service/src/ui/ui.assets.ts`: buyer/admin summaries and order tables render central lifecycle/delivery state, stale/unforwarded states, and manual refresh controls.
+- `services/bazos-service/src/ui/ui.controller.ts`: guarded `/ui/orders` forces `centralStatus: true`; client reads are scoped to the authenticated Bazos user, while admin reads require admin access.
+- `services/bazos-service/src/channel/orders/orders.service.ts`: customer/admin order reads attach `centralOrder`; forwarded rows read central Orders, unforwarded/stale rows are explicit states; create forwarding uses central Orders and fails closed when item or Warehouse evidence is missing.
+- `services/bazos-service/src/ui/ui.assets.ts`: buyer/admin summaries and order tables render central lifecycle/delivery state, stale/unforwarded states, and manual refresh controls.
 - `scripts/verify-orders-lifecycle-ui.js`: static verifier checks all required Orders lifecycle stages and customer/admin refresh markers.
 
 Validation -> See command evidence below.
@@ -70,8 +70,8 @@ Tests: 3 passed, 3 total
 Bazos order service spec:
 
 ```text
-ssh alfares 'cd /home/ssf/Documents/Github/bazos/services/aukro-service && NODE_PATH=../../shared/node_modules ../../shared/node_modules/.bin/jest --config jest.config.js src/aukro/orders/orders.service.spec.ts --runInBand'
-PASS src/aukro/orders/orders.service.spec.ts
+ssh alfares 'cd /home/ssf/Documents/Github/bazos/services/bazos-service && NODE_PATH=../../shared/node_modules ../../shared/node_modules/.bin/jest --config jest.config.js src/channel/orders/orders.service.spec.ts --runInBand'
+PASS src/channel/orders/orders.service.spec.ts
 Test Suites: 1 passed, 1 total
 Tests: 17 passed, 17 total
 ```
@@ -110,7 +110,7 @@ No approved live buyer/admin bearer or browser session packet was available in t
 
 This worker did not find or add a provider-backed Bazos order webhook/status contract. Existing source keeps the boundary explicit:
 
-- `services/aukro-service/src/aukro/orders/orders.service.ts` defines `LIVE_BAZOS_WEBHOOK_SUPPORT = '[UNKNOWN: live Bazos marketplace webhook support]'`.
+- `services/bazos-service/src/channel/orders/orders.service.ts` defines `LIVE_BAZOS_WEBHOOK_SUPPORT = '[UNKNOWN: live Bazos marketplace webhook support]'`.
 - `handleWebhook()` reports `Synthetic/internal Bazos order ingested` and returns the unknown live webhook marker.
 - Focused order service coverage includes `ingests synthetic/internal webhook envelopes while keeping live Bazos webhook support unknown`.
 

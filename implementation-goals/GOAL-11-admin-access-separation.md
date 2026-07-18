@@ -40,14 +40,14 @@ The UI and server-side UI session gate now separate customer and administrator a
 
 ## Parallel Execution
 
-- Workstream: UI/admin access patch - status `ready now`; owner role `integration implementer`; files `services/aukro-service/src/ui/ui.controller.ts`, `services/aukro-service/src/ui/ui.assets.ts`, `k8s/configmap.yaml`, `.env.example`.
-- Workstream: Auth role assignment verification - status `dependency-gated`; owner role `Auth/admin operator`; expected evidence `[MISSING: confirm test user has app:bazos-service:admin or configure BAZOS_ADMIN_EMAILS]`; forbidden files `services/aukro-service/src/**`.
+- Workstream: UI/admin access patch - status `ready now`; owner role `integration implementer`; files `services/bazos-service/src/ui/ui.controller.ts`, `services/bazos-service/src/ui/ui.assets.ts`, `k8s/configmap.yaml`, `.env.example`.
+- Workstream: Auth role assignment verification - status `dependency-gated`; owner role `Auth/admin operator`; expected evidence `[MISSING: confirm test user has app:bazos-service:admin or configure BAZOS_ADMIN_EMAILS]`; forbidden files `services/bazos-service/src/**`.
 - Workstream: deploy/smoke - status `final integration`; owner role `integration owner`; dependency `validation pass and admin identity configured`.
 - Shared contracts: Auth role strings from `POST /auth/validate`; integration owner: original thread; validation owner: original thread; merge order: source patch, config/identity verification, deploy.
 
 ## Validation
 
-- `npm --prefix services/aukro-service run build`
+- `npm --prefix services/bazos-service run build`
 - `npm test`
 - `git diff --check`
 - Static source checks for public admin link removal and admin access guard.

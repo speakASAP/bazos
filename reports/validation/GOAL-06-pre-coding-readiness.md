@@ -12,7 +12,7 @@ Pre-coding gate for adding public and authenticated UI surfaces to the existing 
 
 - `ssh alfares 'cd /home/ssf/Documents/Github/bazos-service && git status --short --branch && git log --oneline -5'`
 - Required context read from `AGENTS.md` list.
-- Auth and controller patterns inspected in `shared/auth/*`, `services/aukro-service/src/app.module.ts`, and existing Bazos controllers.
+- Auth and controller patterns inspected in `shared/auth/*`, `services/bazos-service/src/app.module.ts`, and existing Bazos controllers.
 
 ## Gate Evidence
 

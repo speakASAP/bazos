@@ -9,7 +9,7 @@
 - Task: Replace empty-item forwarding with product-mapped forwarding or a defensive unavailable result.
 - Execution Plan: Inspect current order stub, map incoming Bazos ad line identifiers to `BazosAd.productId`, fail closed when the item ingestion contract is missing, and add focused validation.
 - Coding Prompt: Catalog Goal 17 / Bazos channel workstream.
-- Code: `services/aukro-service/src/aukro/orders/orders.service.ts`.
+- Code: `services/bazos-service/src/channel/orders/orders.service.ts`.
 - Validation: See `reports/validation/GOAL-17-bazos-order-forwarding-report.md`.
 
 ## Scope
@@ -27,7 +27,7 @@ Forbidden:
 
 ## Parallel Execution
 
-- Workstream: Bazos order forwarding guard - status `ready now`; owner role `Bazos channel sub-agent`; files `services/aukro-service/src/aukro/orders/*`; validation owner same session.
+- Workstream: Bazos order forwarding guard - status `ready now`; owner role `Bazos channel sub-agent`; files `services/bazos-service/src/channel/orders/*`; validation owner same session.
 - Workstream: synthetic/internal order payload compatibility - status `ready now`; supports explicit `catalogProductId`/`productId` item payloads for validation and bounded internal ingestion.
 - Workstream: true live Bazos order ingestion contract - status `blocked`; blocker `[UNKNOWN: live Bazos marketplace webhook support]`; requires owner/API contract input before another agent can safely implement live webhook ingestion.
 - Final integration: original Catalog Goal 17 orchestrator; merge order `Bazos guard commit -> Catalog/Orders validator rerun`.
@@ -47,7 +47,7 @@ Feature -> Bazos Orders create caller readiness.
 Task -> add accepted Orders internal auth headers, require `warehouseId` for every forwarded item, and keep missing live webhook support fail-closed.
 Execution Plan -> update the shared Orders client and Bazos order item mapper, add focused specs, then run diff/build/test gates.
 Coding Prompt -> remote-only Goal 7.2B delegated lane; do not edit Orders, secrets, DB rows, publishing/session/challenge flows, or unrelated UI/catalog-client work.
-Code -> `shared/clients/order-client.service.ts`, `shared/clients/order-client.service.spec.ts`, `services/aukro-service/src/aukro/orders/orders.service.ts`, `services/aukro-service/src/aukro/orders/orders.service.spec.ts`, lane-local docs/status.
+Code -> `shared/clients/order-client.service.ts`, `shared/clients/order-client.service.spec.ts`, `services/bazos-service/src/channel/orders/orders.service.ts`, `services/bazos-service/src/channel/orders/orders.service.spec.ts`, lane-local docs/status.
 Validation -> focused service/client specs, `git diff --check`, shared build/test, service build where available.
 
 ### Scope
@@ -83,7 +83,7 @@ Evidence:
 - Remote repo `main` was clean before edits at `10514ac feat: show catalog content previews for Bazos drafts`.
 - Required Bazos context from `AGENTS.md` and project process docs was read.
 - Orders contracts read from `orders-microservice/docs/orchestrator/CHANNEL_ORDER_CREATE_CONTRACT.md`, `WAREHOUSE_HANDOFF_CONTRACT.md`, and `PRODUCTION_ORDER_INTEGRATION_PLAN.md`.
-- Current Bazos order forwarding code inspected in `services/aukro-service/src/aukro/orders/orders.service.ts`; live webhook remains synthetic/internal only.
+- Current Bazos order forwarding code inspected in `services/bazos-service/src/channel/orders/orders.service.ts`; live webhook remains synthetic/internal only.
 - `BazosAd` has canonical `productId` but no dedicated persisted `warehouseId`; therefore order forwarding must require explicit order-line `warehouseId` or auditable ad metadata, otherwise fail closed.
 
 Unresolved non-blocking markers:

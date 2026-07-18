@@ -15,7 +15,7 @@ Vision -> Goal Impact -> System -> Feature -> Task -> Execution Plan -> Coding P
 - Task: add endpoint, module wiring, verifier, handoff, validation report, and state update.
 - Execution Plan: this file and `docs/orchestrator/2026-07-06-bazos-business-health-handoff.md`.
 - Coding Prompt: Codex prompt 2026-07-06 Bazos service-owned business-health channel readback envelope.
-- Code: `services/aukro-service/src/business-health/*`, `services/aukro-service/src/app.module.ts`, `package.json`.
+- Code: `services/bazos-service/src/business-health/*`, `services/bazos-service/src/app.module.ts`, `package.json`.
 - Validation: verifier, service build, `git diff --check`.
 
 ## Goal Impact
@@ -64,7 +64,7 @@ The new endpoint lets coordination systems read Bazos source-owned readiness and
 ## Validation
 
 - `npm run verify:business-health-bazos-channel-contract`
-- `npm --prefix services/aukro-service run build`
+- `npm --prefix services/bazos-service run build`
 - `git diff --check`
 
 ## Parallel Execution

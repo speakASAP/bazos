@@ -1,7 +1,7 @@
 {
   "name": "bazos-service",
   "version": "1.0.0",
-  "description": "Aukro.cz sales channel service - marketplace integration",
+  "description": "Bazos.cz classifieds automation service",
   "private": true,
   "scripts": {
     "start:dev": "concurrently -n \"API-GW,BAZOS\" -c \"blue,yellow\" \"cd services/api-gateway && npm run start:dev\" \"cd services/bazos-service && npm run start:dev\"",

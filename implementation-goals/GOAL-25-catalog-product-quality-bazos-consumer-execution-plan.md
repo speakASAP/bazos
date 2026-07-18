@@ -83,7 +83,7 @@ Prepare remains idempotent for reusable drafts only after quality passes. Blocke
 - `shared/bazos/catalog/bazos-catalog-sell-action.dto.ts`
 - `shared/bazos/catalog/bazos-catalog-sell-action.service.spec.ts`
 - `shared/clients/catalog-client.service.ts`
-- `services/aukro-service/src/ui/ui.assets.ts`
+- `services/bazos-service/src/ui/ui.assets.ts`
 - Catalog contract/report files listed in the goal.
 
 ### Files To Create
@@ -104,7 +104,7 @@ Prepare remains idempotent for reusable drafts only after quality passes. Blocke
 - `shared/bazos/policy/publish-policy.service.spec.ts`
 - `shared/bazos/ad/bazos-ad.service.ts`
 - `shared/bazos/ad/bazos-ad.service.spec.ts`
-- `services/aukro-service/src/ui/ui.assets.ts`
+- `services/bazos-service/src/ui/ui.assets.ts`
 - `k8s/external-secret.yaml`
 - `.env.example`
 - `docs/IMPLEMENTATION_STATE.md`
@@ -142,7 +142,7 @@ Prepare remains idempotent for reusable drafts only after quality passes. Blocke
 - Focused tests must pass.
 - `kubectl apply --dry-run=server -f k8s/external-secret.yaml -n statex-apps` must pass before deployment.
 - `npm --prefix shared run build` must pass.
-- `npm --prefix services/aukro-service run build` must pass.
+- `npm --prefix services/bazos-service run build` must pass.
 - No deployment without explicit owner approval.
 
 ## Gate Commands
@@ -153,7 +153,7 @@ git diff --check
 npm --prefix shared test -- bazos-catalog-sell-action.service.spec.ts publish-policy.service.spec.ts bazos-ad.service.spec.ts
 kubectl apply --dry-run=server -f k8s/external-secret.yaml -n statex-apps
 npm --prefix shared run build
-npm --prefix services/aukro-service run build
+npm --prefix services/bazos-service run build
 ```
 
 ## Documentation Updates
@@ -173,7 +173,7 @@ Ready now: backend consumer, UI display, tests, and reports are small but share 
 
 Dependency-gated: production deploy is blocked until owner approval.
 
-Blocked: no separate worker should modify `shared/bazos/catalog/bazos-catalog-sell-action.service.ts`, `shared/clients/catalog-client.service.ts`, or `services/aukro-service/src/ui/ui.assets.ts` during this slice.
+Blocked: no separate worker should modify `shared/bazos/catalog/bazos-catalog-sell-action.service.ts`, `shared/clients/catalog-client.service.ts`, or `services/bazos-service/src/ui/ui.assets.ts` during this slice.
 
 Integration owner: this worker.
 

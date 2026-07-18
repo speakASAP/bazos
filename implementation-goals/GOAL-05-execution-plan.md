@@ -38,7 +38,7 @@ Operators can inspect policy gate failures, challenge states, blocked attempts, 
 
 - Goal 01 through Goal 04 are complete.
 - Publisher queue records policy-blocked, challenge-required, failed, submitted, queued, and submitting attempt states.
-- Older monitoring code exists under `services/aukro-service/src/aukro/publishing`, but it returns full ad/identity records and is not registered in the current shared Bazos module.
+- Older monitoring code exists under `services/bazos-service/src/channel/publishing`, but it returns full ad/identity records and is not registered in the current shared Bazos module.
 - Shared Bazos module has no monitoring API yet.
 
 ## Project Invariants
@@ -108,8 +108,8 @@ Endpoints remain guarded by `JwtAuthGuard` and scoped to `req.user.id` because n
 - `shared/bazos/policy/publish-policy.service.ts`
 - `shared/bazos/identity/bazos-identity.types.ts`
 - `prisma/schema.prisma`
-- `services/aukro-service/src/aukro/publishing/monitoring.service.ts`
-- `services/aukro-service/src/aukro/publishing/monitoring.controller.ts`
+- `services/bazos-service/src/channel/publishing/monitoring.service.ts`
+- `services/bazos-service/src/channel/publishing/monitoring.controller.ts`
 
 ## Files To Create
 

@@ -31,7 +31,7 @@ Pass by scope. The change is read-only UI aggregation over existing guarded data
 
 ### Validation Evidence
 
-- `npm --prefix services/aukro-service run build`: pass.
+- `npm --prefix services/bazos-service run build`: pass.
 - `npm --prefix shared run build`: pass.
 - `npm test`: pass, 5 suites and 83 tests.
 - `git diff --check`: pass.
@@ -53,7 +53,7 @@ Pass by scope. The change is read-only UI aggregation over existing guarded data
 
 ### Files Changed
 
-- `services/aukro-service/src/ui/ui.assets.ts`
+- `services/bazos-service/src/ui/ui.assets.ts`
 - `implementation-goals/GOAL-12-client-overview-statistics.md`
 - `reports/validation/GOAL-12-client-overview-statistics-report.md`
 - `implementation-goals/README.md`

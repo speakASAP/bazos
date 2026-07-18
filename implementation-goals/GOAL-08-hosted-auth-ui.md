@@ -32,13 +32,13 @@ Bazoš becomes an Auth consumer instead of a local credential collector. Human u
 
 ## Parallel Execution
 
-- Workstream: Bazoš hosted Auth UI migration - status `ready now`; owner role `integration implementer`; files `services/aukro-service/src/ui/ui.assets.ts`, `services/aukro-service/src/ui/ui.controller.ts`.
+- Workstream: Bazoš hosted Auth UI migration - status `ready now`; owner role `integration implementer`; files `services/bazos-service/src/ui/ui.assets.ts`, `services/bazos-service/src/ui/ui.controller.ts`.
 - Workstream: Auth runtime allowlist verification - status `validation owner`; owner role `validator`; expected evidence `GET /auth/validate-return-url?return_url=https://bazos.alfares.cz/auth/callback`.
 - Workstream: live deploy/smoke - status `final integration`; owner role `integration owner`; dependency `build/test/static checks pass and deployment-readiness evidence recorded`.
 
 ## Validation
 
-- `npm --prefix services/aukro-service run build`
+- `npm --prefix services/bazos-service run build`
 - `npm test`
 - `git diff --check`
 - Static scan that active source UI has no local password form or `/ui/auth/login|register` credential posts.

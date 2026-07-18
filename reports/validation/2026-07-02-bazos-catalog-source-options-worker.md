@@ -18,7 +18,7 @@ Feature -> Catalog Dashboard entry points, effective-source product picker, opti
 Task -> implement the Bazos worker lane without deploy, schema changes, secrets, RabbitMQ/catalog-event edits, or destructive git operations.
 Execution Plan -> `docs/orchestrator/2026-07-02-dashboard-catalog-source-options-plan.md` plus `AGENTS.md`.
 Coding Prompt -> current worker prompt with allowed files: UI asset, UI controller, `shared/bazos/ad/**`, docs/reports.
-Code -> `services/aukro-service/src/ui/ui.assets.ts`, `shared/bazos/ad/bazos-ad.dto.ts`, `shared/bazos/ad/bazos-ad.service.ts`, `shared/bazos/ad/bazos-ad.service.spec.ts`.
+Code -> `services/bazos-service/src/ui/ui.assets.ts`, `shared/bazos/ad/bazos-ad.dto.ts`, `shared/bazos/ad/bazos-ad.service.ts`, `shared/bazos/ad/bazos-ad.service.spec.ts`.
 Validation -> commands below passed; deployment not run by instruction.
 
 ## Requirement Matrix After Fix
@@ -44,7 +44,7 @@ npm --prefix shared test -- bazos-ad.service.spec.ts
 npm --prefix shared run build
 # pass
 
-npm --prefix services/aukro-service run build
+npm --prefix services/bazos-service run build
 # pass
 ```
 
@@ -58,7 +58,7 @@ npm --prefix services/aukro-service run build
 
 ## Dirty Worktree Caveats
 
-- `services/aukro-service/src/ui/ui.assets.ts` was dirty before this worker. Pre-existing Catalog return-flow changes were preserved.
+- `services/bazos-service/src/ui/ui.assets.ts` was dirty before this worker. Pre-existing Catalog return-flow changes were preserved.
 - During this worker, additional landing-copy changes and `docs/orchestrator/2026-07-02-public-landing-sales-copy-ips.md` appeared in the remote worktree. They were not created by this worker and were left intact.
 - Existing untracked plan docs remain: `docs/orchestrator/2026-07-02-dashboard-catalog-source-options-plan.md`, `docs/orchestrator/2026-07-02-related-products-order-affinity-plan.md`.
 

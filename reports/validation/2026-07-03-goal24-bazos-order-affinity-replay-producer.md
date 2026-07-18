@@ -8,8 +8,8 @@ Branch `codex/goal24-order-affinity-replay-producer`.
 
 ## Commands Run
 
-- `cd services/aukro-service && NODE_PATH=/home/ssf/Documents/Github/bazos/shared/node_modules:/home/ssf/Documents/Github/bazos/node_modules ./../../shared/node_modules/.bin/jest --config jest.config.js src/aukro/orders/orders.service.spec.ts --runInBand` -> pass, 13 tests.
-- `NODE_PATH=/home/ssf/Documents/Github/bazos/services/aukro-service/node_modules:/home/ssf/Documents/Github/bazos/node_modules npm --prefix services/aukro-service run build` -> pass.
+- `cd services/bazos-service && NODE_PATH=/home/ssf/Documents/Github/bazos/shared/node_modules:/home/ssf/Documents/Github/bazos/node_modules ./../../shared/node_modules/.bin/jest --config jest.config.js src/channel/orders/orders.service.spec.ts --runInBand` -> pass, 13 tests.
+- `NODE_PATH=/home/ssf/Documents/Github/bazos/services/bazos-service/node_modules:/home/ssf/Documents/Github/bazos/node_modules npm --prefix services/bazos-service run build` -> pass.
 - `git diff --check` -> pass.
 
 ## Gate Evidence

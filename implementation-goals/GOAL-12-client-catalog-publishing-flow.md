@@ -47,9 +47,9 @@ Add the requested catalog-to-Bazoš publishing flow inside the Bazoš client UI 
 
 ## Code
 
-- `services/aukro-service/src/ui/ui.controller.ts`
-- `services/aukro-service/src/ui/ui.module.ts`
-- `services/aukro-service/src/ui/ui.assets.ts`
+- `services/bazos-service/src/ui/ui.controller.ts`
+- `services/bazos-service/src/ui/ui.module.ts`
+- `services/bazos-service/src/ui/ui.assets.ts`
 
 ## Validation
 
@@ -57,8 +57,8 @@ See `reports/validation/GOAL-12-validation-report.md`.
 
 ## Parallel Execution
 
-- Workstream: client UI flow - status `ready now`; owner role `implementation owner`; files `services/aukro-service/src/ui/ui.assets.ts`; validation owner `implementation owner`.
-- Workstream: UI catalog proxy - status `ready now`; owner role `implementation owner`; files `services/aukro-service/src/ui/ui.controller.ts`, `services/aukro-service/src/ui/ui.module.ts`; validation owner `implementation owner`.
+- Workstream: client UI flow - status `ready now`; owner role `implementation owner`; files `services/bazos-service/src/ui/ui.assets.ts`; validation owner `implementation owner`.
+- Workstream: UI catalog proxy - status `ready now`; owner role `implementation owner`; files `services/bazos-service/src/ui/ui.controller.ts`, `services/bazos-service/src/ui/ui.module.ts`; validation owner `implementation owner`.
 - Workstream: deploy/live smoke - status `final integration`; owner role `integration owner`; dependency `build/test/static checks pass and source is committed`; merge order `proxy -> UI flow -> deploy`.
 - Shared contract: existing `/api/bazos/catalog/products/:productId/sell-action` prepare/confirm/status API.
 - Forbidden files: production secrets, compliance policy gates, publisher queue bypasses.

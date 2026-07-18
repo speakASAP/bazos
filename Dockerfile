@@ -11,13 +11,13 @@ RUN npm ci && npm run build
 
 # Copy service files and dependencies
 WORKDIR /app
-COPY services/aukro-service ./services/aukro-service
+COPY services/bazos-service ./services/bazos-service
 COPY tsconfig.json ./
 COPY package*.json ./
 COPY prisma ./prisma
 
 # Install service dependencies (which reference shared via file://)
-WORKDIR /app/services/aukro-service
+WORKDIR /app/services/bazos-service
 RUN npm install
 
 # Generate Prisma client from repo root to avoid prisma CLI attempting implicit package installs in /app/shared
@@ -31,10 +31,10 @@ RUN DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy" \
 # @prisma/client loads .prisma/client/default.js; without this it stays the "run prisma generate" stub
 RUN cp /app/shared/node_modules/.prisma/client/index.js /app/shared/node_modules/.prisma/client/default.js
 # Copy generated client into the service node_modules so /app resolves @prisma/client consistently
-RUN cp -r /app/shared/node_modules/.prisma/client/. /app/services/aukro-service/node_modules/.prisma/client/
+RUN cp -r /app/shared/node_modules/.prisma/client/. /app/services/bazos-service/node_modules/.prisma/client/
 
 # Build service
-WORKDIR /app/services/aukro-service
+WORKDIR /app/services/bazos-service
 RUN npm run build
 
 # Production stage - copy only what's needed
@@ -46,8 +46,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends openssl && rm -
 WORKDIR /app
 
 # Copy service dist and node_modules
-COPY --from=builder /app/services/aukro-service/dist ./dist
-COPY --from=builder /app/services/aukro-service/node_modules ./node_modules
+COPY --from=builder /app/services/bazos-service/dist ./dist
+COPY --from=builder /app/services/bazos-service/node_modules ./node_modules
 
 # Copy entire shared package (source + compiled dist + node_modules for @bazos/shared)
 COPY --from=builder /app/shared ./shared

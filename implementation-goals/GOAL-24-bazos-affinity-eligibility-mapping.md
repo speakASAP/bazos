@@ -15,7 +15,7 @@ Marketing and Catalog can treat Bazos as an implemented-but-ineligible replay so
 ## Current State Evidence
 
 - `prisma/schema.prisma` defines `BazosOrder` with `accountId`, optional marketplace/central order ids, customer contact fields, `total`, `currency`, `status`, and `forwarded`. It has no persisted order-item relation, item snapshot JSON, paid timestamp, payment status, payment provider, transaction id, checkout state, or delivery/address projection.
-- `services/aukro-service/src/aukro/orders/orders.service.ts` can map request-time `items`, `orderItems`, `lines`, or `products` into central Orders when present, but those line items are not persisted in `bazos_orders` for replay.
+- `services/bazos-service/src/channel/orders/orders.service.ts` can map request-time `items`, `orderItems`, `lines`, or `products` into central Orders when present, but those line items are not persisted in `bazos_orders` for replay.
 - `toBazosOrderData` persists only the sanitized local order header fields and defaults `status` to `pending`; there is no Bazos-owned paid/processable status mapping.
 - The protected replay endpoint returns zero events and explicit blockers, so no customer, address, payment, provider, token, or raw marketplace payload data can leave Bazos through this contract.
 

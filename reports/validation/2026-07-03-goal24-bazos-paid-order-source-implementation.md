@@ -21,8 +21,8 @@ Allowed files changed:
 
 - `prisma/schema.prisma`
 - `migrations/2026-07-03-bazos-paid-order-replay-source.sql`
-- `services/aukro-service/src/aukro/orders/orders.service.ts`
-- `services/aukro-service/src/aukro/orders/orders.service.spec.ts`
+- `services/bazos-service/src/channel/orders/orders.service.ts`
+- `services/bazos-service/src/channel/orders/orders.service.spec.ts`
 - `implementation-goals/GOAL-24-bazos-paid-order-source-contract.md`
 - `reports/validation/2026-07-03-goal24-bazos-paid-order-source-implementation.md`
 - `docs/IMPLEMENTATION_STATE.md`
@@ -38,8 +38,8 @@ Replay storage/output contains only hashed order references, channel, currency, 
 - Allegro producer compatibility inspected in `/home/ssf/Documents/Github/allegro`: proven replay event shape uses `type=marketplace.order_affinity_candidate.v1`, `eventVersion=1`, hashed replay refs, `source=<marketplace-service>`, and payload `items[].productId`.
 - Marketing marketplace replay contract inspected in `/home/ssf/Documents/Github/marketing-microservice`: Bazos path is `/internal/bazos/order-affinity/replay-candidates`; parser accepts `marketplace.order_affinity_candidate.v1` from `bazos-service`; payload items must use `productId`, optional `sku`, `quantity`, `unitPrice`, and `totalPrice`.
 - `npx prisma generate` passed after adding `BazosOrder.paymentStatus`, `paidAt`, and `itemSnapshots`.
-- Focused Bazos orders spec passed: `NODE_PATH=/home/ssf/Documents/Github/bazos/shared/node_modules:/home/ssf/Documents/Github/bazos/node_modules ./shared/node_modules/.bin/jest --config services/aukro-service/jest.config.js services/aukro-service/src/aukro/orders/orders.service.spec.ts --runInBand` -> 1 suite, 17 tests passed.
-- Bazos service build passed: `npm --prefix services/aukro-service run build`.
+- Focused Bazos orders spec passed: `NODE_PATH=/home/ssf/Documents/Github/bazos/shared/node_modules:/home/ssf/Documents/Github/bazos/node_modules ./shared/node_modules/.bin/jest --config services/bazos-service/jest.config.js services/bazos-service/src/channel/orders/orders.service.spec.ts --runInBand` -> 1 suite, 17 tests passed.
+- Bazos service build passed: `npm --prefix services/bazos-service run build`.
 - Pre-migration live metadata check confirmed existing `bazos_orders` columns use quoted camelCase names.
 - Owner-approved live DB migration applied from the Bazos pod through idempotent raw SQL; verified columns: `itemSnapshots`, `paidAt`, `paymentStatus`.
 - `git diff --check` and `git diff --cached --check` passed before final commit.

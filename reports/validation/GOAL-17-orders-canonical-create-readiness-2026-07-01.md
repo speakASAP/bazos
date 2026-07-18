@@ -12,7 +12,7 @@ Status: deployed; owner-approved synthetic Orders-create smoke passed with Wareh
 - Task: add accepted Orders auth headers and fail closed on missing `warehouseId` before calling Orders.
 - Execution Plan: update shared Orders client headers, update Bazos item mapper, add focused specs, run validation gates, update state.
 - Coding Prompt: Goal-driven lane Goal 7.2B; remote-only; no Orders repo edits; no raw secrets; no Bazos DB mutation/migration; Auth runtime provisioning only after owner approval.
-- Code: `shared/clients/order-client.service.ts`, `shared/clients/order-client.service.spec.ts`, `services/aukro-service/src/aukro/orders/orders.service.ts`, `services/aukro-service/src/aukro/orders/orders.service.spec.ts`, `implementation-goals/GOAL-17-bazos-order-forwarding.md`, `docs/IMPLEMENTATION_STATE.md`, `TASKS.md`.
+- Code: `shared/clients/order-client.service.ts`, `shared/clients/order-client.service.spec.ts`, `services/bazos-service/src/channel/orders/orders.service.ts`, `services/bazos-service/src/channel/orders/orders.service.spec.ts`, `implementation-goals/GOAL-17-bazos-order-forwarding.md`, `docs/IMPLEMENTATION_STATE.md`, `TASKS.md`.
 - Validation: focused Bazos mapper spec pass; focused shared Orders client spec pass; `git diff --check` pass; shared build pass; full shared/root tests pass; service build pass.
 
 ## Pre-Coding Readiness Gate
@@ -46,7 +46,7 @@ Evidence:
 
 ## Live Support Evidence
 
-- `services/aukro-service/src/aukro/orders/orders.controller.ts` exposes authenticated `POST /orders` and `POST /orders/webhook` only.
+- `services/bazos-service/src/channel/orders/orders.controller.ts` exposes authenticated `POST /orders` and `POST /orders/webhook` only.
 - `OrdersService.handleWebhook` unwraps `order`/`payload`/raw data and returns `Synthetic/internal Bazos order ingested` with `[UNKNOWN: live Bazos marketplace webhook support]`.
 - Repo search found no Bazos provider order polling, seller-order endpoint, marketplace order item contract, or external Bazos webhook verifier beyond the synthetic/internal handler.
 
@@ -59,13 +59,13 @@ Evidence:
 
 ## Validation Commands
 
-- `cd services/aukro-service && NODE_PATH=../../shared/node_modules ../../shared/node_modules/.bin/jest --config jest.config.js src/aukro/orders/orders.service.spec.ts --runInBand` - PASS, 1 suite, 7 tests.
+- `cd services/bazos-service && NODE_PATH=../../shared/node_modules ../../shared/node_modules/.bin/jest --config jest.config.js src/channel/orders/orders.service.spec.ts --runInBand` - PASS, 1 suite, 7 tests.
 - `npm --prefix shared test -- --runTestsByPath clients/order-client.service.spec.ts --runInBand` - PASS, 1 suite, 2 tests.
 - `git diff --check` - PASS.
 - `npm --prefix shared run build` - PASS.
 - `npm --prefix shared test` - PASS, 8 suites, 113 tests.
 - `npm test` - PASS, 8 suites, 113 tests.
-- `npm --prefix services/aukro-service run build` - PASS.
+- `npm --prefix services/bazos-service run build` - PASS.
 
 ## Bazos Compliance Check
 
@@ -106,7 +106,7 @@ Validation -> focused specs, shared/root tests, builds, deploy rollout, pod env-
 - Remote preflight before deployment: `git status --short --branch` returned clean `## main...origin/main`; head `230c6b5 fix: align Bazos Orders auth token runtime fallback`.
 - Live deployment before deployment was behind at `localhost:5000/bazos-service:10514ac`; source head was `230c6b5`.
 - Runtime env-name check printed names only: `ORDER_SERVICE_URL`, `JWT_TOKEN`, `WAREHOUSE_SERVICE_URL`, and `WAREHOUSE_SERVICE_TOKEN` were present; explicit Orders token aliases were missing, and the code falls back to `JWT_TOKEN`.
-- Validation passed: focused Bazos order service spec `1 suite, 7 tests`; focused shared Orders client spec `1 suite, 2 tests`; `git diff --check`; `npm --prefix shared run build`; `npm --prefix shared test` `8 suites, 113 tests`; `npm test` `8 suites, 113 tests`; `npm --prefix services/aukro-service run build`.
+- Validation passed: focused Bazos order service spec `1 suite, 7 tests`; focused shared Orders client spec `1 suite, 2 tests`; `git diff --check`; `npm --prefix shared run build`; `npm --prefix shared test` `8 suites, 113 tests`; `npm test` `8 suites, 113 tests`; `npm --prefix services/bazos-service run build`.
 - Deployment command: `./scripts/deploy.sh` from the remote repo. Built and pushed `localhost:5000/bazos-service:230c6b5` with digest `sha256:68fb54ffce47bbd4fe319e14929dd62e8425c845a0b8273f440e3ded436e2300`.
 - Rollout completed with `deployment/bazos-service` ready `1/1`, updated `1`, available `1`, reasons `MinimumReplicasAvailable` and `NewReplicaSetAvailable`.
 - Production smoke: `curl -fsS https://bazos.alfares.cz/health` returned `{"status":"ok","service":"bazos-service"}`.
@@ -206,8 +206,8 @@ No raw token values, decoded JWTs, live Bazos customer/order payloads, DB rows, 
 
 - `shared/clients/order-client.service.ts`
 - `shared/clients/order-client.service.spec.ts`
-- `services/aukro-service/src/aukro/orders/orders.service.ts`
-- `services/aukro-service/src/aukro/orders/orders.service.spec.ts`
+- `services/bazos-service/src/channel/orders/orders.service.ts`
+- `services/bazos-service/src/channel/orders/orders.service.spec.ts`
 - `implementation-goals/GOAL-17-bazos-order-forwarding.md`
 - `reports/validation/GOAL-17-orders-canonical-create-readiness-2026-07-01.md`
 - `docs/IMPLEMENTATION_STATE.md`

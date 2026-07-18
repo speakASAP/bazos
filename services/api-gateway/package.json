@@ -1,7 +1,7 @@
 {
   "name": "api-gateway",
   "version": "1.0.0",
-  "description": "API Gateway for Aukro Service",
+  "description": "API Gateway for Bazos Service",
   "main": "dist/main.js",
   "scripts": {
     "build": "tsc && tsc-alias",

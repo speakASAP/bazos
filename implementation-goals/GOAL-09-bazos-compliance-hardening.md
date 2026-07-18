@@ -14,7 +14,7 @@ upstream:
 downstream:
   - shared/bazos/policy/publish-policy.service.ts
   - shared/bazos/publisher/bazos-publisher-queue.service.ts
-  - services/aukro-service/src/aukro/publishing/*
+  - services/bazos-service/src/channel/publishing/*
 ```
 
 ## Vision
@@ -37,7 +37,7 @@ Compliance gates for Bazos identity/session state, public duplicate evidence, co
 
 - Refresh Bazos compliance policy with current API/import/robots constraints.
 - Require trusted/manual evidence for public duplicate and content-policy gates.
-- Harden legacy `services/aukro-service/src/aukro/publishing/*` so it cannot bypass shared policy semantics.
+- Harden legacy `services/bazos-service/src/channel/publishing/*` so it cannot bypass shared policy semantics.
 - Scope legacy publishing queue operations to the authenticated user.
 - Treat all Bazos challenges as blocking states.
 - Add explicit handoff metadata that forbids server-side Bazos requests, network-origin spoofing, proxy rotation, and device/fingerprint spoofing.
