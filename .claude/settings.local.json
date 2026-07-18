@@ -3,7 +3,8 @@
     "allow": [
       "Bash(git check-ignore *)",
       "Bash(git mv *)",
-      "Bash(set -e)"
+      "Bash(set -e)",
+      "Bash(xargs -I{} echo \"commits ahead of origin/main: {}\")"
     ]
   },
   "enableAllProjectMcpServers": true,
