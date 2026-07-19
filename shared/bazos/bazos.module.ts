@@ -15,12 +15,15 @@ import { BazosCatalogSellActionController } from './catalog/bazos-catalog-sell-a
 import { BazosMonitoringService } from './monitoring/bazos-monitoring.service';
 import { BazosMonitoringController } from './monitoring/bazos-monitoring.controller';
 import { BazosAvailabilityReconciliationService } from './reconciliation/bazos-availability-reconciliation.service';
+import { BazosConsentService } from './consent/bazos-consent.service';
+import { BazosConsentController } from './consent/bazos-consent.controller';
 import { ClientsModule } from '../clients/clients.module';
 
 @Module({
   imports: [PrismaModule, LoggerModule, AuthModule, ClientsModule],
   providers: [
     BazosIdentityService,
+    BazosConsentService,
     PublishPolicyService,
     BazosAdService,
     BazosAdAvailabilityScheduler,
@@ -31,6 +34,7 @@ import { ClientsModule } from '../clients/clients.module';
   ],
   controllers: [
     BazosIdentityController,
+    BazosConsentController,
     BazosAdController,
     BazosPublisherQueueController,
     BazosCatalogSellActionController,
@@ -38,6 +42,7 @@ import { ClientsModule } from '../clients/clients.module';
   ],
   exports: [
     BazosIdentityService,
+    BazosConsentService,
     PublishPolicyService,
     BazosAdService,
     BazosAdAvailabilityScheduler,
