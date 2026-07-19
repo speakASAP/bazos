@@ -49,6 +49,20 @@ const legalLinkList = legalLinks
   .map(([label, slug]) => `<li><a href="${LEGAL_BASE}/${slug}">${label}</a></li>`)
   .join('\n            ');
 
+// Verze textu souhlasu s úložištěm. Po změně znění se návštěvník zeptá znovu.
+const COOKIE_CONSENT_VERSION = 'alfares-consent-v1';
+
+// Deklarujeme jen to, co web opravdu ukládá: přihlašovací token a stav přihlášení.
+// Žádná analytika ani marketing zde neběží, proto se nenabízí volba, která by
+// stejně nic neovlivnila — jen se transparentně informuje.
+const consentMount = `<script type="module">
+  import { mountConsentBanner } from '/ui/consent-banner.js';
+  mountConsentBanner({
+    version: ${JSON.stringify(COOKIE_CONSENT_VERSION)},
+    policyUrl: ${JSON.stringify(`${LEGAL_BASE}/cookie-policy`)},
+  });
+</script>`;
+
 // Provozovatel serveru Bazoš.cz je třetí strana; službu s ním nepojí žádný smluvní vztah.
 const affiliationNotice =
   'Službu provozuje Alfares s.r.o. Není poskytována, schválena ani sponzorována provozovatelem serveru Bazoš.cz.';
