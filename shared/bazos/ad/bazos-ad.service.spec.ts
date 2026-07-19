@@ -184,7 +184,9 @@ describe('BazosAdService pending Bazos updates', () => {
         allowed: true,
         bazosAvailabilityCheck: { enabled: true, source: 'manage_opened' },
       },
-      expiresAt: '2026-07-12T12:00:00.000Z',
+      // Относительная дата: жёстко заданная протухла 2026-07-12 и увела тест
+      // в ветку tracking_expired, из-за чего он падал вместо проверки синхронизации.
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
     };
     const prisma = makePrisma(managedAd);
     const service = makeService(prisma) as any;
@@ -233,7 +235,7 @@ describe('BazosAdService pending Bazos updates', () => {
         allowed: true,
         bazosAvailabilityCheck: { enabled: true, source: 'manage_opened' },
       },
-      expiresAt: '2026-01-01T00:00:00.000Z',
+      expiresAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
     };
     const prisma = makePrisma(expiredManagedAd);
     const service = makeService(prisma) as any;
