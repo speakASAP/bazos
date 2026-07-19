@@ -30,15 +30,18 @@ const operator = {
 
 const LEGAL_BASE = 'https://alfares.cz/cs/legal';
 
+// Slugy jsou anglické záměrně: pod nimi leží úplné české texty
+// (statex-website/frontend/src/content/pages/cs/legal/). Česky pojmenované
+// soubory jsou neúplná duplicitní sada, proto se na ně neodkazuje.
 const legalLinks = [
-  ['Obchodní podmínky', 'obchodni-podminky'],
-  ['Zásady ochrany osobních údajů', 'zasady-ochrany-osobnich-udaju'],
-  ['Zásady cookies', 'zasady-cookies'],
-  ['Soulad s GDPR', 'gdpr-soulad'],
-  ['Zásady vrácení peněz', 'zasady-vraceni-penez'],
-  ['Soulad s aktem EU o AI', 'dodrzovani-zakona-eu-o-ai'],
-  ['Právní vyloučení', 'pravni-vylouceni'],
-  ['Právní dodatky', 'pravni-dodatky'],
+  ['Obchodní podmínky', 'terms-of-service'],
+  ['Zásady ochrany osobních údajů', 'privacy-policy'],
+  ['Zásady cookies', 'cookie-policy'],
+  ['Soulad s GDPR', 'gdpr-compliance'],
+  ['Zásady vrácení peněz', 'refund-policy'],
+  ['Soulad s aktem EU o AI', 'eu-ai-act-compliance'],
+  ['Právní vyloučení', 'legal-disclaimers'],
+  ['Právní dodatky', 'legal-addendum'],
 ];
 
 const legalLinkList = legalLinks
@@ -1021,6 +1024,28 @@ button, input { font: inherit; }
   line-height: 1.45;
 }
 .connection-requirement strong { display: block; color: var(--ink); margin-bottom: 4px; }
+.consent-block {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.consent-block h3 { margin: 0 0 6px; color: var(--ink); font-size: 14px; }
+.consent-block p { margin: 0 0 8px; }
+.consent-block ul { margin: 0 0 10px; padding-left: 18px; }
+.consent-block li { margin-bottom: 4px; }
+.consent-check {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  color: var(--ink);
+  font-weight: 750;
+  cursor: pointer;
+}
+.consent-check input { margin-top: 3px; flex-shrink: 0; }
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1708,7 +1733,9 @@ export const appScript = `
     const fallback = mode === 'admin' ? '/admin' : '/client';
     try {
       const path = window.location.pathname + window.location.search + window.location.hash;
-      return /^\/(admin|client)([?#].*)?$/.test(path) ? path : fallback;
+      // Třída [/] místo \\/ — v šablonovém literálu se zpětné lomítko ztratí a
+      // vygenerovaný regulární výraz by přestal být syntakticky platný.
+      return /^[/](admin|client)([?#].*)?$/.test(path) ? path : fallback;
     } catch {
       return fallback;
     }
@@ -1982,6 +2009,7 @@ export const appScript = `
 
   function policyGateLabel(gate) {
     const labels = {
+      consent_missing: 'Chybí souhlas',
       identity_not_verified: 'Telefon neověřen',
       identity_review_blocked: 'Identita blokována',
       identity_verification_expired: 'Ověření expirovalo',
@@ -2378,6 +2406,20 @@ export const appScript = `
     bindNavigationLinks(identityBanner);
   }
 
+  // Musí odpovídat CONSENT_DOCUMENT_VERSION na serveru; server odmítne souhlas
+  // zaznamenaný proti jiné verzi textu.
+  const CONSENT_VERSION = 'bazos-publish-consent-v1';
+
+  function consentBlockMarkup() {
+    return '<div class="consent-block"><h3>Souhlas s jednáním za vás</h3>' +
+      '<p>Alfares bude pod touto ověřenou Bazoš identitou připravovat a zveřejňovat inzeráty vaším jménem. Bez tohoto souhlasu se nic nezveřejní.</p>' +
+      '<ul><li>Souhlas můžete kdykoli odvolat v Nastavení; zveřejňování se tím okamžitě zastaví.</li>' +
+      '<li>Ověření telefonu, SMS, CAPTCHA a další kontroly Bazoš.cz vždy provádíte vy osobně — Alfares je neobchází.</li>' +
+      '<li>Zaznamenáme datum, verzi tohoto textu, IP adresu a prohlížeč jako doklad o udělení souhlasu.</li></ul>' +
+      '<label class="consent-check"><input type="checkbox" name="publishConsent" required>' +
+      'Souhlasím, aby Alfares zveřejňoval inzeráty na Bazoš.cz pod touto identitou mým jménem.</label></div>';
+  }
+
   function connectionWizardMarkup() {
     const email = currentUser?.email || '';
     return '<div class="connection-modal" id="connection-modal" role="dialog" aria-modal="true" aria-labelledby="connection-title">' +
@@ -2391,7 +2433,8 @@ export const appScript = `
       '<label>PSČ<input name="defaultZip" maxlength="20" autocomplete="postal-code" required></label>' +
       '<label>Lokalita<input name="defaultLocation" maxlength="200" autocomplete="address-level2" required></label>' +
       '<label class="wide">Popis účtu<textarea name="notes" placeholder="např. motodíly, knihy, sezónní zboží nebo hlavní prodejní účet"></textarea></label>' +
-      '</div><p class="form-message" data-form-message></p><div class="flow-actions"><button class="button button-primary" type="submit">Uložit a připojit</button><button class="button button-secondary" data-close-identity-wizard type="button">Dokončit později</button></div></form></div></div>';
+      '</div>' + consentBlockMarkup() +
+      '<p class="form-message" data-form-message></p><div class="flow-actions"><button class="button button-primary" type="submit">Uložit a připojit</button><button class="button button-secondary" data-close-identity-wizard type="button">Dokončit později</button></div></form></div></div>';
   }
 
   function openConnectionWizard(auto) {
@@ -2819,6 +2862,12 @@ export const appScript = `
       if (formMessage) formMessage.textContent = 'Ukládá se nastavení a připravuje se ověření na Bazos.cz...';
       const bazosWindow = window.open('', '_blank');
       const identity = await request('/api/bazos/identities', { method: 'POST', body: JSON.stringify(payload) });
+      // Zaznamenáme souhlas dřív, než se spustí ověřovací tok: identita bez
+      // souhlasu neprojde policy bránou, takže by zůstala nepoužitelná.
+      await request('/api/bazos/identities/' + encodeURIComponent(identity.id) + '/consent', {
+        method: 'POST',
+        body: JSON.stringify({ documentVersion: CONSENT_VERSION }),
+      });
       const session = await startVerificationSessionForIdentity(identity.id).catch((error) => {
         if (bazosWindow) bazosWindow.close();
         throw error;
@@ -3219,7 +3268,55 @@ export const appScript = `
       '<label>PSČ<input name="defaultZip" maxlength="20" value="' + cell(identity.defaultZip || '') + '"></label>' +
       '<label>Lokalita<input name="defaultLocation" maxlength="200" value="' + cell(identity.defaultLocation || '') + '"></label>' +
       '<label class="wide">Popis účtu<textarea name="notes">' + cell(identity.notes || '') + '</textarea></label>' +
-      '</div><p class="form-message" data-form-message></p><div class="row-actions"><button class="button button-primary" type="submit">Uložit změny</button><button class="button button-secondary" data-cancel-identity-edit type="button">Zrušit</button></div></form>';
+      '</div>' + consentStatusMarkup(identity.id) +
+      '<p class="form-message" data-form-message></p><div class="row-actions"><button class="button button-primary" type="submit">Uložit změny</button><button class="button button-secondary" data-cancel-identity-edit type="button">Zrušit</button></div></form>';
+  }
+
+  // Stav souhlasu se načítá až po vykreslení, aby úprava identity nečekala na další request.
+  function consentStatusMarkup(identityId) {
+    return '<div class="consent-block" data-consent-panel="' + cell(identityId) + '">' +
+      '<h3>Souhlas se zveřejňováním</h3><p class="card-note">Načítá se stav souhlasu...</p></div>';
+  }
+
+  async function loadConsentPanel(identityId) {
+    const panel = content.querySelector('[data-consent-panel="' + identityId + '"]');
+    if (!panel) return;
+    try {
+      const status = await request('/api/bazos/identities/' + encodeURIComponent(identityId) + '/consent');
+      panel.innerHTML = consentPanelBody(status);
+      panel.querySelector('[data-revoke-consent]')?.addEventListener('click', () => changeConsent(identityId, 'DELETE'));
+      panel.querySelector('[data-grant-consent]')?.addEventListener('click', () => changeConsent(identityId, 'POST'));
+    } catch (error) {
+      panel.innerHTML = '<h3>Souhlas se zveřejňováním</h3><p class="card-note">Stav souhlasu se nepodařilo načíst: ' + escapeHtml(error.message) + '</p>';
+    }
+  }
+
+  function consentPanelBody(status) {
+    const head = '<h3>Souhlas se zveřejňováním</h3>';
+    if (status.granted) {
+      return head + '<p>Souhlas udělen ' + cell(status.grantedAt) + '. Alfares smí pod touto identitou zveřejňovat inzeráty vaším jménem.</p>' +
+        '<div class="row-actions"><button class="button button-secondary" data-revoke-consent type="button">Odvolat souhlas</button></div>' +
+        '<p class="card-note">Po odvolání se zveřejňování okamžitě zastaví. Již zveřejněné inzeráty zůstávají na Bazoši a smažete je tam sami.</p>';
+    }
+    if (status.needsRenewal) {
+      return head + '<p>Text souhlasu se změnil. Váš dřívější souhlas (' + cell(status.grantedVersion) + ') už neplatí a zveřejňování je pozastaveno.</p>' +
+        '<div class="row-actions"><button class="button button-primary" data-grant-consent type="button">Přijmout aktuální znění</button></div>';
+    }
+    return head + '<p>Souhlas není udělen, proto se pod touto identitou nic nezveřejní.</p>' +
+      '<div class="row-actions"><button class="button button-primary" data-grant-consent type="button">Udělit souhlas</button></div>';
+  }
+
+  async function changeConsent(identityId, method) {
+    const panel = content.querySelector('[data-consent-panel="' + identityId + '"]');
+    try {
+      await request('/api/bazos/identities/' + encodeURIComponent(identityId) + '/consent', {
+        method,
+        body: method === 'POST' ? JSON.stringify({ documentVersion: CONSENT_VERSION }) : undefined,
+      });
+      await renderClient();
+    } catch (error) {
+      if (panel) panel.insertAdjacentHTML('beforeend', '<p class="card-note">' + escapeHtml(error.message) + '</p>');
+    }
   }
 
   function bindAccountIdentityButtons(data) {
@@ -3236,7 +3333,10 @@ export const appScript = `
     content.querySelectorAll('[data-claim-attempt]').forEach((button) => button.addEventListener('click', () => claimDueAttempt(button.dataset.claimAttempt)));
     content.querySelectorAll('[data-open-submission]').forEach((button) => button.addEventListener('click', () => openSubmission(button.dataset.openSubmission)));
     const editForm = content.querySelector('#identity-edit-form');
-    if (editForm && editingIdentityId) editForm.addEventListener('submit', (event) => saveIdentityEdit(event, editingIdentityId));
+    if (editForm && editingIdentityId) {
+      editForm.addEventListener('submit', (event) => saveIdentityEdit(event, editingIdentityId));
+      loadConsentPanel(editingIdentityId);
+    }
   }
 
   function renderAccount(data) {
