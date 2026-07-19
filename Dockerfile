@@ -52,6 +52,14 @@ COPY --from=builder /app/services/bazos-service/node_modules ./node_modules
 # Copy entire shared package (source + compiled dist + node_modules for @bazos/shared)
 COPY --from=builder /app/shared ./shared
 
+# Drop @nestjs duplicates from the shared package so exactly one copy is loaded.
+# Two copies mean two distinct HttpException classes: anything thrown inside
+# @bazos/shared (where all the business controllers live) fails Nest's
+# `instanceof HttpException` check and is reported to clients as a 500 instead
+# of the intended 400/401/403/404. Node resolves these up to /app/node_modules,
+# which carries the same set (axios, common, config, core, platform-express).
+RUN rm -rf /app/shared/node_modules/@nestjs
+
 # Ensure @bazos/shared is properly resolved in node_modules
 RUN mkdir -p /app/node_modules/@bazos && ln -sf ../../shared /app/node_modules/@bazos/shared
 
