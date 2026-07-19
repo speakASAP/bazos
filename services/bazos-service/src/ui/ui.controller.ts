@@ -2,6 +2,7 @@ import { Controller, ForbiddenException, Get, Param, Post, Query, Request, Res, 
 import { AuthService, CatalogClientService, JwtAuthGuard } from '@bazos/shared';
 import { OrdersService } from '../channel/orders/orders.service';
 import { appScript, appStyles, renderAppPage, renderAuthCallbackPage, renderLandingPage } from './ui.assets';
+import { consentBannerSource, consentCoreSource } from './consent.assets';
 import { FAVICON_ICO } from './favicon.assets';
 
 const ADMIN_ROLE_NAMES = new Set(['admin', 'administrator', 'owner']);
@@ -59,6 +60,18 @@ export class UiController {
   @Get('ui/app.js')
   script(@Res() res: any) {
     return res.set('Cache-Control', 'no-store, max-age=0').type('application/javascript').send(appScript);
+  }
+
+  // Both consent modules sit under /ui/ because consent-banner.js imports
+  // './consent-core.js' — the browser resolves that against this same prefix.
+  @Get('ui/consent-core.js')
+  consentCore(@Res() res: any) {
+    return res.set('Cache-Control', 'public, max-age=3600').type('application/javascript').send(consentCoreSource);
+  }
+
+  @Get('ui/consent-banner.js')
+  consentBanner(@Res() res: any) {
+    return res.set('Cache-Control', 'public, max-age=3600').type('application/javascript').send(consentBannerSource);
   }
 
 
