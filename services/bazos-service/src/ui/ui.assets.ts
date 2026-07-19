@@ -16,6 +16,90 @@ ${body}
 
 const icon = (name: string) => `<span class="icon icon-${name}" aria-hidden="true"></span>`;
 
+// Identifikace provozovatele podle § 435 obč. zák. a § 14 zák. o ochraně spotřebitele.
+// Zdroj: veřejný rejstřík ARES (IČ 27138038).
+const operator = {
+  legalName: 'Alfares s.r.o.',
+  ico: '27138038',
+  dic: 'CZ27138038',
+  address: 'Cetechovice 70, 768 02, Česká republika',
+  register: 'Krajský soud v Brně, oddíl C, vložka 67892',
+  phone: '+420 774 287 541',
+  email: 'contact@alfares.cz',
+};
+
+const LEGAL_BASE = 'https://alfares.cz/cs/legal';
+
+const legalLinks = [
+  ['Obchodní podmínky', 'obchodni-podminky'],
+  ['Zásady ochrany osobních údajů', 'zasady-ochrany-osobnich-udaju'],
+  ['Zásady cookies', 'zasady-cookies'],
+  ['Soulad s GDPR', 'gdpr-soulad'],
+  ['Zásady vrácení peněz', 'zasady-vraceni-penez'],
+  ['Soulad s aktem EU o AI', 'dodrzovani-zakona-eu-o-ai'],
+  ['Právní vyloučení', 'pravni-vylouceni'],
+  ['Právní dodatky', 'pravni-dodatky'],
+];
+
+const legalLinkList = legalLinks
+  .map(([label, slug]) => `<li><a href="${LEGAL_BASE}/${slug}">${label}</a></li>`)
+  .join('\n            ');
+
+// Provozovatel serveru Bazoš.cz je třetí strana; službu s ním nepojí žádný smluvní vztah.
+const affiliationNotice =
+  'Službu provozuje Alfares s.r.o. Není poskytována, schválena ani sponzorována provozovatelem serveru Bazoš.cz.';
+
+// ČOI je věcně příslušným subjektem mimosoudního řešení sporů (§ 20e zák. o ochraně spotřebitele).
+// Evropská platforma ODR byla k 20. 7. 2025 ukončena, proto se na ni neodkazuje.
+const adrNotice = `Mimosoudní řešení spotřebitelských sporů přísluší České obchodní inspekci, Štěpánská 796/44, 110 00 Praha 1 – <a href="https://adr.coi.cz">adr.coi.cz</a>.`;
+
+const renderSiteFooter = () => `<footer class="site-footer">
+      <div class="footer-grid">
+        <div class="footer-col footer-col-brand">
+          <span class="footer-brand">AlfaRes Bazoš</span>
+          <p>Prodej přes Bazoš z dodavatelských slev, vlastního zboží a sdíleného katalogu.</p>
+          <p class="footer-affiliation">${affiliationNotice}</p>
+        </div>
+        <div class="footer-col">
+          <h2>Provozovatel</h2>
+          <ul class="footer-facts">
+            <li><span>Právní název</span><strong>${operator.legalName}</strong></li>
+            <li><span>IČ</span><strong>${operator.ico}</strong></li>
+            <li><span>DIČ</span><strong>${operator.dic}</strong></li>
+            <li><span>Sídlo</span><strong>${operator.address}</strong></li>
+            <li><span>Zapsáno</span><strong>${operator.register}</strong></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h2>Kontakt</h2>
+          <ul class="footer-facts">
+            <li><span>Telefon</span><a href="tel:${operator.phone.replace(/\s/g, '')}">${operator.phone}</a></li>
+            <li><span>E-mail</span><a href="mailto:${operator.email}">${operator.email}</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h2>Právní informace</h2>
+          <ul class="footer-links">
+            ${legalLinkList}
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>© ${new Date().getFullYear()} ${operator.legalName} — Všechna práva vyhrazena.</p>
+        <p>${adrNotice}</p>
+      </div>
+    </footer>`;
+
+// Panely jsou rovněž přístupné spotřebitelům, proto nesou zkrácenou identifikaci provozovatele.
+const renderCompactFooter = () => `<footer class="app-footer">
+        <p class="app-footer-identity">${operator.legalName}, IČ ${operator.ico}, DIČ ${operator.dic}, ${operator.address}. Zapsáno: ${operator.register}.</p>
+        <ul class="app-footer-links">
+          ${legalLinkList}
+          <li><a href="https://adr.coi.cz">Mimosoudní řešení sporů (ČOI)</a></li>
+        </ul>
+        <p class="app-footer-affiliation">${affiliationNotice}</p>
+      </footer>`;
+
 export const renderLandingPage = () =>
   pageShell(
     'AlfaRes Bazoš',
@@ -150,10 +234,7 @@ export const renderLandingPage = () =>
 
     </main>
 
-    <footer class="site-footer">
-      <span>AlfaRes Bazoš</span>
-      <span>Prodej přes Bazoš z dodavatelských slev, vlastního zboží a sdíleného katalogu.</span>
-    </footer>`,
+    ${renderSiteFooter()}`,
   );
 
 export const renderAuthCallbackPage = () =>
@@ -247,6 +328,7 @@ export const renderAppPage = (mode: AppMode) => {
           </div>
           <div id="workspace-content" class="workspace-content"></div>
         </section>
+        ${renderCompactFooter()}
       </main>
     </div>
     <script src="/ui/app.js?v=content-preview-20260630"></script>`,
@@ -592,13 +674,100 @@ button, input { font: inherit; }
   font-size: 28px;
 }
 .site-footer {
-  display: flex;
-  justify-content: space-between;
-  gap: 18px;
-  padding: 28px 44px;
+  padding: 44px 44px 28px;
   border-top: 1px solid var(--line);
+  background: var(--bg-soft);
   color: var(--muted);
   font-size: 14px;
+}
+.footer-grid {
+  display: grid;
+  grid-template-columns: 1.4fr 1.2fr 1fr 1.2fr;
+  gap: 32px;
+  align-items: start;
+}
+.footer-col h2 {
+  margin: 0 0 12px;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink);
+}
+.footer-col p { margin: 0 0 10px; line-height: 1.55; }
+.footer-brand {
+  display: block;
+  margin-bottom: 10px;
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--ink);
+}
+.footer-affiliation { font-size: 13px; opacity: 0.85; }
+.footer-facts, .footer-links {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.footer-facts li {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 8px;
+  line-height: 1.45;
+}
+.footer-facts span {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.7;
+}
+.footer-facts strong { font-weight: 500; color: var(--ink); }
+.footer-links li { margin-bottom: 6px; }
+.footer-links a, .footer-facts a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.footer-links a:hover, .footer-facts a:hover, .footer-bottom a:hover { color: var(--red-dark); }
+.footer-bottom {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 32px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+}
+.footer-bottom p { margin: 0; }
+.footer-bottom a { text-decoration: underline; text-underline-offset: 2px; }
+.app-footer {
+  margin-top: 32px;
+  padding: 20px 0 8px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.app-footer p { margin: 0 0 8px; }
+.app-footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+}
+.app-footer-links a {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.app-footer-links a:hover { color: var(--red-dark); }
+.app-footer-affiliation { opacity: 0.85; }
+@media (max-width: 900px) {
+  .site-footer { padding: 32px 20px 24px; }
+  .footer-grid { grid-template-columns: 1fr 1fr; gap: 24px; }
+}
+@media (max-width: 560px) {
+  .footer-grid { grid-template-columns: 1fr; }
 }
 .icon {
   display: inline-block;
@@ -1339,7 +1508,6 @@ button, input { font: inherit; }
     grid-template-columns: 1fr;
   }
   .benefit-band, .workflow-section { padding: 52px 20px; }
-  .site-footer { padding: 24px 20px; flex-direction: column; }
   .app-shell { grid-template-columns: 1fr; }
   .app-sidebar {
     position: static;

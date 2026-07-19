@@ -13,6 +13,8 @@ import {
   CATEGORY_COOLDOWN_HOURS,
 } from '../identity/bazos-identity.types';
 import {
+  CONSENT_DOCUMENT_VERSION,
+  CONSENT_SCOPE,
   POLICY_GATE,
   PolicyEvaluationResult,
   PolicyGateFailure,
@@ -62,6 +64,7 @@ export class PublishPolicyService {
    * Returns allowed=false if ANY gate fails; never throws for policy reasons.
    *
    * Gates checked (in order from BAZOS_COMPLIANCE.md):
+   *  0. seller consent to publish under this identity is live and current-version
    *  1. identity.status == verified
    *  2. identity.reviewState == clear
    *  3. identity.verificationExpiresAt > now (when known)
@@ -95,6 +98,30 @@ export class PublishPolicyService {
         message: `Identity ${input.identityId} not found`,
       });
       return this.buildResult(failures, now);
+    }
+
+    // Gate 0 — the seller must have consented to Alfares publishing for them.
+    // Checked before every other gate: a verified identity establishes who the
+    // seller is, never that we may act on their behalf.
+    const consent = await this.prisma.bazosIdentityConsent.findFirst({
+      where: {
+        identityId: input.identityId,
+        scope: CONSENT_SCOPE.PUBLISH,
+        revokedAt: null,
+      },
+      orderBy: { grantedAt: 'desc' },
+    });
+
+    if (!consent) {
+      failures.push({
+        gate: POLICY_GATE.CONSENT_MISSING,
+        message: 'The seller has not granted consent for Alfares to publish under this identity.',
+      });
+    } else if (consent.documentVersion !== CONSENT_DOCUMENT_VERSION) {
+      failures.push({
+        gate: POLICY_GATE.CONSENT_MISSING,
+        message: `Consent was granted for "${consent.documentVersion}"; current terms are "${CONSENT_DOCUMENT_VERSION}" and must be accepted again.`,
+      });
     }
 
     // Gate 1 — identity must be verified

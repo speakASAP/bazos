@@ -1,5 +1,5 @@
 import { PublishPolicyService } from './publish-policy.service';
-import { POLICY_GATE } from './publish-policy.types';
+import { CONSENT_DOCUMENT_VERSION, CONSENT_SCOPE, POLICY_GATE } from './publish-policy.types';
 import {
   IDENTITY_STATUS,
   REVIEW_STATE,
@@ -17,11 +17,28 @@ function makePrismaStub(overrides: Partial<{
   identity: any;
   duplicateAd: any;
   categoryMapping: any;
+  consent: any;
 }> = {}) {
-  const { identity = null, duplicateAd = null, categoryMapping = { id: 'cat1', isActive: true } } = overrides;
+  const {
+    identity = null,
+    duplicateAd = null,
+    categoryMapping = { id: 'cat1', isActive: true },
+    consent = activeConsent(),
+  } = overrides;
   return {
     bazosIdentity: {
       findUnique: jest.fn().mockResolvedValue(identity),
+    },
+    bazosIdentityConsent: {
+      // Mirrors the parts of the real query the gate relies on, so a consent row
+      // that is revoked or scoped elsewhere is filtered out here too.
+      findFirst: jest.fn().mockImplementation(async ({ where }: any) => {
+        if (!consent) return null;
+        if (where?.revokedAt === null && consent.revokedAt !== null) return null;
+        if (where?.scope && consent.scope !== where.scope) return null;
+        if (where?.identityId && consent.identityId !== where.identityId) return null;
+        return consent;
+      }),
     },
     bazosAd: {
       findFirst: jest.fn().mockResolvedValue(duplicateAd),
@@ -57,6 +74,23 @@ function makePolicyService(prisma: any, warehouse = makeWarehouse(), catalog = m
   return new PublishPolicyService(prisma, makeLogger(), warehouse, catalog);
 }
 
+/**
+ * A live, current-version consent record authorising Alfares to publish on the
+ * seller's behalf. Tests that do not care about consent inherit this.
+ */
+function activeConsent(overrides: Partial<any> = {}): any {
+  return {
+    id: 'consent-1',
+    identityId: 'identity-1',
+    userId: 'user-1',
+    scope: CONSENT_SCOPE.PUBLISH,
+    documentVersion: CONSENT_DOCUMENT_VERSION,
+    grantedAt: new Date('2026-01-01T00:00:00Z'),
+    revokedAt: null,
+    ...overrides,
+  };
+}
+
 function baseIdentity(overrides: Partial<any> = {}): any {
   return {
     id: 'identity-1',
@@ -79,6 +113,60 @@ describe('PublishPolicyService', () => {
     publicDuplicateCheck: { checkedAt: new Date(), source: 'manual_review' as const, likelyDuplicate: false },
     contentPolicy: { checkedAt: new Date(), source: 'manual_review' as const, passed: true },
   };
+
+  describe('Gate 0 — seller consent to publish on their behalf', () => {
+    it('blocks when the identity has never granted consent', async () => {
+      const prisma = makePrismaStub({ identity: baseIdentity(), consent: null });
+      const svc = makePolicyService(prisma);
+      const result = await svc.evaluate(input);
+      expect(result.allowed).toBe(false);
+      expect(result.failures.some((f) => f.gate === POLICY_GATE.CONSENT_MISSING)).toBe(true);
+    });
+
+    it('blocks when consent was revoked', async () => {
+      const prisma = makePrismaStub({
+        identity: baseIdentity(),
+        consent: activeConsent({ revokedAt: new Date('2026-02-01T00:00:00Z') }),
+      });
+      const svc = makePolicyService(prisma);
+      const result = await svc.evaluate(input);
+      expect(result.allowed).toBe(false);
+      expect(result.failures.some((f) => f.gate === POLICY_GATE.CONSENT_MISSING)).toBe(true);
+    });
+
+    it('blocks when consent was granted against an outdated document version', async () => {
+      const prisma = makePrismaStub({
+        identity: baseIdentity(),
+        consent: activeConsent({ documentVersion: 'bazos-publish-consent-v0' }),
+      });
+      const svc = makePolicyService(prisma);
+      const result = await svc.evaluate(input);
+      expect(result.allowed).toBe(false);
+      expect(result.failures.some((f) => f.gate === POLICY_GATE.CONSENT_MISSING)).toBe(true);
+    });
+
+    it('only accepts consent scoped to publishing', async () => {
+      const prisma = makePrismaStub({ identity: baseIdentity(), consent: null });
+      const svc = makePolicyService(prisma);
+      await svc.evaluate(input);
+      expect(prisma.bazosIdentityConsent.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            identityId: 'identity-1',
+            scope: CONSENT_SCOPE.PUBLISH,
+            revokedAt: null,
+          }),
+        }),
+      );
+    });
+
+    it('allows when a live current-version consent exists', async () => {
+      const prisma = makePrismaStub({ identity: baseIdentity() });
+      const svc = makePolicyService(prisma);
+      const result = await svc.evaluate(input);
+      expect(result.allowed).toBe(true);
+    });
+  });
 
   describe('Gate 1 — identity.status must be verified', () => {
     it('blocks when status is draft', async () => {

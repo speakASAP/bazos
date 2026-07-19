@@ -139,6 +139,7 @@ model BazosIdentity {
   publishAttempts       BazosPublishAttempt[]
   categoryCadences      BazosIdentityCategoryCadence[]
   verificationSessions BazosVerificationSession[]
+  consents              BazosIdentityConsent[]
 
   @@index([accountId])
   @@index([userId])
@@ -146,6 +147,29 @@ model BazosIdentity {
   @@index([reviewState])
   @@index([nextPublishNotBefore])
   @@map("bazos_identities")
+}
+
+// Seller consent for Alfares to act under a verified Bazos identity.
+// Audit trail: a grant is never edited in place except to stamp revokedAt, and
+// re-granting inserts a new row, so the full consent history stays reconstructable.
+model BazosIdentityConsent {
+  id              String    @id @default(uuid()) @db.Uuid
+  identityId      String    @db.Uuid
+  userId          String    @db.VarChar(100)
+  scope           String    @default("publish") @db.VarChar(50)
+  documentVersion String    @db.VarChar(100)
+  grantedAt       DateTime  @default(now()) @db.Timestamp(6)
+  revokedAt       DateTime? @db.Timestamp(6)
+  // Evidence of who accepted and from where, required to prove consent was given.
+  ip              String?   @db.VarChar(100)
+  userAgent       String?   @db.Text
+  createdAt       DateTime  @default(now()) @db.Timestamp(6)
+  updatedAt       DateTime  @updatedAt @db.Timestamp(6)
+  identity        BazosIdentity @relation(fields: [identityId], references: [id], onDelete: Cascade)
+
+  @@index([identityId, scope, revokedAt])
+  @@index([userId])
+  @@map("bazos_identity_consents")
 }
 
 // Per-identity category cadence so automated publishing cannot flood the same Bazos category
