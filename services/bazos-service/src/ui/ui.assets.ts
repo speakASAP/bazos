@@ -11,6 +11,7 @@ const pageShell = (title: string, body: string) => `<!doctype html>
 </head>
 <body>
 ${body}
+${consentMount}
 </body>
 </html>`;
 
