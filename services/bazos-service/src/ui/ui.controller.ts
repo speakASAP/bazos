@@ -1,6 +1,7 @@
-import { Controller, ForbiddenException, Get, Param, Post, Query, Request, Res, UnauthorizedException, UseGuards } from '@nestjs/common';
+import { Body, Controller, ForbiddenException, Get, HttpCode, Param, Post, Query, Request, Res, UnauthorizedException, UseGuards } from '@nestjs/common';
 import { AuthService, CatalogClientService, JwtAuthGuard } from '@bazos/shared';
 import { OrdersService } from '../channel/orders/orders.service';
+import { GrowthAttributionService } from './growth-attribution.service';
 import { appScript, appStyles, renderAppPage, renderAuthCallbackPage, renderLandingPage } from './ui.assets';
 import { consentBannerSource, consentCoreSource } from './consent.assets';
 import { FAVICON_ICO } from './favicon.assets';
@@ -17,7 +18,35 @@ export class UiController {
     private readonly authService: AuthService,
     private readonly catalogClient: CatalogClientService,
     private readonly ordersService: OrdersService,
+    private readonly growthAttribution: GrowthAttributionService,
   ) {}
+
+  /**
+   * Records that a visitor clicked through to the hosted auth flow (EP-005 W4, C-005 §2.2a).
+   *
+   * Called by the page immediately before it navigates to `auth.alfares.cz`, so the click is
+   * recorded even if the visitor registers and closes the tab — waiting for the auth callback
+   * would miss exactly the conversions worth counting.
+   *
+   * Deliberately unauthenticated: the visitor has not registered yet, which is the whole point.
+   * `gsid` is read here from the request's own cookie rather than sent by the page, so the
+   * attribution token never travels to auth's host, its access logs, or a `Referer` header.
+   *
+   * Always 204. This endpoint cannot fail a registration: the browser does not wait on the
+   * result, and the service swallows its own errors.
+   */
+  @Post('ui/auth-redirect')
+  @HttpCode(204)
+  async recordAuthRedirect(
+    @Body() body: { state?: string; gsid?: string },
+    @Request() req: any,
+  ): Promise<void> {
+    await this.growthAttribution.recordAuthRedirect({
+      state: String(body?.state || ''),
+      cookieHeader: req?.headers?.cookie,
+      queryGsid: body?.gsid,
+    });
+  }
 
   @Get()
   landing(@Res() res: any) {

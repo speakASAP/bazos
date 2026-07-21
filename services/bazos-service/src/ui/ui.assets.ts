@@ -1761,6 +1761,32 @@ export const appScript = `
     const returnPath = currentReturnPath();
     sessionStorage.setItem(authStateKey, state);
     sessionStorage.setItem(authReturnKey, returnPath);
+
+    // EP-005 W4 - record the click before navigating away, so a visitor who registers and then
+    // closes the tab is still counted. The state value doubles as the join key: auth round-trips
+    // it and emits it back as correlationId, and growth-core joins the two halves on it.
+    //
+    // keepalive lets the request outlive the navigation on the next line. It is deliberately not
+    // awaited: attribution must never add latency to someone trying to sign up, and the endpoint
+    // answers 204 regardless. The gsid is not sent - the server reads it from the cookie, which
+    // keeps the attribution token off any URL bound for auth.alfares.cz.
+    //
+    // No backticks in this comment: the whole function lives inside a TypeScript template
+    // literal, and one would end the string.
+    if (action === 'register') {
+      try {
+        fetch('/ui/auth-redirect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ state: state }),
+          keepalive: true,
+          credentials: 'same-origin',
+        }).catch(function () {});
+      } catch (err) {
+        // An older browser without keepalive, or a blocked request. Registration continues.
+      }
+    }
+
     const url = new URL(action === 'register' ? '/register' : '/login', authBaseUrl);
     url.searchParams.set('client_id', authClientId);
     url.searchParams.set('return_url', authCallbackUrl);
