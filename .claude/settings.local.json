@@ -4,7 +4,12 @@
       "Bash(git check-ignore *)",
       "Bash(git mv *)",
       "Bash(set -e)",
-      "Bash(xargs -I{} echo \"commits ahead of origin/main: {}\")"
+      "Bash(xargs -I{} echo \"commits ahead of origin/main: {}\")",
+      "mcp__postgres__postgres_query",
+      "Bash(./node_modules/.bin/tsc --version)",
+      "mcp__playwright__browser_navigate",
+      "mcp__playwright__browser_snapshot",
+      "mcp__playwright__browser_console_messages"
     ]
   },
   "enableAllProjectMcpServers": true,

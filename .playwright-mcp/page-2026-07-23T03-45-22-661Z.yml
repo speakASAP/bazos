@@ -1,0 +1,41 @@
+- generic [active] [ref=f1e1]:
+  - main [ref=f1e3]:
+    - generic [ref=f1e4]:
+      - paragraph [ref=f1e5]: "Alfares s.r.o., IČ 27138038, DIČ CZ27138038, Cetechovice 70, 768 02, Česká republika. Zapsáno: Krajský soud v Brně, oddíl C, vložka 67892."
+      - list [ref=f1e6]:
+        - listitem [ref=f1e7]:
+          - link "Obchodní podmínky" [ref=f1e8] [cursor=pointer]:
+            - /url: https://alfares.cz/cs/legal/terms-of-service
+        - listitem [ref=f1e9]:
+          - link "Zásady ochrany osobních údajů" [ref=f1e10] [cursor=pointer]:
+            - /url: https://alfares.cz/cs/legal/privacy-policy
+        - listitem [ref=f1e11]:
+          - link "Zásady cookies" [ref=f1e12] [cursor=pointer]:
+            - /url: https://alfares.cz/cs/legal/cookie-policy
+        - listitem [ref=f1e13]:
+          - link "Soulad s GDPR" [ref=f1e14] [cursor=pointer]:
+            - /url: https://alfares.cz/cs/legal/gdpr-compliance
+        - listitem [ref=f1e15]:
+          - link "Zásady vrácení peněz" [ref=f1e16] [cursor=pointer]:
+            - /url: https://alfares.cz/cs/legal/refund-policy
+        - listitem [ref=f1e17]:
+          - link "Soulad s aktem EU o AI" [ref=f1e18] [cursor=pointer]:
+            - /url: https://alfares.cz/cs/legal/eu-ai-act-compliance
+        - listitem [ref=f1e19]:
+          - link "Právní vyloučení" [ref=f1e20] [cursor=pointer]:
+            - /url: https://alfares.cz/cs/legal/legal-disclaimers
+        - listitem [ref=f1e21]:
+          - link "Právní dodatky" [ref=f1e22] [cursor=pointer]:
+            - /url: https://alfares.cz/cs/legal/legal-addendum
+        - listitem [ref=f1e23]:
+          - link "Mimosoudní řešení sporů (ČOI)" [ref=f1e24] [cursor=pointer]:
+            - /url: https://adr.coi.cz
+      - paragraph [ref=f1e25]: Službu provozuje Alfares s.r.o. Není poskytována, schválena ani sponzorována provozovatelem serveru Bazoš.cz.
+  - dialog [ref=f1e26]:
+    - generic [ref=f1e27]:
+      - heading "Cookies a úložiště" [level=2] [ref=f1e28]
+      - paragraph [ref=f1e29]:
+        - text: Tento web ukládá pouze údaje nezbytné pro přihlášení, bezpečnost a základní chod. Nepoužíváme analytické ani marketingové cookies a nesledujeme vás na jiných webech.
+        - link "Zásady cookies" [ref=f1e30] [cursor=pointer]:
+          - /url: https://alfares.cz/cs/legal/cookie-policy
+      - button "Rozumím" [ref=f1e32] [cursor=pointer]

@@ -1,0 +1,28 @@
+- generic [ref=f3e3]:
+  - group "Language" [ref=f3e4]:
+    - button "EN" [ref=f3e5] [cursor=pointer]
+    - button "CS" [ref=f3e6] [cursor=pointer]
+    - button "RU" [ref=f3e7] [cursor=pointer]
+  - heading "Přihlášení" [level=2] [ref=f3e8]
+  - paragraph [ref=f3e9]: Pokračujte e-mailem nebo telefonem
+  - generic [ref=f3e10]:
+    - button "Přihlásit" [ref=f3e11] [cursor=pointer]
+    - button "Registrace" [ref=f3e12] [cursor=pointer]
+  - generic [ref=f3e13]:
+    - generic [ref=f3e14]:
+      - generic [ref=f3e15]: E-mail nebo telefon
+      - textbox "E-mail nebo telefon" [ref=f3e16]
+    - generic [ref=f3e17]:
+      - generic [ref=f3e18]: Heslo
+      - textbox "Heslo" [ref=f3e19]
+    - button "Přihlásit" [ref=f3e20] [cursor=pointer]
+  - generic [ref=f3e21]:
+    - button "Poslat přihlašovací kód" [ref=f3e22] [cursor=pointer]
+    - button "Zapomenuté heslo?" [ref=f3e23] [cursor=pointer]
+  - paragraph [ref=f3e24]:
+    - text: "Cíl přesměrování:"
+    - code [ref=f3e25]: https://bazos.alfares.cz/auth/callback
+  - paragraph [ref=f3e26]:
+    - text: Potřebujete admin nástroje?
+    - link "Otevřít admin panel" [ref=f3e27] [cursor=pointer]:
+      - /url: /admin

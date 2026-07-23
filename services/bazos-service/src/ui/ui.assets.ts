@@ -983,34 +983,17 @@ button, input { font: inherit; }
   background: var(--danger-line);
 }
 .identity-required-banner .button-primary:hover { background: #b42318; }
-.connection-modal {
-  position: fixed;
-  inset: 0;
-  z-index: 40;
-  display: grid;
-  place-items: center;
-  padding: 24px;
-  background: rgba(0, 0, 0, 0.42);
-}
-.connection-dialog {
+.connect-page {
   width: min(760px, 100%);
-  max-height: min(92vh, 820px);
-  overflow: auto;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: #fff;
-  box-shadow: var(--shadow);
+  margin: 0 auto;
 }
-.connection-dialog-header {
-  display: flex;
-  justify-content: space-between;
-  gap: 14px;
-  align-items: flex-start;
-  padding: 22px 22px 14px;
+.connect-page-header {
+  padding-bottom: 14px;
   border-bottom: 1px solid var(--line);
 }
-.connection-dialog-header h2 { margin: 0 0 8px; font-size: 24px; }
-.connection-dialog-header p { margin: 0; color: var(--muted); line-height: 1.5; }
+.connect-page-header h2 { margin: 0 0 8px; font-size: 24px; }
+.connect-page-header p { margin: 0; color: var(--muted); line-height: 1.5; }
+.connect-page .form-panel { border: 0; padding: 0; }
 .icon-button {
   display: grid;
   place-items: center;
@@ -1023,10 +1006,6 @@ button, input { font: inherit; }
   cursor: pointer;
   font-size: 22px;
   line-height: 1;
-}
-.connection-dialog .form-panel {
-  border: 0;
-  border-radius: 0;
 }
 .connection-requirement {
   padding: 12px;
@@ -1679,6 +1658,13 @@ export const appScript = `
   const catalogReturnUrlFromQuery = safeCatalogReturnUrl(launchParams.get('returnUrl'));
   if (catalogReturnUrlFromQuery) sessionStorage.setItem(catalogReturnKey, catalogReturnUrlFromQuery);
   const catalogReturnUrl = catalogReturnUrlFromQuery || safeCatalogReturnUrl(sessionStorage.getItem(catalogReturnKey));
+  // Musí stát před initialView() níže — to se volá hned při inicializaci
+  // activeView, takže pozdější const by skončil v temporal dead zone.
+  const CLIENT_VIEWS = ['overview', 'details', 'orders', 'publish', 'account', 'settings', 'catalog', 'connect'];
+  // Hash je veřejná adresa pohledu, proto se nesmí měnit; pohled 'connect'
+  // nahradil dřívější modální okno, takže má vlastní stránku i hash.
+  const HASH_TO_VIEW = { 'bazos-settings': 'settings', 'bazos-connect': 'connect' };
+  const VIEW_TO_HASH = { settings: 'bazos-settings', connect: 'bazos-connect' };
   let activeView = initialView();
   let clientAdFilter = 'all';
   let selectedIdentityId = null;
@@ -1706,12 +1692,18 @@ export const appScript = `
     { value: 'zdarma', label: 'Zdarma' },
   ];
 
+  function viewFromHash() {
+    const raw = String(window.location.hash || '').replace('#', '');
+    if (HASH_TO_VIEW[raw]) return HASH_TO_VIEW[raw];
+    return CLIENT_VIEWS.includes(raw) ? raw : '';
+  }
+
   function initialView() {
     if (mode !== 'client') return 'overview';
-    const view = String(window.location.hash || '').replace('#', '');
-    if (view === 'bazos-settings') return 'settings';
+    const raw = String(window.location.hash || '').replace('#', '');
+    if (HASH_TO_VIEW[raw]) return HASH_TO_VIEW[raw];
     if (catalogProductId) return 'catalog';
-    return ['overview', 'details', 'orders', 'publish', 'account', 'settings', 'catalog'].includes(view) ? view : 'overview';
+    return CLIENT_VIEWS.includes(raw) ? raw : 'overview';
   }
 
   const token = () => localStorage.getItem(tokenKey);
@@ -2351,8 +2343,43 @@ export const appScript = `
     return '<div class="data-panel empty-state">' + escapeHtml(message) + '<div class="flow-actions" style="justify-content:center;margin-top:14px">' + settingsLink(label || 'Nastavit v Nastavení Bazos.cz', 'button button-primary') + '</div></div>';
   }
 
+  function connectLink(label, className) {
+    return '<a class="' + (className || 'setup-link') + '" href="#bazos-connect" data-nav-view="connect">' + escapeHtml(label || 'Připojit účet Bazoš') + '</a>';
+  }
+
+  // Server je API a odpovídá anglicky. UI je celé česky, takže hlášky, které
+  // se reálně dostanou před uživatele, překládáme až tady.
+  const ERROR_TRANSLATIONS = [
+    [/^Phone number (.+) is already registered as a Bazos identity\.?$/i, (match) => 'Telefon ' + match[1] + ' už je zaregistrovaný jako Bazoš identita.'],
+    [/^Bazos identity not found( for this user)?\.?$/i, 'Bazoš identita nebyla nalezena.'],
+    [/^Bazos account is not available for this user\.?$/i, 'K tomuto účtu není dostupný žádný Bazoš účet.'],
+    [/^Bazos verification session not found\.?$/i, 'Ověřovací relace nebyla nalezena.'],
+    [/^Verification session has expired\.?$/i, 'Ověřovací relace vypršela. Zahajte ověření znovu.'],
+    [/^Completed verification sessions cannot be expired\.?$/i, 'Dokončenou ověřovací relaci už nelze nechat vypršet.'],
+    [/^Human confirmation is required before marking Bazos verification complete\.?$/i, 'Ověření musíte nejdřív ručně dokončit na Bazos.cz a potvrdit to tady.'],
+    [/^Human confirmation is required before marking a Bazos identity verified\.?$/i, 'Ověření musíte nejdřív ručně dokončit na Bazos.cz a potvrdit to tady.'],
+    [/^Identity must be linked to a Bazos account before creating ads\.?$/i, 'Identita musí být propojená s Bazoš účtem, teprve pak lze zakládat inzeráty.'],
+  ];
+
+  function localizeError(message) {
+    const text = String(message || '').trim();
+    if (!text) return 'Požadavek selhal';
+    for (let index = 0; index < ERROR_TRANSLATIONS.length; index += 1) {
+      const match = text.match(ERROR_TRANSLATIONS[index][0]);
+      if (!match) continue;
+      const translation = ERROR_TRANSLATIONS[index][1];
+      return typeof translation === 'function' ? translation(match) : translation;
+    }
+    return text;
+  }
+
+  function phoneConflictFrom(message) {
+    const match = String(message || '').match(/^Phone number (.+) is already registered as a Bazos identity\.?$/i);
+    return match ? match[1].trim() : '';
+  }
+
   function settingsErrorMarkup(message) {
-    return escapeHtml(message) + '<br>' + settingsLink('Otevřít Nastavení Bazos.cz');
+    return escapeHtml(localizeError(message)) + '<br>' + settingsLink('Otevřít Nastavení Bazos.cz');
   }
   function awaitingVerificationSession(identity) {
     return (identity?.verificationSessions || []).find((session) => String(session.state || '').toLowerCase() === 'awaiting_human') || null;
@@ -2443,7 +2470,7 @@ export const appScript = `
       return;
     }
     identityBanner.classList.remove('hidden');
-    identityBanner.innerHTML = '<div><strong>Účet zatím není připojen k Bazoši</strong><p>Nejdříve vyplňte Nastavení Bazos.cz: telefon, e-mail účtu Bazoš, kontaktní údaje, PSČ a lokalitu. Po uložení se otevře Bazos.cz pro ruční ověření telefonu a relace.</p>' + settingsLink('Připojit') + '</div>' + settingsLink('Připojit účet Bazoš', 'button button-primary');
+    identityBanner.innerHTML = '<div><strong>Účet zatím není připojen k Bazoši</strong><p>Nejdříve vyplňte údaje Bazoš účtu: telefon, e-mail účtu Bazoš, kontaktní údaje, PSČ a lokalitu. Po uložení si sami otevřete Bazos.cz a ručně dokončíte ověření telefonu a relace.</p>' + connectLink('Připojit') + '</div>' + connectLink('Připojit účet Bazoš', 'button button-primary');
     bindNavigationLinks(identityBanner);
   }
 
@@ -2461,10 +2488,10 @@ export const appScript = `
       'Souhlasím, aby Alfares zveřejňoval inzeráty na Bazoš.cz pod touto identitou mým jménem.</label></div>';
   }
 
-  function connectionWizardMarkup() {
+  function connectPageMarkup() {
     const email = currentUser?.email || '';
-    return '<div class="connection-modal" id="connection-modal" role="dialog" aria-modal="true" aria-labelledby="connection-title">' +
-      '<div class="connection-dialog"><div class="connection-dialog-header"><div><h2 id="connection-title">Připojit účet Bazoš</h2><p>Vyplňte údaje používané na Bazoši. Tím vznikne vazba mezi vaším Alfares účtem a Bazoš identitou; ověření telefonu a relace se dokončuje podle pravidel Bazoš.cz.</p></div><button class="icon-button" data-close-identity-wizard type="button" aria-label="Zavřít">×</button></div>' +
+    return '<div class="data-panel panel-stack connect-page">' +
+      '<div class="connect-page-header"><h2>Připojit účet Bazoš</h2><p>Vyplňte údaje používané na Bazoši. Tím vznikne vazba mezi vaším Alfares účtem a Bazoš identitou; ověření telefonu a relace se dokončuje podle pravidel Bazoš.cz.</p></div>' +
       '<form class="form-panel panel-stack" id="identity-wizard-form"><div class="connection-requirement"><strong>Přihlášení do Alfares</strong>Tento Bazoš účet bude spravovaný pod Alfares účtem: ' + cell(email || 'není k dispozici') + '.</div><div class="form-grid">' +
       '<label class="wide">E-mail účtu Bazoš<input name="bazosEmail" type="email" maxlength="200" autocomplete="email" placeholder="prodejce@example.cz" required></label>' +
       '<label>Telefon Bazoš<input name="phoneNumber" minlength="9" maxlength="20" autocomplete="tel" required></label>' +
@@ -2475,36 +2502,51 @@ export const appScript = `
       '<label>Lokalita<input name="defaultLocation" maxlength="200" autocomplete="address-level2" required></label>' +
       '<label class="wide">Popis účtu<textarea name="notes" placeholder="např. motodíly, knihy, sezónní zboží nebo hlavní prodejní účet"></textarea></label>' +
       '</div>' + consentBlockMarkup() +
-      '<p class="form-message" data-form-message></p><div class="flow-actions"><button class="button button-primary" type="submit">Uložit a připojit</button><button class="button button-secondary" data-close-identity-wizard type="button">Dokončit později</button></div></form></div></div>';
+      '<p class="form-message" data-form-message></p><div class="flow-actions"><button class="button button-primary" data-identity-submit type="submit">Uložit a připojit</button><button class="button button-secondary" data-connect-later type="button">Dokončit později</button></div></form></div>';
   }
 
-  function openConnectionWizard(auto) {
-    if (mode !== 'client') return;
-    if (document.getElementById('connection-modal')) return;
-    document.body.insertAdjacentHTML('beforeend', connectionWizardMarkup());
-    document.getElementById('identity-wizard-form')?.addEventListener('submit', createIdentity);
-    document.querySelectorAll('[data-close-identity-wizard]').forEach((button) => button.addEventListener('click', () => {
-      if (auto) sessionStorage.setItem(connectionWizardKey(), 'dismissed');
-      closeConnectionWizard();
-    }));
+  function connectedPageMarkup() {
+    return '<div class="data-panel panel-stack connect-page">' +
+      '<div class="connect-page-header"><h2>Účet Bazoš je připojený</h2><p>Tento Alfares účet už má Bazoš identitu. Další identity a ověření spravujete v Nastavení Bazos.cz.</p></div>' +
+      '<div class="flow-actions">' + settingsLink('Otevřít Nastavení Bazos.cz', 'button button-primary') +
+      '<button class="button button-secondary" data-nav-view="account" type="button">Zobrazit identity</button></div></div>';
   }
 
-  function closeConnectionWizard() {
-    document.getElementById('connection-modal')?.remove();
+  function renderConnect(data) {
+    if (hasLinkedBazosIdentity(data)) {
+      content.innerHTML = connectedPageMarkup();
+      bindNavigationLinks(content);
+      return;
+    }
+    content.innerHTML = connectPageMarkup();
+    const form = document.getElementById('identity-wizard-form');
+    form?.addEventListener('submit', createIdentity);
+    bindContactPhoneMirror(form);
+    bindSettingsFormGuidance(form);
+    content.querySelector('[data-connect-later]')?.addEventListener('click', () => {
+      sessionStorage.setItem(connectionWizardKey(), 'dismissed');
+      navigateTo('overview');
+    });
+    bindNavigationLinks(content);
   }
 
   function bindIdentityWizardButtons() {
     document.querySelectorAll('[data-open-identity-wizard]').forEach((button) => {
       if (button.dataset.bound === 'true') return;
       button.dataset.bound = 'true';
-      button.addEventListener('click', () => openConnectionWizard(false));
+      button.addEventListener('click', () => navigateTo('connect'));
     });
   }
 
-  function maybeAutoOpenConnectionWizard(data) {
-    if (mode !== 'client' || hasLinkedBazosIdentity(data)) return;
-    if (sessionStorage.getItem(connectionWizardKey())) return;
-    openConnectionWizard(true);
+  // Dřív se tady otevíralo modální okno. Teď se jen jednou za relaci přesměruje
+  // na stránku /client#bazos-connect; vrací true, když navigace obsah překreslí.
+  function maybeAutoOpenConnectPage(data) {
+    if (mode !== 'client' || hasLinkedBazosIdentity(data)) return false;
+    if (activeView === 'connect') return false;
+    if (sessionStorage.getItem(connectionWizardKey())) return false;
+    sessionStorage.setItem(connectionWizardKey(), 'auto-opened');
+    navigateTo('connect');
+    return true;
   }
 
   async function renderAdmin(options) {
@@ -2855,12 +2897,13 @@ export const appScript = `
   function identityFormPayload(data) {
     const bazosEmail = String(data.bazosEmail || '').trim();
     const notes = [data.notes, bazosEmail ? 'E-mail účtu Bazoš: ' + bazosEmail : ''].filter(Boolean).join('\\n');
+    const phoneNumber = String(data.phoneNumber || '').trim();
     return {
-      phoneNumber: String(data.phoneNumber || '').trim(),
+      phoneNumber,
       displayName: defaultIdentityDisplayName(data),
       bazosEmail: bazosEmail || undefined,
       contactName: String(data.contactName || '').trim() || undefined,
-      contactPhone: String(data.contactPhone || '').trim() || undefined,
+      contactPhone: String(data.contactPhone || '').trim() || phoneNumber || undefined,
       defaultZip: String(data.defaultZip || '').trim() || undefined,
       defaultLocation: String(data.defaultLocation || '').trim() || undefined,
       notes: notes || undefined,
@@ -2901,7 +2944,9 @@ export const appScript = `
         return;
       }
       if (formMessage) formMessage.textContent = 'Ukládá se nastavení a připravuje se ověření na Bazos.cz...';
-      const bazosWindow = window.open('', '_blank');
+      // Kartu s Bazos.cz zásadně neotevíráme dopředu: když request spadne
+      // (například na obsazeném telefonu), uživatel skončil v prázdné kartě.
+      // Odkaz na Bazos.cz nabídneme až po úspěchu, kliknutím.
       const identity = await request('/api/bazos/identities', { method: 'POST', body: JSON.stringify(payload) });
       // Zaznamenáme souhlas dřív, než se spustí ověřovací tok: identita bez
       // souhlasu neprojde policy bránou, takže by zůstala nepoužitelná.
@@ -2909,23 +2954,36 @@ export const appScript = `
         method: 'POST',
         body: JSON.stringify({ documentVersion: CONSENT_VERSION }),
       });
-      const session = await startVerificationSessionForIdentity(identity.id).catch((error) => {
-        if (bazosWindow) bazosWindow.close();
-        throw error;
-      });
-      if (bazosWindow) bazosWindow.location = session.verificationUrl || BAZOS_VERIFICATION_URL;
-      else window.open(session.verificationUrl || BAZOS_VERIFICATION_URL, '_blank', 'noopener');
+      const session = await startVerificationSessionForIdentity(identity.id);
       sessionStorage.setItem(connectionWizardKey(), 'completed');
-      closeConnectionWizard();
       accountBulkOpen = false;
       editingIdentityId = null;
       activeView = 'account';
+      if (mode === 'client') window.history.replaceState(null, document.title, '/client#account');
       syncActiveTabs();
       await renderClient();
       showSetupNextStep(session.verificationUrl || BAZOS_VERIFICATION_URL);
     } catch (error) {
-      if (formMessage) formMessage.innerHTML = settingsErrorMarkup(error.message);
+      showIdentityFormError(form, formMessage, error);
     }
+  }
+
+  function showIdentityFormError(form, formMessage, error) {
+    if (!formMessage) return;
+    const conflictPhone = phoneConflictFrom(error?.message);
+    if (!conflictPhone) {
+      formMessage.innerHTML = settingsErrorMarkup(error?.message);
+      bindNavigationLinks(formMessage);
+      return;
+    }
+    // Telefon patří jiné identitě, takže odeslání formuláře už nikdy neprojde.
+    // Tlačítko na uložení proto odebereme a necháme jen cesty, které někam vedou.
+    (form.querySelector('[data-identity-submit]') || form.querySelector('button[type="submit"]'))?.remove();
+    formMessage.innerHTML = '<strong>' + escapeHtml('Telefon ' + conflictPhone + ' už je zaregistrovaný jako Bazoš identita.') + '</strong>' +
+      '<br>Pokud je ten účet váš, spravujte ho v Nastavení Bazos.cz. Jinak zadejte jiné telefonní číslo.' +
+      '<div class="flow-actions" style="margin-top:12px">' + settingsLink('Otevřít Nastavení Bazos.cz', 'button button-primary') +
+      '<button class="button button-secondary" data-nav-view="account" type="button">Zobrazit moje identity</button></div>';
+    bindNavigationLinks(formMessage);
   }
 
   async function startVerificationSessionForIdentity(identityId) {
@@ -2948,7 +3006,7 @@ export const appScript = `
   }
 
   function showSetupNextStep(url) {
-    content.insertAdjacentHTML('afterbegin', '<div class="data-panel panel-stack setup-next-step"><div><h2>Nastavení bylo uloženo</h2><p class="card-note">Bazos.cz se otevřel v nové kartě. Tam se přihlaste nebo zaregistrujte, zadejte uložený telefon a dokončete SMS/ověření podle Bazos.cz. Po dokončení se vraťte sem a u účtu klikněte na Dokončit ruční ověření.</p></div><div class="flow-actions"><a class="button button-primary" href="' + escapeHtml(url || BAZOS_VERIFICATION_URL) + '" target="_blank" rel="noopener">Otevřít Bazos.cz</a><button class="button button-secondary" data-nav-view="account" type="button">Zobrazit účet</button>' + catalogReturnActionMarkup() + '</div></div>');
+    content.insertAdjacentHTML('afterbegin', '<div class="data-panel panel-stack setup-next-step"><div><h2>Nastavení bylo uloženo</h2><p class="card-note">Teď otevřete Bazos.cz tlačítkem níže. Tam se přihlaste nebo zaregistrujte, zadejte uložený telefon a dokončete SMS/ověření podle Bazos.cz. Po dokončení se vraťte sem a u účtu klikněte na Dokončit ruční ověření.</p></div><div class="flow-actions"><a class="button button-primary" href="' + escapeHtml(url || BAZOS_VERIFICATION_URL) + '" target="_blank" rel="noopener">Otevřít Bazos.cz</a><button class="button button-secondary" data-nav-view="account" type="button">Zobrazit účet</button>' + catalogReturnActionMarkup() + '</div></div>');
     bindNavigationLinks(content);
   }
 
@@ -2982,6 +3040,25 @@ export const appScript = `
     setupRequiredFields(form).forEach((field) => field.addEventListener('input', () => {
       field.closest('label')?.classList.toggle('field-missing', !String(field.value || '').trim());
     }));
+  }
+
+  // Kontaktní telefon je ve většině případů shodný s telefonem účtu - doplníme ho,
+  // dokud si ho uživatel nepřepíše vlastní hodnotou.
+  function bindContactPhoneMirror(form) {
+    const phoneField = form?.elements?.phoneNumber;
+    const contactField = form?.elements?.contactPhone;
+    if (!phoneField || !contactField || form.dataset.contactPhoneMirrorBound === 'true') return;
+    form.dataset.contactPhoneMirrorBound = 'true';
+    const markMirrored = (mirrored) => { contactField.dataset.mirroredFromPhone = mirrored ? 'true' : 'false'; };
+    markMirrored(!String(contactField.value || '').trim());
+    const mirror = () => {
+      if (contactField.dataset.mirroredFromPhone !== 'true') return;
+      contactField.value = phoneField.value;
+      contactField.closest('label')?.classList.toggle('field-missing', !String(contactField.value || '').trim());
+    };
+    phoneField.addEventListener('input', mirror);
+    phoneField.addEventListener('change', mirror);
+    contactField.addEventListener('input', () => markMirrored(!String(contactField.value || '').trim()));
   }
 
   function parseBulkIdentityRows(value) {
@@ -3432,6 +3509,7 @@ export const appScript = `
     const form = document.getElementById('identity-form');
     form.addEventListener('submit', createIdentity);
     bindSettingsFormGuidance(form);
+    bindContactPhoneMirror(form);
     if (pendingSettingsGuide) {
       pendingSettingsGuide = false;
       setTimeout(() => guideMissingSettingsFields(form), 0);
@@ -3759,7 +3837,8 @@ export const appScript = `
     if (!options?.silent) content.innerHTML = '<div class="data-panel empty-state">Načítají se data Bazos.cz...</div>';
     const data = await loadClientData(options);
     renderConnectionBanner(data);
-    maybeAutoOpenConnectionWizard(data);
+    if (maybeAutoOpenConnectPage(data)) return;
+    if (activeView === 'connect') return renderConnect(data);
     if (activeView === 'overview') renderOverview(data);
     else if (activeView === 'details') renderDetails(data);
     else if (activeView === 'orders') renderOrders(data);
@@ -3780,10 +3859,20 @@ export const appScript = `
       selectedIdentityId = null;
       editingIdentityId = null;
     }
-    const hash = activeView === 'settings' ? 'bazos-settings' : activeView;
+    const hash = VIEW_TO_HASH[activeView] || activeView;
     if (mode === 'client') window.history.replaceState(null, document.title, '/client#' + hash);
     syncActiveTabs();
     render();
+  }
+
+  // Bez tohoto posluchače byl každý odkaz na #bazos-settings mrtvý všude, kde ho
+  // nestihl obsloužit bindNavigationLinks — hash se změnil a nestalo se nic.
+  function bindHashNavigation() {
+    if (mode !== 'client') return;
+    window.addEventListener('hashchange', () => {
+      const view = viewFromHash();
+      if (view && view !== activeView) navigateTo(view);
+    });
   }
 
   function bindNavigationLinks(container) {
@@ -3889,6 +3978,7 @@ export const appScript = `
 
   startPublishWorkerTimer();
   startOrderRefreshTimer();
+  bindHashNavigation();
 
   refresh.addEventListener('click', () => {
     if (mode === 'client') return renderClient({ refreshExternal: true });
