@@ -49,6 +49,6 @@ Stack: NestJS, PostgreSQL
 
 ### Secrets
 
-All secrets are in Vault at secret/prod/bazos-service. See ../shared/docs/VAULT.md.
+All secrets are in Vault at secret/prod/bazos-service.
 
 Ops: kubectl logs -n statex-apps -l app=bazos-service -f; kubectl rollout restart deployment/bazos-service -n statex-apps; ./scripts/deploy.sh

@@ -21,7 +21,7 @@ Tables: bazos_accounts, bazos_ads, bazos_orders.
 
 ## Secrets
 
-All secrets are in Vault at secret/prod/bazos-service and are synced to Kubernetes through bazos-service-secret. See ../shared/docs/VAULT.md.
+All secrets are in Vault at secret/prod/bazos-service and are synced to Kubernetes through bazos-service-secret.
 
 ## API
 
