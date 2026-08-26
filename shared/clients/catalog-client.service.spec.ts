@@ -151,4 +151,41 @@ describe('CatalogClientService', () => {
       expect(logger.error).toHaveBeenCalled();
     });
   });
+
+  describe('getProductMedia', () => {
+    it('returns [] on a 404 (no media for this product)', async () => {
+      const httpService = {
+        get: jest.fn().mockReturnValue(
+          throwError(() => {
+            const err: any = new Error('Not Found');
+            err.response = { status: HttpStatus.NOT_FOUND };
+            return err;
+          }),
+        ),
+      } as any;
+      const service = new CatalogClientService(httpService, makeLogger());
+
+      await expect(service.getProductMedia('product-missing')).resolves.toEqual([]);
+    });
+
+    it('THROWS on a 401 instead of masking it as no media', async () => {
+      const logger = makeLogger();
+      const httpService = {
+        get: jest.fn().mockReturnValue(
+          throwError(() => {
+            const err: any = new Error('Invalid token');
+            err.response = { status: HttpStatus.UNAUTHORIZED };
+            return err;
+          }),
+        ),
+      } as any;
+      const service = new CatalogClientService(httpService, logger);
+
+      await expect(service.getProductMedia('product-1')).rejects.toBeInstanceOf(HttpException);
+      await expect(service.getProductMedia('product-1')).rejects.toThrow(
+        'Media lookup failed: Invalid token',
+      );
+      expect(logger.error).toHaveBeenCalled();
+    });
+  });
 });

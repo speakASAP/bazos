@@ -309,12 +309,18 @@ export class CatalogClientService {
   async getProductMedia(productId: string): Promise<any[]> {
     try {
       const response = await firstValueFrom(
-        this.httpService.get(`${this.baseUrl}/api/media/product/${productId}`)
+        this.httpService.get(`${this.baseUrl}/api/media/product/${productId}`, this.authOptions())
       );
       return response.data.data || [];
-    } catch (error) {
-      this.logger.warn(`Media not found for product ${productId}`, 'CatalogClient');
-      return [];
+    } catch (error: unknown) {
+      // Was `return []` on any error. An auth or transport failure must not be
+      // indistinguishable from a product genuinely having no media. Only a 404
+      // means "no media for this product".
+      if ((error as any)?.response?.status === HttpStatus.NOT_FOUND) {
+        this.logger.warn(`Media not found for product ${productId}`, 'CatalogClient');
+        return [];
+      }
+      this.rethrowCatalogLookupFailure(error, `productId=${productId}`, 'Media lookup');
     }
   }
 
