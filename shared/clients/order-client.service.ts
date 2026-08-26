@@ -133,9 +133,25 @@ export class OrderClientService {
       );
       const orders = response.data.data || [];
       return orders.find((order: any) => order.externalOrderId === externalOrderId) || null;
-    } catch (error: unknown) {
-      this.logger.warn('Order not found: ' + externalOrderId, 'OrderClient');
-      return null;
+    } catch (error: any) {
+      // This lookup is the duplicate-order guard before creating a new central
+      // order. Returning null on any error made an auth/transport failure
+      // indistinguishable from "no matching order exists yet" — which risks
+      // creating a duplicate order instead of reusing the existing one. Only a
+      // 404 legitimately means "no matching order".
+      const status = error?.response?.status;
+      if (status === HttpStatus.NOT_FOUND) {
+        return null;
+      }
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      const stack = error instanceof Error ? error.stack : undefined;
+      this.logger.error(
+        `Order lookup by external id failed against orders-microservice: externalOrderId=${externalOrderId}, `
+          + `channel=${channel}, httpStatus=${status ?? 'n/a'}, error=${message}`,
+        stack,
+        'OrderClient',
+      );
+      throw new HttpException(`Failed to look up order by external id: ${message}`, status || HttpStatus.BAD_GATEWAY);
     }
   }
 

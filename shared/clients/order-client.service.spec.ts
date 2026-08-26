@@ -1,5 +1,6 @@
 process.env.LOGGING_SERVICE_URL = process.env.LOGGING_SERVICE_URL || 'http://logging.test';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
+import { HttpException, HttpStatus } from '@nestjs/common';
 import { OrderClientService } from './order-client.service';
 
 function makeLogger() {
@@ -190,6 +191,80 @@ describe('OrderClientService', () => {
     expect(options.headers.Authorization).toBe('Bearer test-bearer-token');
     expect(options.headers['x-internal-service-token']).toBeUndefined();
     expect(options.headers['x-service-name']).toBe('bazos-service');
+  });
+
+  describe('findByExternalId', () => {
+    it('returns null on a 404 (no matching order)', async () => {
+      process.env.ORDER_SERVICE_URL = 'http://orders.test';
+      process.env.SERVICE_TOKEN = 'generic-token';
+      const httpService = {
+        get: jest.fn().mockReturnValue(
+          throwError(() => {
+            const err: any = new Error('Not Found');
+            err.response = { status: HttpStatus.NOT_FOUND };
+            return err;
+          }),
+        ),
+      } as any;
+      const service = new OrderClientService(httpService, makeLogger());
+
+      await expect(service.findByExternalId('bazos-order-1', 'bazos')).resolves.toBeNull();
+    });
+
+    it('THROWS on a 401 instead of masking it as "no matching order yet" (which would create a duplicate order)', async () => {
+      process.env.ORDER_SERVICE_URL = 'http://orders.test';
+      process.env.ORDERS_SERVICE_TOKEN = 'test-bearer-token';
+      const logger = makeLogger();
+      const httpService = {
+        get: jest.fn().mockReturnValue(
+          throwError(() => {
+            const err: any = new Error('Invalid token');
+            err.response = { status: HttpStatus.UNAUTHORIZED };
+            return err;
+          }),
+        ),
+      } as any;
+      const service = new OrderClientService(httpService, logger);
+
+      await expect(service.findByExternalId('bazos-order-1', 'bazos')).rejects.toBeInstanceOf(HttpException);
+      await expect(service.findByExternalId('bazos-order-1', 'bazos')).rejects.toThrow(
+        'Failed to look up order by external id: Invalid token',
+      );
+      expect(logger.error).toHaveBeenCalled();
+      const [message] = logger.error.mock.calls[0];
+      expect(message).toContain('externalOrderId=bazos-order-1');
+      expect(message).toContain('httpStatus=401');
+    });
+
+    it('THROWS on a 500 from orders-microservice', async () => {
+      process.env.ORDER_SERVICE_URL = 'http://orders.test';
+      process.env.SERVICE_TOKEN = 'generic-token';
+      const httpService = {
+        get: jest.fn().mockReturnValue(
+          throwError(() => {
+            const err: any = new Error('boom');
+            err.response = { status: HttpStatus.INTERNAL_SERVER_ERROR };
+            return err;
+          }),
+        ),
+      } as any;
+      const service = new OrderClientService(httpService, makeLogger());
+
+      await expect(service.findByExternalId('bazos-order-1', 'bazos')).rejects.toBeInstanceOf(HttpException);
+    });
+
+    it('still finds the matching order on success', async () => {
+      process.env.ORDER_SERVICE_URL = 'http://orders.test';
+      process.env.SERVICE_TOKEN = 'generic-token';
+      const httpService = {
+        get: jest.fn().mockReturnValue(of({ data: { data: [{ externalOrderId: 'bazos-order-1', id: 'central-1' }] } })),
+      } as any;
+      const service = new OrderClientService(httpService, makeLogger());
+
+      await expect(service.findByExternalId('bazos-order-1', 'bazos')).resolves.toEqual(
+        expect.objectContaining({ id: 'central-1' }),
+      );
+    });
   });
 
 });
