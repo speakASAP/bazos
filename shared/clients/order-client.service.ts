@@ -239,6 +239,22 @@ export class OrderClientService {
 
   private requestOptions() {
     const serviceName = (process.env.ORDER_SERVICE_NAME || process.env.SERVICE_NAME || DEFAULT_SERVICE_NAME).trim() || DEFAULT_SERVICE_NAME;
+    const headers: Record<string, string> = {
+      'x-service-name': serviceName,
+    };
+
+    // Preferred: per-pair RS256 principal
+    // (svc-bazos-service--orders-microservice@internal.alfares.cz), verified by
+    // orders through /auth/validate.
+    const bearer = process.env.ORDERS_SERVICE_TOKEN?.trim();
+    if (bearer) {
+      headers.Authorization = bearer.startsWith('Bearer ') ? bearer : `Bearer ${bearer}`;
+      return { headers };
+    }
+
+    // Cutover fallback: the shared static credential, where orders derives identity
+    // from x-service-name rather than from the token. Retired once this lane is
+    // verified on the Bearer path.
     const internalToken = (
       process.env.BAZOS_INTERNAL_SERVICE_TOKEN ||
       process.env.ORDERS_INTERNAL_SERVICE_TOKEN ||
@@ -247,11 +263,15 @@ export class OrderClientService {
       process.env.SERVICE_TOKEN ||
       ''
     ).trim();
-    const headers: Record<string, string> = {
-      'x-service-name': serviceName,
-    };
 
     if (internalToken) {
+      this.logger.error(
+        'ORDERS_SERVICE_TOKEN is unset; falling back to the shared static internal '
+          + 'header for orders-microservice. This credential is header-authenticated '
+          + 'and scheduled for retirement — set ORDERS_SERVICE_TOKEN.',
+        undefined,
+        'OrderClient',
+      );
       headers['x-internal-service-token'] = internalToken;
     }
 

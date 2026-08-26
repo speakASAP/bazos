@@ -24,6 +24,9 @@ describe('OrderClientService', () => {
     delete process.env.ORDER_SERVICE_INTERNAL_TOKEN;
     delete process.env.JWT_TOKEN;
     delete process.env.SERVICE_TOKEN;
+    // Must be cleared too: it takes precedence over every static token above, so
+    // leaving it set would make the fallback cases silently exercise the Bearer path.
+    delete process.env.ORDERS_SERVICE_TOKEN;
   });
 
   afterAll(() => {
@@ -151,6 +154,42 @@ describe('OrderClientService', () => {
         }),
       }),
     );
+  });
+
+  it('prefers the per-pair RS256 principal as a Bearer token over every static token', async () => {
+    process.env.ORDER_SERVICE_URL = 'http://orders.test';
+    process.env.ORDERS_SERVICE_TOKEN = 'test-bearer-token';
+    // Set deliberately: the Bearer path must win, and the shared static header must
+    // not be sent alongside it — otherwise orders still derives identity from
+    // x-service-name rather than verifying the token.
+    process.env.BAZOS_INTERNAL_SERVICE_TOKEN = 'test-internal-token';
+    const httpService = {
+      post: jest.fn().mockReturnValue(of({ data: { data: { id: 'central-order-1' } } })),
+    } as any;
+    const service = new OrderClientService(httpService, makeLogger());
+
+    await service.createOrder({
+      externalOrderId: 'bazos-order-3',
+      channel: 'bazos',
+      items: [{
+        productId: 'catalog-product-1',
+        warehouseId: 'warehouse-1',
+        title: 'Bazos item',
+        quantity: 1,
+        unitPrice: 100,
+        totalPrice: 100,
+      }],
+      subtotal: 100,
+      shippingCost: 0,
+      taxAmount: 0,
+      total: 100,
+      currency: 'CZK',
+    });
+
+    const options = httpService.post.mock.calls[0][2];
+    expect(options.headers.Authorization).toBe('Bearer test-bearer-token');
+    expect(options.headers['x-internal-service-token']).toBeUndefined();
+    expect(options.headers['x-service-name']).toBe('bazos-service');
   });
 
 });
