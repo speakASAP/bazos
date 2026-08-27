@@ -268,30 +268,20 @@ export class OrderClientService {
       return { headers };
     }
 
-    // Cutover fallback: the shared static credential, where orders derives identity
-    // from x-service-name rather than from the token. Retired once this lane is
-    // verified on the Bearer path.
-    const internalToken = (
-      process.env.BAZOS_INTERNAL_SERVICE_TOKEN ||
-      process.env.ORDERS_INTERNAL_SERVICE_TOKEN ||
-      process.env.ORDER_SERVICE_INTERNAL_TOKEN ||
-      process.env.JWT_TOKEN ||
-      process.env.SERVICE_TOKEN ||
-      ''
-    ).trim();
-
-    if (internalToken) {
-      this.logger.error(
-        'ORDERS_SERVICE_TOKEN is unset; falling back to the shared static internal '
-          + 'header for orders-microservice. This credential is header-authenticated '
-          + 'and scheduled for retirement — set ORDERS_SERVICE_TOKEN.',
-        undefined,
-        'OrderClient',
-      );
-      headers['x-internal-service-token'] = internalToken;
-    }
-
-    return { headers };
+    // No fallback: this lane runs on ORDERS_SERVICE_TOKEN, a per-pair RS256
+    // principal. The static x-internal-service-token path was removed on
+    // 2026-08-27 — orders-microservice stopped accepting the shared a2880693
+    // value from any caller when header-chosen identity was closed, so the
+    // fallback could only turn a missing credential into a 401 that looked like
+    // an orders-side problem. Fail loudly here instead.
+    this.logger.error(
+      'ORDERS_SERVICE_TOKEN is unset; refusing to call orders-microservice '
+        + 'unauthenticated. Set the per-pair RS256 principal for '
+        + 'bazos-service -> orders-microservice.',
+      undefined,
+      'OrderClient',
+    );
+    throw new Error('[MISSING: orders-microservice runtime credential]');
   }
 
   private normalizeChannelAccountId(channelAccountId?: string): string {

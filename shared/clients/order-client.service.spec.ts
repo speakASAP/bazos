@@ -36,7 +36,7 @@ describe('OrderClientService', () => {
 
   it('sends canonical create payload with Bazos internal service headers', async () => {
     process.env.ORDER_SERVICE_URL = 'http://orders.test';
-    process.env.BAZOS_INTERNAL_SERVICE_TOKEN = 'test-internal-token';
+    process.env.ORDERS_SERVICE_TOKEN = 'test-bearer-token';
     const httpService = {
       post: jest.fn().mockReturnValue(of({ data: { data: { id: 'central-order-1' } } })),
     } as any;
@@ -74,14 +74,14 @@ describe('OrderClientService', () => {
       {
         headers: {
           'x-service-name': 'bazos-service',
-          'x-internal-service-token': 'test-internal-token',
+          Authorization: 'Bearer test-bearer-token',
         },
       },
     );
   });
   it('reads central order lifecycle status from Orders detail', async () => {
     process.env.ORDER_SERVICE_URL = 'http://orders.test';
-    process.env.BAZOS_INTERNAL_SERVICE_TOKEN = 'test-internal-token';
+    process.env.ORDERS_SERVICE_TOKEN = 'test-bearer-token';
     const httpService = {
       get: jest.fn().mockReturnValue(of({
         data: {
@@ -105,7 +105,7 @@ describe('OrderClientService', () => {
       {
         headers: {
           'x-service-name': 'bazos-service',
-          'x-internal-service-token': 'test-internal-token',
+          Authorization: 'Bearer test-bearer-token',
         },
       },
     );
@@ -119,15 +119,22 @@ describe('OrderClientService', () => {
     }));
   });
 
-  it('falls back to the Bazos runtime JWT_TOKEN used by Orders runtime aliasing', async () => {
+  // Inverted on 2026-08-27. This used to assert that an unset ORDERS_SERVICE_TOKEN
+  // fell back to JWT_TOKEN as an x-internal-service-token header. That property
+  // holds a2880693, the value shared with five other services, and
+  // orders-microservice stopped accepting it from any caller when header-chosen
+  // identity was closed — so the fallback could only ever produce a 401 that
+  // looked like an orders-side fault. It must now fail loudly instead.
+  it('throws rather than falling back to a static header when ORDERS_SERVICE_TOKEN is unset', async () => {
     process.env.ORDER_SERVICE_URL = 'http://orders.test';
     process.env.JWT_TOKEN = 'runtime-service-token';
+    process.env.BAZOS_INTERNAL_SERVICE_TOKEN = 'test-internal-token';
     const httpService = {
       post: jest.fn().mockReturnValue(of({ data: { data: { id: 'central-order-1' } } })),
     } as any;
     const service = new OrderClientService(httpService, makeLogger());
 
-    await service.createOrder({
+    await expect(service.createOrder({
       externalOrderId: 'bazos-order-2',
       channel: 'bazos',
       items: [{
@@ -143,18 +150,10 @@ describe('OrderClientService', () => {
       taxAmount: 0,
       total: 100,
       currency: 'CZK',
-    });
+    })).rejects.toThrow(/orders-microservice runtime credential/);
 
-    expect(httpService.post).toHaveBeenCalledWith(
-      'http://orders.test/api/orders',
-      expect.any(Object),
-      expect.objectContaining({
-        headers: expect.objectContaining({
-          'x-service-name': 'bazos-service',
-          'x-internal-service-token': 'runtime-service-token',
-        }),
-      }),
-    );
+    // and no unauthenticated request may be sent
+    expect(httpService.post).not.toHaveBeenCalled();
   });
 
   it('prefers the per-pair RS256 principal as a Bearer token over every static token', async () => {
@@ -163,7 +162,7 @@ describe('OrderClientService', () => {
     // Set deliberately: the Bearer path must win, and the shared static header must
     // not be sent alongside it — otherwise orders still derives identity from
     // x-service-name rather than verifying the token.
-    process.env.BAZOS_INTERNAL_SERVICE_TOKEN = 'test-internal-token';
+    process.env.ORDERS_SERVICE_TOKEN = 'test-bearer-token';
     const httpService = {
       post: jest.fn().mockReturnValue(of({ data: { data: { id: 'central-order-1' } } })),
     } as any;
@@ -196,7 +195,7 @@ describe('OrderClientService', () => {
   describe('findByExternalId', () => {
     it('returns null on a 404 (no matching order)', async () => {
       process.env.ORDER_SERVICE_URL = 'http://orders.test';
-      process.env.SERVICE_TOKEN = 'generic-token';
+      process.env.ORDERS_SERVICE_TOKEN = 'test-bearer-token';
       const httpService = {
         get: jest.fn().mockReturnValue(
           throwError(() => {
@@ -238,7 +237,7 @@ describe('OrderClientService', () => {
 
     it('THROWS on a 500 from orders-microservice', async () => {
       process.env.ORDER_SERVICE_URL = 'http://orders.test';
-      process.env.SERVICE_TOKEN = 'generic-token';
+      process.env.ORDERS_SERVICE_TOKEN = 'test-bearer-token';
       const httpService = {
         get: jest.fn().mockReturnValue(
           throwError(() => {
@@ -255,7 +254,7 @@ describe('OrderClientService', () => {
 
     it('still finds the matching order on success', async () => {
       process.env.ORDER_SERVICE_URL = 'http://orders.test';
-      process.env.SERVICE_TOKEN = 'generic-token';
+      process.env.ORDERS_SERVICE_TOKEN = 'test-bearer-token';
       const httpService = {
         get: jest.fn().mockReturnValue(of({ data: { data: [{ externalOrderId: 'bazos-order-1', id: 'central-1' }] } })),
       } as any;
