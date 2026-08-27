@@ -48,10 +48,14 @@ export class InternalOrderAffinityController {
   }
 
   private assertMarketingService(token?: string, serviceName?: string): void {
+    // JWT_TOKEN is deliberately NOT in this chain: it holds the shared a2880693
+    // value, which was simultaneously the credential for five other services.
+    // Leaving it here would keep that value accepted on this lane after
+    // BAZOS_INTERNAL_SERVICE_TOKEN moved to its own opaque secret, and so would
+    // silently block the value from ever being retired.
     const expected = (
       this.configService.get<string>('BAZOS_INTERNAL_SERVICE_TOKEN')
       || this.configService.get<string>('INTERNAL_SERVICE_TOKEN')
-      || this.configService.get<string>('JWT_TOKEN')
       || ''
     ).trim();
     const supplied = String(token || '').replace(/^Bearer\s+/i, '').trim();

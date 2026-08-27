@@ -188,7 +188,12 @@ describe('OrdersService', () => {
     }));
   });
 
-  it('accepts the deployed JWT_TOKEN alias for internal replay auth', async () => {
+  // Inverted on 2026-08-27. This used to assert that JWT_TOKEN was an accepted
+  // alias for the replay guard. That property held the shared a2880693 value,
+  // which was simultaneously the credential for five other services, so
+  // accepting it here kept the value alive and un-rotatable.
+  // BAZOS_INTERNAL_SERVICE_TOKEN now carries this lane's own opaque secret.
+  it('rejects the JWT_TOKEN alias for internal replay auth', async () => {
     const prisma = makePrisma();
     const { service } = makeService(prisma);
     const config = {
@@ -196,7 +201,20 @@ describe('OrdersService', () => {
     } as any;
     const controller = new InternalOrderAffinityController(service, config);
 
-    const response = await controller.getReplayCandidates({ limit: '10', dryRun: 'true' }, 'runtime-replay-token', 'marketing-microservice');
+    await expect(
+      controller.getReplayCandidates({ limit: '10', dryRun: 'true' }, 'runtime-replay-token', 'marketing-microservice'),
+    ).rejects.toThrow(UnauthorizedException);
+  });
+
+  it('accepts BAZOS_INTERNAL_SERVICE_TOKEN for internal replay auth', async () => {
+    const prisma = makePrisma();
+    const { service } = makeService(prisma);
+    const config = {
+      get: jest.fn((key: string) => key === 'BAZOS_INTERNAL_SERVICE_TOKEN' ? 'lane-own-secret' : undefined),
+    } as any;
+    const controller = new InternalOrderAffinityController(service, config);
+
+    const response = await controller.getReplayCandidates({ limit: '10', dryRun: 'true' }, 'lane-own-secret', 'marketing-microservice');
 
     expect(response.success).toBe(true);
     expect(response.data).toEqual(expect.objectContaining({
