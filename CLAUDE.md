@@ -17,13 +17,17 @@ Read those first, then follow the repository-specific notes below and the curren
 
 Reading order: BUSINESS.md -> SYSTEM.md -> AGENTS.md -> TASKS.md -> STATE.json
 
-## Knowledge Retrieval - docs-rag-microservice (MANDATORY, query before reading files)
+## Knowledge Retrieval
 
-Query the RAG before reading source files when working on implementation.
+Use `docs-rag-microservice` for bounded discovery when it is healthy, then
+verify deployment, security, database, integration and public-contract facts
+against the cited Git source. Git remains authoritative.
 
-Command template:
+Authority and fallback rules:
+`/home/ssf/Documents/Github/shared/docs/DOCUMENTATION_AUTHORITY.md`.
 
-kubectl -n statex-apps exec deployment/bazos-service -- curl -s -X POST http://docs-rag-microservice:3397/retrieval/agent-context -H Content-Type:application/json -H "Authorization: Bearer $JWT_TOKEN" -d QUERY_JSON
+Do not generate tokens in documentation or assume an unconfident/failed RAG
+response means that source documentation does not exist.
 
 ## bazos-service
 
