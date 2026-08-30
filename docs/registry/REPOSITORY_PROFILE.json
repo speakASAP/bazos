@@ -1,0 +1,57 @@
+{
+  "schema_version": "1.0",
+  "repository": "bazos",
+  "profile": "service",
+  "project_registration": {
+    "runlayer_project_slug": null,
+    "runlayer_permalink": null,
+    "status": "blocked-manual-canonical-correction",
+    "warning": "RunLayer candidate b3154f73-d1fc-44f9-84a1-4d97a3532b6c uses slug/repo_ref bazos-service while this checkout repository is bazos; canonical project mapping must be corrected manually before linking."
+  },
+  "collectable_paths": [
+    "12_validation/VAL-GOAL-25-catalog-manual-review-metadata.md",
+    "AGENTS.md",
+    "AGENT_OPERATIONS.md",
+    "BUSINESS.md",
+    "STATE.json",
+    "SYSTEM.md",
+    "TASKS.md",
+    "docs/orchestrator/VALIDATION_DEBT.md",
+    "docs/registry/ARTIFACT_INDEX.json",
+    "docs/registry/REPOSITORY_PROFILE.json",
+    "implementation-goals/GOAL-01-bazos-identity-session-compliance.md",
+    "implementation-goals/GOAL-02-human-verification-flow.md",
+    "implementation-goals/GOAL-03-publisher-queue-browser-submitter.md",
+    "implementation-goals/GOAL-04-catalog-sell-button.md",
+    "implementation-goals/GOAL-05-monitoring-reconciliation.md",
+    "implementation-goals/GOAL-17-bazos-order-forwarding.md",
+    "implementation-goals/GOAL-25-catalog-product-quality-bazos-consumer.md"
+  ],
+  "excluded_path_patterns": [
+    ".env*",
+    "**/*.key",
+    "**/*.log",
+    "**/*.p12",
+    "**/*.pem",
+    "**/*.pfx",
+    "**/coverage/**",
+    "**/customer-data/**",
+    "**/dumps/**",
+    "**/logs/**",
+    "**/node_modules/**",
+    "**/runtime/**",
+    "**/secrets/**",
+    "Dockerfile*",
+    "k8s/**",
+    "scripts/**",
+    "services/**",
+    "src/**"
+  ],
+  "owners": {
+    "business_intent": "human-managed",
+    "technical_system": "coordinator-maintained",
+    "planning_state": "coordinator-maintained",
+    "integration": "coordinator-maintained",
+    "registry_contract": "coordinator-maintained"
+  }
+}

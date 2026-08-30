@@ -1,0 +1,82 @@
+{
+  "schema_version": "1.0",
+  "repository": "bazos",
+  "generated_at": "2026-08-30T21:51:04Z",
+  "artifacts": [
+    {
+      "id": "GOAL-01",
+      "type": "goal",
+      "status": "done",
+      "title": "Bazos Identity Session Compliance",
+      "path": "implementation-goals/GOAL-01-bazos-identity-session-compliance.md",
+      "parent_ids": [],
+      "updated_at": "2026-06-12T13:06:03+02:00"
+    },
+    {
+      "id": "GOAL-02",
+      "type": "goal",
+      "status": "done",
+      "title": "Human Verification Flow",
+      "path": "implementation-goals/GOAL-02-human-verification-flow.md",
+      "parent_ids": [],
+      "updated_at": "2026-06-12T13:06:03+02:00"
+    },
+    {
+      "id": "GOAL-03",
+      "type": "goal",
+      "status": "done",
+      "title": "Publisher Queue And Browser Submitter",
+      "path": "implementation-goals/GOAL-03-publisher-queue-browser-submitter.md",
+      "parent_ids": [],
+      "updated_at": "2026-06-12T13:06:03+02:00"
+    },
+    {
+      "id": "GOAL-04",
+      "type": "goal",
+      "status": "done",
+      "title": "Catalog Sell Button",
+      "path": "implementation-goals/GOAL-04-catalog-sell-button.md",
+      "parent_ids": [],
+      "updated_at": "2026-06-12T13:06:03+02:00"
+    },
+    {
+      "id": "GOAL-05",
+      "type": "goal",
+      "status": "done",
+      "title": "Monitoring And Reconciliation",
+      "path": "implementation-goals/GOAL-05-monitoring-reconciliation.md",
+      "parent_ids": [],
+      "updated_at": "2026-06-12T13:06:03+02:00"
+    },
+    {
+      "id": "GOAL-17",
+      "type": "goal",
+      "status": "done",
+      "title": "Bazos Order Forwarding",
+      "path": "implementation-goals/GOAL-17-bazos-order-forwarding.md",
+      "parent_ids": [],
+      "updated_at": "2026-07-18T18:40:38+02:00"
+    },
+    {
+      "id": "GOAL-25",
+      "type": "goal",
+      "status": "done",
+      "title": "Catalog Product Quality Bazos Consumer",
+      "path": "implementation-goals/GOAL-25-catalog-product-quality-bazos-consumer.md",
+      "parent_ids": [],
+      "updated_at": "2026-07-18T18:40:38+02:00"
+    },
+    {
+      "id": "VAL-GOAL-25",
+      "type": "validation",
+      "status": "validated",
+      "title": "Catalog Manual Review Metadata Adoption for Bazos",
+      "path": "12_validation/VAL-GOAL-25-catalog-manual-review-metadata.md",
+      "parent_ids": [
+        "GOAL-25"
+      ],
+      "updated_at": "2026-07-18T18:40:38+02:00"
+    }
+  ],
+  "warnings": []
+}
