@@ -1,13 +1,10 @@
 # Tasks
 
-## Active
-- bootstrap IPS onboarding for bazos
+## Active- bootstrap IPS onboarding for bazos
 
-## Ready next
-- confirm final marketplace API payload mapping for production integration details
+## Ready Next- confirm final marketplace API payload mapping for production integration details
 
-## Blocked
-- no active blockers
+## Blocked- no active blockers
 
 ## Completed
 - root adoption docs created and aligned to repo reality
