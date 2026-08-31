@@ -1,44 +1,42 @@
-# bazos-service
+# bazos
 
-Bazos.cz classifieds automation. See BUSINESS.md for goals/SLA and SYSTEM.md for stack/ports/deploy.
+## Status
+Status: active
 
-## Sub-services
+## Documentation authority
+This repository follows the shared IPS onboarding standard and keeps project-level traceability in the repo itself.
 
-| Container | Port | Purpose |
-|-----------|------|---------|
-| bazos | 3900 | Core ad management + scraping |
-| api-gateway | 3901 | Auth proxy + routing |
-| imports | 3902 | CSV import service |
-| settings | 3903 | Account settings |
-| gateway-proxy | 3904 | Nginx reverse proxy |
-| frontend | 3905 | UI |
+## Capabilities
+- auth: required
+- postgres: required
+- redis: not-applicable — no Redis dependency is required for this repo
+- logging: required
+- notifications: required
+- ai: not-applicable — no AI workflow is required
+- payments: not-applicable — no payment capture in scope
+- catalog: required
+- orders: required
+- warehouse: required
+- invoices: not-applicable — not owned here
+- object-storage: not-applicable — not used here
+- event-bus: required
+- docs-rag: required
+- monitoring: required
+- backups: not-applicable — no backup owner here
 
-## Database
+## Interfaces
+- GitHub: https://github.com/speakASAP/bazos
+- IPS standard: https://github.com/speakASAP/intent-preservation-system
+- Runtime boundary: marketplace integration for Bazos data synchronization and order forwarding
 
-Database: bazos_db. Prisma schema: prisma/schema.prisma.
+## Development
+- Validate with the central IPS adoption script before changes are considered complete.
 
-Tables: bazos_accounts, bazos_ads, bazos_orders.
+## Configuration
+- This repository uses repo-local configuration and shared platform configuration only.
 
-## Secrets
+## Deployment
+- Deployment follows the shared ecosystem deployment conventions.
 
-All secrets are in Vault at secret/prod/bazos-service and are synced to Kubernetes through bazos-service-secret.
-
-## API
-
-Base: https://bazos.alfares.cz/api (dev: http://localhost:3901/api)
-
-| Method | Path | Purpose |
-|--------|------|---------|
-| GET | /api/accounts | List accounts |
-| POST | /api/accounts | Add account |
-| GET | /api/ads | List ads |
-| POST | /api/ads | Create ad |
-| POST | /api/ads/sync | Sync from catalog |
-| POST | /api/ads/:id/renew | Renew ad |
-| GET | /api/categories | Category mappings |
-
-## Bazos Compliance Guardrails
-
-Publishing must follow docs/BAZOS_COMPLIANCE.md. The short version: Bazos has no public API, requires verified phone/device/account state, limits active non-promoted ads, deletes duplicates, and forbids attempts to bypass verification or rate controls.
-
-The service design supports several verified phone identities per ecosystem user, but each identity is governed independently by active-ad caps, category rate limits, duplicate checks, and randomized pacing. Multiple phone identities are for legitimate seller operations only, not for evading Bazos rules.
+## Health and observability
+- Health checks must remain truthful to the runtime scope owned by the repo.

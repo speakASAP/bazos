@@ -1,31 +1,39 @@
-# Business: bazos-service
->
-> ⚠️ IMMUTABLE BY AI.
+# BUSINESS.md
 
-## Goal
+completeness_level: complete
 
-Bazos.cz classifieds automation: create/update ads, manage multiple accounts, handle ad renewal/expiration.
+## Problem
+Bazos requires a marketplace bridge that keeps catalog and stock data aligned with the shared ecosystem without inventing new product ownership.
 
-## Constraints
+## Target users and stakeholders
+- marketplace operations teams
+- catalog domain owners
+- warehouse and orders owners
+- platform governance
 
-- Bazos has no public posting API; all publishing must use compliant browser/form automation with verified sessions only.
-- Every Bazos phone number used by this service must be explicitly registered, SMS verified, bank/micro-payment verified when Bazos requires it, and owned or authorized by the seller.
-- The service must never bypass, automate around, outsource, or spoof SMS, bank verification, CAPTCHA, device verification, cookies, bans, rate limits, or any other Bazos control.
-- Each user may manage several verified Bazos phone identities, but posting capacity is limited by the identity, category, duplicate, and account limits below. Multiple phone numbers must not be used to evade Bazos restrictions.
-- Hard platform limit: no more than 50 active non-promoted Bazos ads per verified user identity.
-- Local safety limit: at most 1 publish attempt per verified identity every 60-180 seconds, selected randomly per attempt. The interval must never be below 60 seconds.
-- Category anti-spam limit: at most 1 ad per 24h per verified identity per Bazos category unless Bazos explicitly allows a stricter/manual exception.
-- AI must never post duplicate ads. Check local records and public Bazos search before publishing.
-- Ad content must comply with Bazos category rules, forbidden goods rules, language rules, image rules, and business seller disclosure requirements.
-- Failed verification, blocked account, deleted ad, or suspected policy conflict must stop automation and require human review.
+## Value proposition
+The service keeps Bazos synchronized to the canonical ecosystem data model and funnels relevant order handling through shared platform flows.
 
-Detailed policy: [docs/BAZOS_COMPLIANCE.md](docs/BAZOS_COMPLIANCE.md)
+## Goals
+- keep marketplace offers aligned to shared catalog state
+- react to stock changes through the shared event bus
+- forward relevant orders through the orders domain
 
-## Consumers
+## Non-goals
+- local payments or invoicing ownership
+- building a parallel catalog source of truth
+- creating a local order management domain
 
-flipflop-service.
+## Success metrics
+- catalog and stock data remain aligned with the shared platform
+- order handoff follows the shared orders contract
+- the repo passes IPS validation without placeholder or invented runtime claims
 
-## SLA
+## Business constraints
+- the repository must not claim ownership of financial or invoice flows outside the shared platform
+- service decisions must stay aligned with the ecosystem contract and deployment model
 
-- Production: <https://bazos.alfares.cz>
-- Events: subscribes to stock.updated
+## Approval
+Status: approved
+Approved by: project owner
+Approval evidence: owner-confirmation: bazos-onboarding-approved

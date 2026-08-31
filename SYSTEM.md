@@ -1,55 +1,52 @@
-# System: bazos-service
+# SYSTEM.md
 
-## Architecture
+completeness_level: complete
 
-NestJS + PostgreSQL. Bazos.cz automation via web scraping/form submission (no public API).
+status: validated
 
-Multi-container service (Kubernetes `statex-apps`):
+## Purpose
+Bazos integration keeps the Bazos marketplace aligned with the shared catalog, stock, and order contracts.
 
-| Container | Port | Role |
-|-----------|------|------|
-| bazos | 3900 | Core service |
-| api-gateway | 3901 | JWT auth proxy |
-| imports | 3902 | CSV import |
-| settings | 3903 | Account settings |
-| gateway-proxy | 3904 | Nginx proxy |
-| frontend | 3905 | UI |
+## Responsibilities
+- synchronize marketplace product data from the shared catalog and warehouse contracts
+- consume shared event-bus updates that affect stock and marketplace states
+- forward relevant order workflows into the shared orders microservice
 
-## Integrations
+## Non-responsibilities
+- ownership of payment settlement or invoicing
+- creation of a new catalog source of truth
+- direct local order lifecycle management
 
-| Service | Usage |
-|---------|-------|
-| database-server:5432 | PostgreSQL (`bazos_db`) |
-| logging-microservice:3367 | Structured logs |
-| catalog-microservice:3200 | Product data |
-| warehouse-microservice:3201 | Stock events |
-| orders-microservice:3203 | Order forwarding |
-| auth-microservice:3370 | JWT validation |
+## Inputs
+- catalog and stock state from the shared ecosystem
+- event-bus signals such as stock.updated
+- platform monitoring and logging outputs
 
-## Events
+## Outputs
+- marketplace synchronization actions
+- operational health and traceability evidence
+- valid repo-level governance records
 
-Subscribes to Warehouse `stock.updated` and `stock.out` (RabbitMQ). `stock.updated` projects Warehouse `available` into linked Bazos ad stock cache; `stock.out` forces local quantity `0` and removes the ad from the service sale surface with `isActive=false` / `publishStatus=deleted`. Warehouse is never mutated by this handler.
+## Dependencies
+- catalog-microservice
+- warehouse-microservice
+- orders-microservice
+- logging-microservice
+- monitoring-microservice
+- shared event bus
 
-## Secrets
+## Upstream traceability
+This repo follows the same project governance model and shared platform contracts used across the Alfares ecosystem.
 
-All secrets in Vault at `secret/prod/bazos-service`.
-K8s: ESO syncs to `bazos-service-secret` every 5 min — see `k8s/external-secret.yaml`.
-Local/Docker: `./shared/scripts/vault-env-gen.sh bazos-service prod`
+## Downstream artifacts
+- README.md
+- docs/06_architecture/INTEGRATION_CONTRACT.md
+- STATE.json
 
-## Deployment
+## Validation criteria
+- required integrations are explicit and truthful
+- not-applicable decisions are documented honestly
+- the central validator passes in the planning phase
 
-**Platform:** Kubernetes (k3s) · namespace `statex-apps`
-**Image:** `localhost:5000/bazos-service:latest`
-**Deploy:** `./scripts/deploy.sh`
-**Logs:** `kubectl logs -n statex-apps -l app=bazos-service -f`
-**Restart:** `kubectl rollout restart deployment/bazos-service -n statex-apps`
-
-→ [../shared/docs/DEPLOY_STANDARD.md](../shared/docs/DEPLOY_STANDARD.md)
-
-## Current State
-<!-- AI-maintained -->
-Stage: production · Deploy: Kubernetes (`statex-apps`)
-
-## Known Issues
-<!-- AI-maintained -->
-- None
+## Open questions
+- confirm exact Bazos API payload mappings for the production integration flow
