@@ -1,18 +1,29 @@
 {
-  "schemaVersion": 1,
-  "project": "bazos",
-  "lifecycle": "implementation",
-  "health": "active",
-  "activeTask": "bootstrap-service",
-  "lastUpdated": "2026-08-30T22:50:25Z",
-  "deployment": {
-    "status": "not-deployed",
-    "lastUpdated": "2026-08-30T22:50:25Z"
+  "schema_version": "1.0",
+  "repository": "bazos",
+  "service": {
+    "name": "bazos-service",
+    "kind": "service",
+    "lifecycle": "implementation",
+    "deployment": "kubernetes"
   },
-  "blockers": [
-    "Project owner approval evidence for onboarding must remain explicit and truthful."
-  ],
-  "followUps": [
-    "Confirm the final marketplace integration details during the next governance review."
-  ]
+  "planning": {
+    "status": "active",
+    "active_goal_ids": [],
+    "next_ready_goal_ids": [],
+    "blocked_goal_ids": [],
+    "active_workstream_ids": [],
+    "last_updated_at": "2026-08-30T22:50:25Z"
+  },
+  "delivery": {
+    "last_validation_id": "VAL-GOAL-25",
+    "last_validation_status": "validated",
+    "validation_debt_count": 0,
+    "last_deployment_commit": null
+  },
+  "collection": {
+    "profile": "service",
+    "artifact_index": "docs/registry/ARTIFACT_INDEX.json",
+    "status_source": "Wave0 v1 metadata reconciled from 2026-08-30 onboarding state: lifecycle=implementation, health=active, activeTask=bootstrap-service, deployment.status=not-deployed, blocker=\"Project owner approval evidence for onboarding must remain explicit and truthful.\", followUp=\"Confirm the final marketplace integration details during the next governance review.\""
+  }
 }
