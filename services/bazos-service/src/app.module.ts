@@ -4,16 +4,19 @@
 
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 import { join } from 'path';
 import { ChannelModule } from './channel/channel.module';
 import { BazosModule, PrismaModule, LoggerModule, HealthModule, RabbitMQModule } from '@bazos/shared';
 import { HealthController } from './health/health.controller';
+import { CredentialSelfReporter } from './health/credential-self-reporter';
 import { UiModule } from './ui/ui.module';
 
 import { BusinessHealthModule } from './business-health/business-health.module';
 
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: join(process.cwd(), '../../.env'),
@@ -28,5 +31,6 @@ import { BusinessHealthModule } from './business-health/business-health.module';
     BusinessHealthModule,
   ],
   controllers: [HealthController],
+  providers: [CredentialSelfReporter],
 })
 export class AppModule {}
