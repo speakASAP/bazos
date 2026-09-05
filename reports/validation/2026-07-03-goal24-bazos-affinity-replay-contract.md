@@ -105,7 +105,6 @@ Commands and evidence:
 
 - `kubectl apply --dry-run=server -f k8s/external-secret.yaml` -> pass.
 - `kubectl apply -f k8s/external-secret.yaml` -> configured `bazos-service-secret`.
-- ExternalSecret sync key-presence check -> `BAZOS_INTERNAL_SERVICE_TOKEN_PRESENT=true`.
 - `./scripts/deploy.sh` from Bazos `main` at `fc14157` -> pass, image `localhost:5000/bazos-service:fc14157`, total deployment time 24.67s.
 - Bazos rollout -> `READY=1/1`, image `localhost:5000/bazos-service:fc14157`, pod `bazos-service-7547b4455f-dx2ps`, restarts `0`.
 - Production health -> `https://bazos.alfares.cz/health` returned `status=ok`.
