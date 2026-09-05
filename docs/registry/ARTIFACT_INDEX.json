@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "repository": "bazos",
-  "generated_at": "2026-08-30T21:51:04Z",
+  "generated_at": "2026-09-05T18:06:37Z",
   "artifacts": [
     {
       "id": "GOAL-01",
@@ -65,6 +65,26 @@
       "path": "implementation-goals/GOAL-25-catalog-product-quality-bazos-consumer.md",
       "parent_ids": [],
       "updated_at": "2026-07-18T18:40:38+02:00"
+    },
+    {
+      "id": "GOAL-BAZOS-001",
+      "type": "goal",
+      "status": "active",
+      "title": "Bootstrap IPS onboarding for bazos",
+      "path": "TASKS.md",
+      "parent_ids": [],
+      "updated_at": "2026-09-05T18:06:37Z"
+    },
+    {
+      "id": "TASK-BAZOS-001",
+      "type": "task",
+      "status": "active",
+      "title": "Bootstrap IPS onboarding for bazos",
+      "path": "TASKS.md",
+      "parent_ids": [
+        "GOAL-BAZOS-001"
+      ],
+      "updated_at": "2026-09-05T18:06:37Z"
     },
     {
       "id": "VAL-GOAL-25",
