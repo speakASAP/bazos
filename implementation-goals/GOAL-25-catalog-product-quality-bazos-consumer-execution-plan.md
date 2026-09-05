@@ -47,7 +47,6 @@ The change prevents incomplete Catalog product truth from becoming a Bazos draft
 - Existing sell-action prepare creates/reuses a local draft, caps stock by Warehouse, evaluates Bazos publish policy, and returns a preview without queueing.
 - Existing confirm requires explicit user confirmation and delegates queueing to `BazosPublisherQueueService`.
 - Catalog Goal 25 exposes `catalog.product_quality.v1`; exact per-product quality evidence is available through Catalog readiness with the same blocker codes, while `GET /api/products/review/quality` does not currently expose an exact product-id filter.
-- Subagent readiness review found that the source consumer needs runtime access to Catalog's shared internal service token; Bazos maps `CATALOG_INTERNAL_SERVICE_TOKEN` from the existing Auth secret without printing the value.
 
 ## Project Invariants
 
@@ -126,7 +125,6 @@ Prepare remains idempotent for reusable drafts only after quality passes. Blocke
 5. Include `catalogQuality` and policy failure details in API responses.
 6. Render Catalog quality blockers in the catalog publish UI and disable confirmation while blocked.
 7. Extend publish policy and Bazos ad draft preparation tests for Catalog quality blockers and draft lifecycle preservation.
-8. Map `CATALOG_INTERNAL_SERVICE_TOKEN` for Bazos runtime service-to-service Catalog readiness calls.
 9. Run validation commands and update reports/state.
 
 ## Test Plan

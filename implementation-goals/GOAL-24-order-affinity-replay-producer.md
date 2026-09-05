@@ -31,7 +31,6 @@ Marketing can distinguish an implemented-but-blocked Bazos producer from a missi
 ## Acceptance Criteria
 
 - Protected route exists at `GET /internal/bazos/order-affinity/replay-candidates`.
-- Route requires Marketing internal service token and service name.
 - Response uses `marketplace.order_affinity_candidate.v1`.
 - Response fails closed with zero events and explicit blockers, including `[MISSING: Bazos paid order history source]`.
 - No customer/contact/address/payment/provider/token/raw payload data is emitted.

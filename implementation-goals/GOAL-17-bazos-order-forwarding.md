@@ -67,7 +67,6 @@ Forbidden:
 
 ### Acceptance Criteria
 
-- `POST /api/orders` calls include `x-internal-service-token` from runtime configuration when present and `x-service-name: bazos-service`; token values are never logged.
 - Every item sent to Orders has canonical `productId` and Warehouse-owned `warehouseId`.
 - Missing `warehouseId` fails closed before calling Orders with bounded `[MISSING: Warehouse-owned warehouseId for Bazos order item]` evidence.
 - Missing live Bazos marketplace webhook support remains `[UNKNOWN: live Bazos marketplace webhook support]`.
@@ -94,4 +93,3 @@ Unresolved non-blocking markers:
 ### Parallel Execution
 
 No separate editing agents for this lane. Code edits are single-owner because the shared Orders client and Bazos order mapper are coupled by the item contract. Read-only validation subchecks may run in parallel. Integration owner and validation owner: this session. Merge order: docs/readiness -> client headers -> mapper warehouse guard -> tests -> status/report.
-

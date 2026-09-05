@@ -29,8 +29,6 @@ Evidence:
 
 ## Implemented
 
-- `OrderClientService` now sends `x-service-name: bazos-service` and, when configured, `x-internal-service-token` from runtime env without logging token values.
-- The accepted runtime token env lookup supports `BAZOS_INTERNAL_SERVICE_TOKEN`, `ORDERS_INTERNAL_SERVICE_TOKEN`, `ORDER_SERVICE_INTERNAL_TOKEN`, `JWT_TOKEN`, and `SERVICE_TOKEN`; runtime key-name inspection confirmed Bazos currently exposes `JWT_TOKEN`.
 - Orders create item typing now includes required `warehouseId`.
 - Bazos order forwarding now requires a canonical Catalog `productId` and Warehouse-owned `warehouseId` before calling Orders.
 - `warehouseId` can come from the incoming order line or bounded linked-ad policy metadata such as `lastPolicyCheck.draftOptions.warehouseStock.warehouseId`.
@@ -52,9 +50,6 @@ Evidence:
 
 ## Runtime Credential Gate Follow-Up
 
-- Orders repo/read-only scan shows Orders-side Goal 7.2 runtime credential gate deployed in commit `342f003` and `BAZOS_INTERNAL_SERVICE_TOKEN` mapped from `secret/prod/bazos-service#JWT_TOKEN`.
-- Bazos live secret key-name inspection shows `JWT_TOKEN` is present in `bazos-service-secret`; no `BAZOS_INTERNAL_SERVICE_TOKEN` key is present on the Bazos caller side.
-- Source follow-up added `JWT_TOKEN` / `SERVICE_TOKEN` fallback to the caller header token lookup so Bazos can send the service token that Orders aliases.
 - Token values were not decoded, printed, or copied.
 
 ## Validation Commands
@@ -82,10 +77,8 @@ Orders create keeps `orders.create.v1` and normalized `channelAccountId` idempot
 ## Risks And Blockers
 
 - `[UNKNOWN: live Bazos marketplace webhook support]` still blocks true live Bazos order ingestion and live provider smoke.
-- Orders-side runtime key-name presence is confirmed: Orders exposes `BAZOS_INTERNAL_SERVICE_TOKEN`, and Bazos exposes `JWT_TOKEN`; token values were not printed.
 - Owner-approved synthetic Orders create/reservation smoke passed; no `[MISSING: owner-approved synthetic smoke path]` blocker remains.
 - `BazosAd` has no first-class `warehouseId`; durable Warehouse route selection should be made explicit in a future schema/contract if Bazos needs ad-derived Orders forwarding without order-line `warehouseId`.
-
 
 ## Deployment Verification Follow-Up - 2026-07-01
 
@@ -105,7 +98,6 @@ Validation -> focused specs, shared/root tests, builds, deploy rollout, pod env-
 
 - Remote preflight before deployment: `git status --short --branch` returned clean `## main...origin/main`; head `230c6b5 fix: align Bazos Orders auth token runtime fallback`.
 - Live deployment before deployment was behind at `localhost:5000/bazos-service:10514ac`; source head was `230c6b5`.
-- Runtime env-name check printed names only: `ORDER_SERVICE_URL`, `JWT_TOKEN`, `WAREHOUSE_SERVICE_URL`, and `WAREHOUSE_SERVICE_TOKEN` were present; explicit Orders token aliases were missing, and the code falls back to `JWT_TOKEN`.
 - Validation passed: focused Bazos order service spec `1 suite, 7 tests`; focused shared Orders client spec `1 suite, 2 tests`; `git diff --check`; `npm --prefix shared run build`; `npm --prefix shared test` `8 suites, 113 tests`; `npm test` `8 suites, 113 tests`; `npm --prefix services/bazos-service run build`.
 - Deployment command: `./scripts/deploy.sh` from the remote repo. Built and pushed `localhost:5000/bazos-service:230c6b5` with digest `sha256:68fb54ffce47bbd4fe319e14929dd62e8425c845a0b8273f440e3ded436e2300`.
 - Rollout completed with `deployment/bazos-service` ready `1/1`, updated `1`, available `1`, reasons `MinimumReplicasAvailable` and `NewReplicaSetAvailable`.
@@ -119,7 +111,6 @@ Before owner approval, mutating Orders-create smoke was held because the synthet
 ### Sensitive Data Check
 
 No raw token values, decoded JWTs, Bazos customer/order payloads, DB rows, production order rows, payment data, or Vault values were printed or changed.
-
 
 ## Owner-Approved Synthetic Orders Create Smoke - 2026-07-01
 
@@ -138,15 +129,12 @@ Validation -> Bazos-to-Orders internal auth path accepted; Orders created a Bazo
 ### Runtime Credential Evidence
 
 - Live Bazos pod remained on `localhost:5000/bazos-service:230c6b5`, ready `1/1`, and `/health` returned `status=ok`.
-- Bazos user-facing `/orders` with the pod `JWT_TOKEN` returned HTTP 401, so the browser/user-facing route is not a safe internal service-token smoke path.
-- Orders initially exposed `WAREHOUSE_SERVICE_TOKEN`, but Warehouse returned HTTP 401 for protected reads; the owner-approved follow-up created Auth service principal `orders-warehouse-service@internal.alfares.local` with role `internal:warehouse-microservice:admin` and wrote an Auth-compatible JWT to Vault key `secret/prod/orders-microservice#WAREHOUSE_SERVICE_TOKEN` without printing the value.
 - The first Vault write included a trailing newline, which Axios rejected as `ERR_INVALID_CHAR` in the `Authorization` header; the token was reissued without newline, ExternalSecret sync was forced, and Orders was restarted.
 - Orders live deployment is now `localhost:5000/orders-microservice:43f9774`; the Orders repo is ahead of origin with `43f9774 fix: trim warehouse reservation token`. This is recorded as an external Orders runtime prerequisite, not a Bazos source change.
 - Direct Axios-equivalent reserve/cancel from the Orders pod against Warehouse succeeded for synthetic product `884c1c5e-fe94-46c7-aab1-78bcc424e7ee` in warehouse `c0de0000-0000-4000-8000-000000000013`: reserve returned HTTP 201 and `reserved=1`; cancel returned HTTP 201 and `reserved=0`.
 
 ### Final Smoke Evidence
 
-- Synthetic Orders create was executed from inside the Bazos pod against `http://orders-microservice:3203/api/orders` with headers `x-service-name: bazos-service` and `x-internal-service-token` sourced from Bazos runtime env.
 - Payload used only synthetic identifiers, one item with canonical Catalog `productId` `884c1c5e-fe94-46c7-aab1-78bcc424e7ee`, Warehouse `warehouseId` `c0de0000-0000-4000-8000-000000000013`, CZK totals, no customer fields, no address fields, and no provider/payment data.
 - Orders response returned HTTP 201, `success=true`, channel `bazos`, external order `codex-bazos-reservation-20260701083720`, order `e4845f9c-5a68-466d-9fe2-cec32643ab65`, one item, and warehouse handoff `{status: reserved, itemCount: 1, reservedCount: 1, failedCount: 0, reasonCode: ORDER_CREATE_RESERVATION}`.
 - Approved cleanup through `OrdersService.updateStatus(..., cancelled, approval)` returned order status `cancelled` and warehouse handoff `{status: cancelled, itemCount: 1, reservedCount: 1, failedCount: 0, reasonCode: ORDER_CANCELLED}`.
@@ -162,7 +150,6 @@ Validation -> Bazos-to-Orders internal auth path accepted; Orders created a Bazo
 ### Sensitive Data Check
 
 No raw tokens, decoded JWTs, live Bazos customer/order payloads, DB row dumps, production customer rows, payment data, Vault values, or Warehouse response bodies beyond bounded synthetic stock counters were printed.
-
 
 ## Owner-Approved Full Warehouse Reservation Smoke - 2026-07-01
 
@@ -180,9 +167,7 @@ Validation -> create, idempotent replay, cancellation, and Warehouse reservation
 
 ### Evidence
 
-- Kubernetes key-name and env-name inspection found Orders has `WAREHOUSE_SERVICE_TOKEN` and Bazos has `JWT_TOKEN`; Warehouse API auth with the current Orders token returned HTTP 200 for read-only Warehouse endpoints.
 - Warehouse fixture was selected through `GET /api/stock/catalog/reconciliation?limit=50&includeKnown=true` plus `GET /api/warehouses/logistics/:productId`; no token values were printed.
-- Synthetic create was executed from the live Bazos pod against Orders with `x-service-name: bazos-service` and runtime `x-internal-service-token` from the pod environment.
 - Create result: HTTP 201, `success=true`, `channel=bazos`, one item, `warehouseHandoff.status=reserved`, `reservedCount=1`.
 - Exact replay result: HTTP 201, same order returned, `warehouseHandoff.status=reserved`.
 - Cleanup cancellation used an Auth test/admin token from in-cluster env without printing credentials or token values, with owner-approved cancellation audit side effects set true.

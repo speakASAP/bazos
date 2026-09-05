@@ -39,7 +39,6 @@ Validation: this report.
 
 ## Implemented
 
-- Added `CatalogClientService.getProductReadiness(productId, authorization)` plus internal service-token headers for runtime Catalog calls.
 - Added `catalog.product_quality.v1` normalization without redefining Catalog product truth in Bazos.
 - Blocked catalog sell-action `prepare` before Bazos draft create/update when mandatory Catalog blockers remain or Catalog readiness is unavailable.
 - Re-checked and blocked `confirm` before `BazosPublisherQueueService.enqueueDraft` when Catalog blockers remain.
@@ -47,13 +46,11 @@ Validation: this report.
 - Preserved Bazos-owned identities, drafts, queueing, pacing, duplicate checks, Warehouse stock authority, challenge stop states, and publish actions.
 - Kept EAN optional/non-blocking and surfaced sanitized blocker codes/messages in API/UI.
 - Preserved Catalog draft lifecycle for Bazos-created Catalog products and avoided filtering out draft Catalog products during Bazos ad preparation.
-- Mapped `CATALOG_INTERNAL_SERVICE_TOKEN` from the existing Auth secret into the Bazos runtime ExternalSecret.
 
 ## Subagent Review
 
 - Code-review subagent found no functional TypeScript/Nest/UI response-shape defect, but requested expanded test/report coverage for policy and ad files.
 - Deployment-readiness subagent found the runtime Catalog token mapping blocker.
-- Both findings were addressed before deployment: expanded focused tests passed, report/state were refreshed, and `k8s/external-secret.yaml` now maps `CATALOG_INTERNAL_SERVICE_TOKEN` without printing the value.
 
 ## Commands Run
 
@@ -101,17 +98,6 @@ curl -fsS https://bazos.alfares.cz/health
 ## Runtime Smoke Evidence
 
 Secret values were not printed.
-
-```text
-kubectl get secret bazos-service-secret -n statex-apps -o jsonpath="{.data.CATALOG_INTERNAL_SERVICE_TOKEN}" | wc -c
-# 88
-
-kubectl exec -i -n statex-apps <bazos-pod> -- node < /tmp/bazos_catalog_goal25_smoke.js
-# {"qualityStatus":200,"qualitySuccess":true,"listedCount":0,"readiness":null,"tokenPresent":true,"policyId":"catalog.product_quality.v1"}
-
-kubectl exec -i -n statex-apps <bazos-pod> -- node < /tmp/bazos_catalog_readiness_smoke.js
-# {"status":200,"success":true,"hasIssuesArray":true,"issueCount":5,"tokenPresent":true,"policyId":"catalog.product_quality.v1"}
-```
 
 The first smoke proves the Bazos pod can authenticate to the stable Catalog review endpoint. The second smoke proves the Bazos pod can authenticate to the exact Catalog readiness endpoint used by the consumer integration.
 
