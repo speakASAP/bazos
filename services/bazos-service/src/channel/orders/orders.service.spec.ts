@@ -1,4 +1,4 @@
-import { UnauthorizedException } from '@nestjs/common';
+import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { InternalOrderAffinityController } from './orders.controller';
 import { BAZOS_ORDER_AFFINITY_REPLAY_CONTRACT, OrdersService } from './orders.service';
 
@@ -160,71 +160,87 @@ describe('OrdersService', () => {
     }));
   });
 
-  it('requires Marketing service auth on the internal replay controller', async () => {
+  it('requires Auth Bearer with order-affinity role on the internal replay controller', async () => {
     const prisma = makePrisma();
     const { service } = makeService(prisma);
-    const config = {
-      get: jest.fn((key: string) => key === 'BAZOS_INTERNAL_SERVICE_TOKEN' ? 'bazos-replay-token' : undefined),
-    } as any;
-    const controller = new InternalOrderAffinityController(service, config);
+    const controller = new InternalOrderAffinityController(service);
+    const originalFetch = global.fetch;
 
-    await expect(controller.getReplayCandidates({ limit: '10' }, 'wrong-token', 'marketing-microservice'))
-      .rejects.toBeInstanceOf(UnauthorizedException);
-    await expect(controller.getReplayCandidates({ limit: '10' }, 'bazos-replay-token', 'other-service'))
+    await expect(controller.getReplayCandidates({ limit: '10' }))
       .rejects.toBeInstanceOf(UnauthorizedException);
 
-    const response = await controller.getReplayCandidates({ limit: '10', dryRun: 'true' }, 'Bearer bazos-replay-token', 'marketing-microservice');
+    global.fetch = jest.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        valid: true,
+        user: { id: 'svc-marketing--bazos', roles: ['internal:bazos-service:order-affinity'] },
+      }),
+    })) as never;
 
-    expect(response.success).toBe(true);
-    expect(response.data).toEqual(expect.objectContaining({
-      sourceOwner: 'bazos-service',
-      consumerOwner: 'marketing-microservice',
-      contract: BAZOS_ORDER_AFFINITY_REPLAY_CONTRACT,
-      channel: 'bazos',
-      count: 0,
-      events: [],
-      failClosed: false,
-      blockers: [],
-    }));
+    try {
+      const response = await controller.getReplayCandidates(
+        { limit: '10', dryRun: 'true' },
+        'Bearer auth-rs256-jwt',
+      );
+
+      expect(response.success).toBe(true);
+      expect(response.data).toEqual(expect.objectContaining({
+        sourceOwner: 'bazos-service',
+        consumerOwner: 'marketing-microservice',
+        contract: BAZOS_ORDER_AFFINITY_REPLAY_CONTRACT,
+        channel: 'bazos',
+        count: 0,
+        events: [],
+        failClosed: false,
+        blockers: [],
+      }));
+    } finally {
+      global.fetch = originalFetch;
+    }
   });
 
-  // Inverted on 2026-08-27. This used to assert that JWT_TOKEN was an accepted
-  // alias for the replay guard. That property held the shared a2880693 value,
-  // which was simultaneously the credential for five other services, so
-  // accepting it here kept the value alive and un-rotatable.
-  // BAZOS_INTERNAL_SERVICE_TOKEN now carries this lane's own opaque secret.
-  it('rejects the JWT_TOKEN alias for internal replay auth', async () => {
+  it('rejects static BAZOS_INTERNAL_SERVICE_TOKEN for internal replay auth', async () => {
     const prisma = makePrisma();
     const { service } = makeService(prisma);
-    const config = {
-      get: jest.fn((key: string) => key === 'JWT_TOKEN' ? 'runtime-replay-token' : undefined),
-    } as any;
-    const controller = new InternalOrderAffinityController(service, config);
+    const controller = new InternalOrderAffinityController(service);
+    const originalFetch = global.fetch;
 
-    await expect(
-      controller.getReplayCandidates({ limit: '10', dryRun: 'true' }, 'runtime-replay-token', 'marketing-microservice'),
-    ).rejects.toThrow(UnauthorizedException);
+    global.fetch = jest.fn(async () => ({ ok: false, json: async () => ({}) })) as never;
+
+    try {
+      await expect(
+        controller.getReplayCandidates({ limit: '10', dryRun: 'true' }, 'Bearer lane-own-secret'),
+      ).rejects.toThrow(UnauthorizedException);
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/auth/validate'),
+        expect.objectContaining({ method: 'POST' }),
+      );
+    } finally {
+      global.fetch = originalFetch;
+    }
   });
 
-  it('accepts BAZOS_INTERNAL_SERVICE_TOKEN for internal replay auth', async () => {
+  it('rejects Auth principal lacking order-affinity role', async () => {
     const prisma = makePrisma();
     const { service } = makeService(prisma);
-    const config = {
-      get: jest.fn((key: string) => key === 'BAZOS_INTERNAL_SERVICE_TOKEN' ? 'lane-own-secret' : undefined),
-    } as any;
-    const controller = new InternalOrderAffinityController(service, config);
+    const controller = new InternalOrderAffinityController(service);
+    const originalFetch = global.fetch;
 
-    const response = await controller.getReplayCandidates({ limit: '10', dryRun: 'true' }, 'lane-own-secret', 'marketing-microservice');
+    global.fetch = jest.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        valid: true,
+        user: { id: 'svc-other', roles: ['internal:bazos-service:readonly'] },
+      }),
+    })) as never;
 
-    expect(response.success).toBe(true);
-    expect(response.data).toEqual(expect.objectContaining({
-      sourceOwner: 'bazos-service',
-      consumerOwner: 'marketing-microservice',
-      count: 0,
-      events: [],
-      failClosed: false,
-      blockers: [],
-    }));
+    try {
+      await expect(
+        controller.getReplayCandidates({ limit: '10', dryRun: 'true' }, 'Bearer wrong-role'),
+      ).rejects.toThrow(ForbiddenException);
+    } finally {
+      global.fetch = originalFetch;
+    }
   });
 
   it('returns the protected replay contract with no blockers when no paid local source rows match', async () => {
