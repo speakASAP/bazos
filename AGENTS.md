@@ -11,6 +11,9 @@
 ## Authority
 This repository follows the shared IPS governance model and project owner approval requirements.
 
+## Service-to-service authentication
+For machine service identity, follow the sole canonical [`SERVICE_IDENTITY_CONSUMER_STANDARD.md`](../auth-microservice/docs/SERVICE_IDENTITY_CONSUMER_STANDARD.md). It is not reproduced here.
+
 ## Intent preservation system
 The repository keeps code, validation, and task traceability aligned with the central IPS standard.
 
