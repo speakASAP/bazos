@@ -60,7 +60,7 @@ Intent chain:
 
 Bounded implementation notes:
 
-- `OrderClientService.getOrderLifecycleStatus()` reads `GET /api/orders/:id` through the existing internal-service header path and derives lifecycle fields when Orders detail does not return a lifecycle projection.
+- `OrderClientService.getOrderLifecycleStatus()` reads `GET /api/orders/:id` through Auth RS256 pair principal Bearer per [`SERVICE_IDENTITY_CONSUMER_STANDARD.md`](../../../auth-microservice/docs/SERVICE_IDENTITY_CONSUMER_STANDARD.md) and derives lifecycle fields when Orders detail does not return a lifecycle projection.
 - Bazos order reads include central status only when requested by `centralStatus`, `includeCentralStatus`, `central`, or `withCentral`.
 - User reads are scoped to Bazos accounts owned by the Auth user id or linked identities; admin reads require existing admin access checks.
 - UI `/client` and `/admin` now surface synthetic/internal Bazos orders, central lifecycle/status, and explicit non-ok states. This is not a provider webhook implementation.
